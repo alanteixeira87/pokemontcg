@@ -10,7 +10,9 @@ services:
       - key: NODE_ENV
         value: production
       - key: DATABASE_URL
-        value: file:/data/dev.db
+        fromDatabase:
+          name: pokemon-tcg-postgres
+          property: connectionString
       - key: POKEMON_TCG_API_URL
         value: https://api.pokemontcg.io/v2
       - key: POKEMON_TCG_API_KEY
@@ -23,7 +25,7 @@ services:
         sync: false
       - key: JWT_SECRET
         generateValue: true
-    disk:
-      name: pokemon-tcg-sqlite
-      mountPath: /data
-      sizeGB: 1
+databases:
+  - name: pokemon-tcg-postgres
+    databaseName: pokemontcg
+    user: pokemontcg

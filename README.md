@@ -6,7 +6,7 @@ Aplicacao fullstack local para explorar cartas Pokemon TCG, gerenciar colecao, f
 
 - Frontend: React + Vite + TypeScript + Tailwind CSS + Zustand
 - Backend: Node.js + Express + TypeScript
-- Banco: SQLite + Prisma ORM
+- Banco: PostgreSQL + Prisma ORM
 - Integracoes: Pokemon TCG API, Axios, Zod, ExcelJS, dotenv
 
 ## Como rodar
@@ -42,7 +42,7 @@ O arquivo `backend/.env` ja vem configurado para uso local:
 
 ```env
 PORT=3001
-DATABASE_URL="file:./dev.db"
+DATABASE_URL="postgresql://USER:PASSWORD@HOST:5432/DATABASE?schema=public"
 POKEMON_TCG_API_URL="https://api.pokemontcg.io/v2"
 POKEMON_TCG_API_KEY=""
 POKEWALLET_API_URL="https://api.pokewallet.io"

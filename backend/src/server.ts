@@ -1,13 +1,10 @@
 import { app } from "./app.js";
-import { initDatabase } from "./database/initDatabase.js";
 import { prisma } from "./database/prisma.js";
 import { env } from "./utils/env.js";
 
-const server = await initDatabase().then(() =>
-  app.listen(env.port, () => {
-    console.log(JSON.stringify({ level: "info", message: `API running on port ${env.port}` }));
-  })
-);
+const server = app.listen(env.port, () => {
+  console.log(JSON.stringify({ level: "info", message: `API running on port ${env.port}` }));
+});
 
 server.on("error", async (error: NodeJS.ErrnoException) => {
   if (error.code === "EADDRINUSE") {

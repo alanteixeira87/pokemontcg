@@ -4,7 +4,7 @@ Este projeto pode ser publicado com:
 
 - Frontend: Vercel
 - Backend: Render
-- Banco: SQLite em disco persistente no Render
+- Banco: PostgreSQL no Render
 
 ## 1. Subir o codigo para o GitHub
 
@@ -28,7 +28,7 @@ Variaveis:
 
 ```text
 NODE_ENV=production
-DATABASE_URL=file:/data/dev.db
+DATABASE_URL=postgresql://...
 POKEMON_TCG_API_URL=https://api.pokemontcg.io/v2
 POKEMON_TCG_API_KEY=
 POKEWALLET_API_URL=https://api.pokewallet.io
@@ -37,14 +37,7 @@ FRONTEND_URL=https://sua-url-da-vercel.vercel.app
 JWT_SECRET=uma-chave-grande-e-secreta
 ```
 
-Crie um disco persistente:
-
-```text
-Mount Path: /data
-Size: 1GB
-```
-
-Sem disco persistente, o SQLite pode perder dados quando o servidor reiniciar.
+Crie um banco PostgreSQL no Render e use a `Internal Database URL` como `DATABASE_URL`.
 
 ## 3. Frontend na Vercel
 
