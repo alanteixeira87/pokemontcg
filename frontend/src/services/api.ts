@@ -1,7 +1,10 @@
 import axios from "axios";
 import type { AuthResponse, CollectionItem, DashboardStats, ExploreCard, ImportResult, PaginatedCards, PokemonSet, SortOption } from "../types";
 
-const apiBaseUrl = (import.meta.env.VITE_API_URL ?? "http://localhost:3001/api").replace(/\/$/, "");
+const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+const apiBaseUrl = isLocalhost
+  ? "http://localhost:3001/api"
+  : "https://name-pokemon-tcg-local-api.onrender.com/api";
 
 export const api = axios.create({
   baseURL: apiBaseUrl,
