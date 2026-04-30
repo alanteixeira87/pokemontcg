@@ -16,6 +16,17 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem("pokemon-tcg-token");
+      localStorage.removeItem("pokemon-tcg-user");
+    }
+    return Promise.reject(error);
+  }
+);
+
 export type CollectionFilters = {
   set?: string;
   favorite?: boolean;

@@ -63,7 +63,16 @@ export function AuthPage({ onToast }: { onToast: (toast: ToastState) => void }) 
                 Nome
                 <div className="relative mt-1">
                   <User className="pointer-events-none absolute left-3 top-3 text-slate-400" size={16} />
-                  <Input className="pl-9" value={name} onChange={(event) => setName(event.target.value)} required minLength={2} />
+                  <Input
+                    id="name"
+                    name="name"
+                    autoComplete="name"
+                    className="pl-9"
+                    value={name}
+                    onChange={(event) => setName(event.target.value)}
+                    required
+                    minLength={2}
+                  />
                 </div>
               </label>
             )}
@@ -71,14 +80,33 @@ export function AuthPage({ onToast }: { onToast: (toast: ToastState) => void }) 
               E-mail
               <div className="relative mt-1">
                 <Mail className="pointer-events-none absolute left-3 top-3 text-slate-400" size={16} />
-                <Input className="pl-9" type="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
+                <Input
+                  id="email"
+                  name="email"
+                  autoComplete="email"
+                  className="pl-9"
+                  type="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  required
+                />
               </div>
             </label>
             <label className="block text-sm font-bold text-slate-700">
               Senha
               <div className="relative mt-1">
                 <Lock className="pointer-events-none absolute left-3 top-3 text-slate-400" size={16} />
-                <Input className="pl-9" type="password" value={password} onChange={(event) => setPassword(event.target.value)} required minLength={6} />
+                <Input
+                  id="password"
+                  name="password"
+                  autoComplete={mode === "login" ? "current-password" : "new-password"}
+                  className="pl-9"
+                  type="password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  required
+                  minLength={6}
+                />
               </div>
             </label>
           </div>
