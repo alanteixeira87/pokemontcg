@@ -1,5 +1,8 @@
 {
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "framework": "vite"
+  "framework": "vite",
+  "env": {
+    "VITE_API_URL": "https://name-pokemon-tcg-local-api.onrender.com/api"
+  }
 }
