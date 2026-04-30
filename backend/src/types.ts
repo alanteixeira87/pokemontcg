@@ -25,6 +25,9 @@ export type PokemonSet = {
   id: string;
   name: string;
   series?: string;
+  ptcgoCode?: string;
+  printedTotal?: number;
+  total?: number;
 };
 
 export type ExploreCard = {

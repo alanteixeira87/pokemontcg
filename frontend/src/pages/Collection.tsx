@@ -83,9 +83,12 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
     try {
       const result = await apiService.importCollection(file);
       await load();
-      const notFoundMessage = result.notFound.length ? ` ${result.notFound.length} nao encontradas.` : "";
+      const firstIssue = result.notFound[0];
+      const notFoundMessage = result.notFound.length
+        ? ` ${result.notFound.length} nao encontradas. ${firstIssue?.reason ?? ""}`
+        : "";
       onToast({
-        type: "success",
+        type: result.imported > 0 ? "success" : "error",
         message: `${result.imported} cartas importadas. ${result.skipped} linhas ignoradas.${notFoundMessage}`
       });
     } catch {

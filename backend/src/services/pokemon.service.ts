@@ -74,6 +74,111 @@ function sanitizeSearch(value?: string): string {
     .trim();
 }
 
+function normalizeLookupText(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/&/g, " and ")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+function normalizeCardNumbers(value: string): string[] {
+  const raw = value.trim();
+  const beforeSlash = raw.split("/")[0]?.trim() ?? raw;
+  const withoutHash = beforeSlash.replace(/^#/, "").trim();
+  const withoutLeadingZeros = withoutHash.replace(/^0+(\d)/, "$1");
+  return Array.from(new Set([raw, beforeSlash, withoutHash, withoutLeadingZeros].filter(Boolean)));
+}
+
+function compactCode(value: string): string {
+  return normalizeLookupText(value).replace(/\s+/g, "");
+}
+
+function setCodeCandidates(set: PokemonSet): string[] {
+  const compactName = compactCode(set.name);
+  const wordInitials = normalizeLookupText(set.name)
+    .split(" ")
+    .filter(Boolean)
+    .map((word) => word[0])
+    .join("");
+
+  return Array.from(
+    new Set([set.id, set.ptcgoCode ?? "", compactName.slice(0, 3), wordInitials].map((value) => compactCode(value)).filter(Boolean))
+  );
+}
+
+const setAliases = new Map<string, string>([
+  ["escarlate e violeta", "sv1"],
+  ["scarlet violet", "sv1"],
+  ["evoluidos em paldea", "sv2"],
+  ["paldea evoluida", "sv2"],
+  ["paldea evolved", "sv2"],
+  ["chamas obsidianas", "sv3"],
+  ["obsidian flames", "sv3"],
+  ["151", "sv3pt5"],
+  ["fenda paradoxal", "sv4"],
+  ["paradox rift", "sv4"],
+  ["destinos de paldea", "sv4pt5"],
+  ["paldean fates", "sv4pt5"],
+  ["forcas temporais", "sv5"],
+  ["temporal forces", "sv5"],
+  ["mascara do crepusculo", "sv6"],
+  ["twilight masquerade", "sv6"],
+  ["fabula nebulosa", "sv6pt5"],
+  ["shrouded fable", "sv6pt5"],
+  ["coroa estelar", "sv7"],
+  ["stellar crown", "sv7"],
+  ["fagulhas impetuosas", "sv8"],
+  ["surging sparks", "sv8"],
+  ["evolucoes prismaticas", "sv8pt5"],
+  ["prismatic evolutions", "sv8pt5"],
+  ["jornada juntos", "sv9"],
+  ["journey together", "sv9"],
+  ["rivais destinados", "sv10"],
+  ["destined rivals", "sv10"]
+]);
+
+async function resolveSetCandidates(input: string, setTotal?: string): Promise<PokemonSet[]> {
+  const sets = await pokemonService.listSets();
+  const normalizedInput = normalizeLookupText(input);
+  const compactInput = compactCode(input);
+  const totalNumber = Number(setTotal);
+  const aliasId = setAliases.get(normalizedInput);
+
+  const exact = sets.filter(
+    (set) =>
+      set.id.toLowerCase() === input.trim().toLowerCase() ||
+      set.ptcgoCode?.toLowerCase() === input.trim().toLowerCase() ||
+      normalizeLookupText(set.name) === normalizedInput ||
+      setCodeCandidates(set).includes(compactInput) ||
+      (aliasId ? set.id === aliasId : false)
+  );
+  if (exact.length) {
+    const exactWithTotal = Number.isFinite(totalNumber)
+      ? exact.filter((set) => set.printedTotal === totalNumber || set.total === totalNumber)
+      : exact;
+    return exactWithTotal.length ? exactWithTotal : exact;
+  }
+
+  if (Number.isFinite(totalNumber)) {
+    const byTotal = sets.filter((set) => set.printedTotal === totalNumber || set.total === totalNumber);
+    if (byTotal.length) {
+      const byCode = byTotal.filter((set) => setCodeCandidates(set).includes(compactInput));
+      return byCode.length ? byCode : byTotal.slice(0, 5);
+    }
+  }
+
+  return sets
+    .filter((set) => {
+      const setName = normalizeLookupText(set.name);
+      return normalizedInput.length >= 3 && (setName.includes(normalizedInput) || normalizedInput.includes(setName));
+    })
+    .slice(0, 5);
+}
+
 export const pokemonService = {
   async listCards(page: number, pageSize: number, search?: string, set?: string): Promise<PaginatedCards> {
     const cacheKey = `cards:${page}:${pageSize}:${search ?? ""}:${set ?? ""}`;
@@ -110,34 +215,64 @@ export const pokemonService = {
       response.data.data.map((set) => ({
         id: set.id,
         name: set.name,
-        series: set.series
+        series: set.series,
+        ptcgoCode: set.ptcgoCode,
+        printedTotal: set.printedTotal,
+        total: set.total
       }))
     );
   },
 
-  async findCardBySetAndNumber(setName: string, number: string) {
+  async findCardBySetAndNumber(setName: string, number: string, setTotal?: string) {
     const normalizedSet = escapeQuery(setName);
-    const normalizedNumber = escapeQuery(number);
-    const cacheKey = `card-by-set-number:${normalizedSet}:${normalizedNumber}`;
+    const numberCandidates = normalizeCardNumbers(number);
+    const cacheKey = `card-by-set-number:${normalizedSet}:${setTotal ?? ""}:${numberCandidates.join("|")}`;
     const cached = getCached<ReturnType<typeof normalizeCard> | null>(cacheKey);
     if (cached) return cached;
 
-    const response = await withRetry(() =>
-      api.get<{ data: PokemonCard[] }>("/cards", {
-        params: {
-          page: 1,
-          pageSize: 5,
-          q: `set.name:"${normalizedSet}" number:"${normalizedNumber}"`
-        }
-      })
-    );
+    const setCandidates = await resolveSetCandidates(setName, setTotal);
 
-    const exact = response.data.data.find(
-      (card) =>
-        card.number?.toLowerCase() === number.toLowerCase() &&
-        card.set?.name?.toLowerCase() === setName.toLowerCase()
-    );
-    const card = exact ?? response.data.data[0];
-    return setCached(cacheKey, card ? normalizeCard(card) : null);
+    for (const set of setCandidates) {
+      for (const candidateNumber of numberCandidates) {
+        const normalizedNumber = escapeQuery(candidateNumber);
+        const response = await withRetry(() =>
+          api.get<{ data: PokemonCard[] }>("/cards", {
+            params: {
+              page: 1,
+              pageSize: 5,
+              q: `set.id:"${escapeQuery(set.id)}" number:"${normalizedNumber}"`
+            }
+          })
+        );
+
+        const exact = response.data.data.find(
+          (card) => normalizeLookupText(card.number ?? "") === normalizeLookupText(candidateNumber)
+        );
+        const card = exact ?? response.data.data[0];
+        if (card) {
+          return setCached(cacheKey, normalizeCard(card));
+        }
+      }
+    }
+
+    for (const candidateNumber of numberCandidates) {
+      const normalizedNumber = escapeQuery(candidateNumber);
+      const response = await withRetry(() =>
+        api.get<{ data: PokemonCard[] }>("/cards", {
+          params: {
+            page: 1,
+            pageSize: 5,
+            q: `set.name:"${normalizedSet}" number:"${normalizedNumber}"`
+          }
+        })
+      );
+
+      const card = response.data.data[0];
+      if (card) {
+        return setCached(cacheKey, normalizeCard(card));
+      }
+    }
+
+    return setCached(cacheKey, null);
   }
 };

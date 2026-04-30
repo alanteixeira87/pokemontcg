@@ -16,6 +16,9 @@ export type ImportResult = {
     number: string;
     sequence: string;
     status: string;
+    quantity: string;
+    rowNumber?: number;
+    reason?: string;
   }>;
 };
 
