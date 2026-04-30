@@ -6,7 +6,8 @@ export const addCardSchema = z.object({
   image: z.string().trim().url(),
   set: z.string().trim().min(1).max(160),
   quantity: z.coerce.number().int().min(1).default(1),
-  price: z.coerce.number().min(0).default(0)
+  price: z.coerce.number().min(0).default(0),
+  number: z.string().trim().optional()
 });
 
 export const updateCollectionSchema = z.object({

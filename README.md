@@ -45,6 +45,8 @@ PORT=3001
 DATABASE_URL="file:./dev.db"
 POKEMON_TCG_API_URL="https://api.pokemontcg.io/v2"
 POKEMON_TCG_API_KEY=""
+POKEWALLET_API_URL="https://api.pokewallet.io"
+POKEWALLET_API_KEY=""
 JWT_SECRET="dev-secret-change-me"
 ```
 
@@ -54,6 +56,7 @@ A chave da Pokemon TCG API e opcional para uso basico, mas pode ser preenchida e
 
 - Explorar cartas com paginacao, busca com debounce e filtro por set
 - Exibir valor estimado da Pokemon TCG API quando disponivel
+- Validar preco com PokéWallet quando `POKEWALLET_API_KEY` estiver configurada
 - Adicionar cartas sem duplicar registros: se ja existir, soma quantidade
 - Usar valor estimado como preco inicial, mantendo edicao manual livre
 - Colecao com edicao inline de quantidade, preco manual, favorito e troca

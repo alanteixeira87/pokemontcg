@@ -2,6 +2,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "../database/prisma.js";
 import type { CollectionItem } from "../types.js";
 import { HttpError } from "../utils/httpError.js";
+import { priceService } from "./price.service.js";
 
 type AddCardInput = {
   cardId: string;
@@ -10,6 +11,7 @@ type AddCardInput = {
   set: string;
   quantity: number;
   price: number;
+  number?: string;
 };
 
 type UpdateCardInput = {
@@ -46,6 +48,13 @@ export const collectionService = {
   },
 
   async add(userId: number, input: AddCardInput): Promise<CollectionItem> {
+    const estimatedPrice = await priceService.estimate({
+      name: input.name,
+      set: input.set,
+      number: input.number,
+      fallback: input.price
+    });
+
     const existing = await prisma.collection.findUnique({
       where: { userId_cardId: { userId, cardId: input.cardId } }
     });
@@ -55,7 +64,7 @@ export const collectionService = {
         where: { id: existing.id },
         data: {
           quantity: existing.quantity + input.quantity,
-          price: input.price
+          price: estimatedPrice
         }
       });
     }
@@ -68,7 +77,7 @@ export const collectionService = {
         image: input.image,
         set: input.set,
         quantity: input.quantity,
-        price: input.price
+        price: estimatedPrice
       }
     });
   },

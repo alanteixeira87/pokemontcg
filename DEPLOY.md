@@ -31,6 +31,8 @@ NODE_ENV=production
 DATABASE_URL=file:/data/dev.db
 POKEMON_TCG_API_URL=https://api.pokemontcg.io/v2
 POKEMON_TCG_API_KEY=
+POKEWALLET_API_URL=https://api.pokewallet.io
+POKEWALLET_API_KEY=sua-chave-pokewallet
 FRONTEND_URL=https://sua-url-da-vercel.vercel.app
 JWT_SECRET=uma-chave-grande-e-secreta
 ```

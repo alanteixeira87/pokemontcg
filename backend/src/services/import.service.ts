@@ -126,7 +126,8 @@ export const importService = {
         image: card.image,
         set: card.set,
         quantity,
-        price: card.marketPrice ?? 0
+        price: card.marketPrice ?? 0,
+        number: card.number
       });
       result.imported += quantity;
     }

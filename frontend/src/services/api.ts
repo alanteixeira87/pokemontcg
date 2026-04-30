@@ -72,7 +72,8 @@ export const apiService = {
       image: card.image,
       set: card.set,
       quantity: 1,
-      price: card.marketPrice ?? 0
+      price: card.marketPrice ?? 0,
+      number: card.number
     });
     return response.data;
   },

@@ -15,6 +15,10 @@ services:
         value: https://api.pokemontcg.io/v2
       - key: POKEMON_TCG_API_KEY
         sync: false
+      - key: POKEWALLET_API_URL
+        value: https://api.pokewallet.io
+      - key: POKEWALLET_API_KEY
+        sync: false
       - key: FRONTEND_URL
         sync: false
       - key: JWT_SECRET
