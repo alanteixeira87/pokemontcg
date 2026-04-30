@@ -63,4 +63,8 @@ app.use("/api", cardsRoutes);
 app.use("/api", collectionRoutes);
 app.use("/api", exportRoutes);
 app.use("/api", importRoutes);
+app.use("/", cardsRoutes);
+app.use("/", collectionRoutes);
+app.use("/", exportRoutes);
+app.use("/", importRoutes);
 app.use(errorHandler);
