@@ -22,14 +22,28 @@ function isAllowedLocalOrigin(origin: string): boolean {
 
 function isAllowedConfiguredOrigin(origin: string): boolean {
   if (!env.frontendUrl) return false;
-  return origin === env.frontendUrl;
+  const configuredOrigins = env.frontendUrl
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
+
+  return configuredOrigins.includes(origin);
+}
+
+function isAllowedVercelOrigin(origin: string): boolean {
+  try {
+    const url = new URL(origin);
+    return url.protocol === "https:" && url.hostname.endsWith(".vercel.app");
+  } catch {
+    return false;
+  }
 }
 
 app.use(helmet());
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || isAllowedLocalOrigin(origin) || isAllowedConfiguredOrigin(origin)) {
+      if (!origin || isAllowedLocalOrigin(origin) || isAllowedConfiguredOrigin(origin) || isAllowedVercelOrigin(origin)) {
         callback(null, true);
         return;
       }

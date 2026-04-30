@@ -1,7 +1,7 @@
 import axios from "axios";
 import type { CollectionItem, DashboardStats, ExploreCard, ImportResult, PaginatedCards, PokemonSet, SortOption } from "../types";
 
-const apiBaseUrl = import.meta.env.VITE_API_URL ?? "http://localhost:3001/api";
+const apiBaseUrl = (import.meta.env.VITE_API_URL ?? "http://localhost:3001/api").replace(/\/$/, "");
 
 export const api = axios.create({
   baseURL: apiBaseUrl,
