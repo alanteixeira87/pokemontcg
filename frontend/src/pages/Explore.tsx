@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, FilterX, Search, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { CardTile } from "../components/CardTile";
 import { EmptyState } from "../components/EmptyState";
@@ -15,12 +15,19 @@ export function Explore({ onToast }: { onToast: (toast: ToastState) => void }) {
   const [cards, setCards] = useState<ExploreCard[]>([]);
   const [sets, setSets] = useState<PokemonSet[]>([]);
   const [search, setSearch] = useState("");
+  const [series, setSeries] = useState("");
   const [setId, setSetId] = useState("");
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const debouncedSearch = useDebounce(search);
   const pageSize = 24;
+  const filteredSets = useMemo(
+    () => (series ? sets.filter((set) => set.series === series) : sets),
+    [series, sets]
+  );
+  const seriesOptions = useMemo(() => Array.from(new Set(sets.map((set) => set.series).filter(Boolean))).sort(), [sets]);
+  const hasFilters = Boolean(search || setId || series);
 
   useEffect(() => {
     void apiService.sets().then(setSets).catch(() => onToast({ type: "error", message: "Nao foi possivel carregar colecoes." }));
@@ -40,6 +47,13 @@ export function Explore({ onToast }: { onToast: (toast: ToastState) => void }) {
 
   const totalPages = useMemo(() => Math.max(1, Math.ceil(total / pageSize)), [total]);
 
+  function clearFilters() {
+    setSearch("");
+    setSeries("");
+    setSetId("");
+    setPage(1);
+  }
+
   async function add(card: ExploreCard) {
     try {
       await apiService.addToCollection(card);
@@ -51,41 +65,81 @@ export function Explore({ onToast }: { onToast: (toast: ToastState) => void }) {
 
   return (
     <div className="space-y-5">
-      <section className="rounded-lg border border-border bg-white p-4 shadow-sm">
+      <section className="overflow-hidden rounded-xl border border-border bg-white shadow-sm">
+        <div className="border-b border-slate-100 bg-gradient-to-r from-slate-950 via-slate-900 to-primary p-5 text-white">
         <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h2 className="text-xl font-black text-slate-900">Marketplace de cartas</h2>
-            <p className="text-sm text-muted-foreground">Pesquise por nome, filtre por colecao e adicione direto na sua pasta.</p>
+            <p className="text-xs font-black uppercase text-yellow-200">Explorar cartas</p>
+            <h2 className="mt-1 text-2xl font-black">Marketplace de cartas</h2>
+            <p className="mt-1 text-sm text-slate-200">Pesquise por nome, serie ou colecao e adicione direto na sua pasta.</p>
           </div>
-          <span className="rounded-md bg-yellow-100 px-3 py-1 text-xs font-bold text-slate-900">{total.toLocaleString("pt-BR")} cartas</span>
+          <span className="rounded-md bg-yellow-300 px-3 py-1 text-xs font-black text-slate-950">{total.toLocaleString("pt-BR")} cartas</span>
         </div>
-        <div className="grid gap-3 md:grid-cols-[1fr_260px]">
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-3 text-muted-foreground" size={16} />
-          <Input
-            className="pl-9"
-            placeholder="Buscar por nome"
-            value={search}
-            onChange={(event) => {
-              setSearch(event.target.value);
-              setPage(1);
-            }}
-          />
         </div>
-        <Select
-          value={setId}
-          onChange={(event) => {
-            setSetId(event.target.value);
-            setPage(1);
-          }}
-        >
-          <option value="">Todas as colecoes</option>
-          {sets.map((set) => (
-            <option key={set.id} value={set.id}>
-              {set.name}
-            </option>
-          ))}
-        </Select>
+        <div className="space-y-3 p-4">
+          <div className="grid gap-3 lg:grid-cols-[1fr_220px_280px_auto]">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-3 text-muted-foreground" size={16} />
+              <Input
+                className="pl-9"
+                placeholder="Buscar por nome, ex: Charizard EX"
+                value={search}
+                onChange={(event) => {
+                  setSearch(event.target.value);
+                  setPage(1);
+                }}
+              />
+            </div>
+            <Select
+              value={series}
+              onChange={(event) => {
+                setSeries(event.target.value);
+                setSetId("");
+                setPage(1);
+              }}
+            >
+              <option value="">Todas as series</option>
+              {seriesOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </Select>
+            <Select
+              value={setId}
+              onChange={(event) => {
+                setSetId(event.target.value);
+                setPage(1);
+              }}
+            >
+              <option value="">Todas as colecoes</option>
+              {filteredSets.map((set) => (
+                <option key={set.id} value={set.id}>
+                  {set.name}
+                </option>
+              ))}
+            </Select>
+            <Button variant="secondary" disabled={!hasFilters} onClick={clearFilters}>
+              <FilterX size={16} />
+              Limpar
+            </Button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {["charizard", "pikachu", "eevee", "mew", "mega charizard"].map((term) => (
+              <button
+                key={term}
+                type="button"
+                onClick={() => {
+                  setSearch(term);
+                  setPage(1);
+                }}
+                className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-bold text-slate-600 transition hover:border-primary/40 hover:text-primary"
+              >
+                <Sparkles size={12} />
+                {term}
+              </button>
+            ))}
+          </div>
         </div>
       </section>
 

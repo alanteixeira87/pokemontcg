@@ -110,6 +110,11 @@ export const apiService = {
     await api.delete(`/collection/${id}`);
   },
 
+  async clearCollection(): Promise<{ deleted: number }> {
+    const response = await api.delete<{ deleted: number }>("/collection");
+    return response.data;
+  },
+
   async trades(): Promise<CollectionItem[]> {
     const response = await api.get<CollectionItem[]>("/trades");
     return response.data;

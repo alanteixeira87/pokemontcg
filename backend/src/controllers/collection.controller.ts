@@ -45,6 +45,14 @@ export const collectionController = {
     }
   },
 
+  async clear(req: Request, res: Response, next: NextFunction) {
+    try {
+      res.json(await collectionService.clear(getAuthenticatedUserId(req)));
+    } catch (error) {
+      next(error);
+    }
+  },
+
   async trades(req: Request, res: Response, next: NextFunction) {
     try {
       res.json(await collectionService.trades(getAuthenticatedUserId(req)));

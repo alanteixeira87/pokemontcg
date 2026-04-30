@@ -103,6 +103,14 @@ export const collectionService = {
     await prisma.collection.delete({ where: { id } });
   },
 
+  async clear(userId: number): Promise<{ deleted: number }> {
+    const result = await prisma.collection.deleteMany({
+      where: { userId }
+    });
+
+    return { deleted: result.count };
+  },
+
   async trades(userId: number): Promise<CollectionItem[]> {
     return prisma.collection.findMany({
       where: { userId, forTrade: true },

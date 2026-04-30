@@ -1,4 +1,4 @@
-import { BarChart3, Download, Layers3, Trophy, Upload } from "lucide-react";
+import { AlertTriangle, BarChart3, Download, Layers3, Trash2, Trophy, Upload } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CardTile } from "../components/CardTile";
 import { EmptyState } from "../components/EmptyState";
@@ -17,6 +17,7 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
   const [pokemonSets, setPokemonSets] = useState<PokemonSet[]>([]);
   const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);
+  const [confirmClear, setConfirmClear] = useState(false);
   const { filters, setFilters } = useAppStore();
 
   const loadMeta = useCallback(async () => {
@@ -113,6 +114,27 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
       onToast({ type: "error", message: "Nao foi possivel importar a planilha. Confira as colunas e tente novamente." });
     } finally {
       setImporting(false);
+    }
+  }
+
+  async function clearCollection() {
+    if (!confirmClear) {
+      setConfirmClear(true);
+      onToast({ type: "error", message: "Clique novamente em limpar colecao para confirmar." });
+      window.setTimeout(() => setConfirmClear(false), 5000);
+      return;
+    }
+
+    try {
+      const result = await apiService.clearCollection();
+      setItems([]);
+      setAllItems([]);
+      setAvailableSets([]);
+      setConfirmClear(false);
+      setFilters({ set: "", favorite: false, forTrade: false });
+      onToast({ type: "success", message: `${result.deleted} cartas removidas da sua colecao.` });
+    } catch {
+      onToast({ type: "error", message: "Nao foi possivel limpar a colecao." });
     }
   }
 
@@ -231,6 +253,12 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
               }}
             />
           </label>
+        )}
+        {!tradeOnly && (
+          <Button variant={confirmClear ? "danger" : "secondary"} disabled={allItems.length === 0} onClick={clearCollection}>
+            {confirmClear ? <AlertTriangle size={16} /> : <Trash2 size={16} />}
+            {confirmClear ? "Confirmar limpeza" : "Limpar colecao"}
+          </Button>
         )}
         <Button variant="secondary" onClick={() => window.open(apiService.exportUrl("full"), "_blank")}>
           <Download size={16} />

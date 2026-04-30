@@ -7,6 +7,7 @@ export const collectionRoutes = Router();
 collectionRoutes.use(requireAuth);
 collectionRoutes.get("/collection", collectionController.list);
 collectionRoutes.post("/collection", collectionController.add);
+collectionRoutes.delete("/collection", collectionController.clear);
 collectionRoutes.patch("/collection/:id", collectionController.update);
 collectionRoutes.delete("/collection/:id", collectionController.remove);
 collectionRoutes.get("/trades", collectionController.trades);
