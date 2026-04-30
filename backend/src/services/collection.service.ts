@@ -33,9 +33,10 @@ function orderBy(sort: ListFilters["sort"]): Prisma.CollectionOrderByWithRelatio
 }
 
 export const collectionService = {
-  async list(filters: ListFilters): Promise<CollectionItem[]> {
+  async list(userId: number, filters: ListFilters): Promise<CollectionItem[]> {
     return prisma.collection.findMany({
       where: {
+        userId,
         set: filters.set || undefined,
         favorite: filters.favorite ? filters.favorite === "true" : undefined,
         forTrade: filters.forTrade ? filters.forTrade === "true" : undefined
@@ -44,14 +45,14 @@ export const collectionService = {
     });
   },
 
-  async add(input: AddCardInput): Promise<CollectionItem> {
+  async add(userId: number, input: AddCardInput): Promise<CollectionItem> {
     const existing = await prisma.collection.findUnique({
-      where: { cardId: input.cardId }
+      where: { userId_cardId: { userId, cardId: input.cardId } }
     });
 
     if (existing) {
       return prisma.collection.update({
-        where: { cardId: input.cardId },
+        where: { id: existing.id },
         data: {
           quantity: existing.quantity + input.quantity,
           price: input.price
@@ -61,6 +62,7 @@ export const collectionService = {
 
     return prisma.collection.create({
       data: {
+        userId,
         cardId: input.cardId,
         name: input.name,
         image: input.image,
@@ -71,34 +73,36 @@ export const collectionService = {
     });
   },
 
-  async update(id: number, input: UpdateCardInput): Promise<CollectionItem> {
-    try {
-      return await prisma.collection.update({
-        where: { id },
-        data: input
-      });
-    } catch {
+  async update(userId: number, id: number, input: UpdateCardInput): Promise<CollectionItem> {
+    const existing = await prisma.collection.findFirst({ where: { id, userId } });
+    if (!existing) {
       throw new HttpError(404, "Carta nao encontrada na colecao.");
     }
+
+    return prisma.collection.update({
+      where: { id },
+      data: input
+    });
   },
 
-  async remove(id: number): Promise<void> {
-    try {
-      await prisma.collection.delete({ where: { id } });
-    } catch {
+  async remove(userId: number, id: number): Promise<void> {
+    const existing = await prisma.collection.findFirst({ where: { id, userId } });
+    if (!existing) {
       throw new HttpError(404, "Carta nao encontrada na colecao.");
     }
+
+    await prisma.collection.delete({ where: { id } });
   },
 
-  async trades(): Promise<CollectionItem[]> {
+  async trades(userId: number): Promise<CollectionItem[]> {
     return prisma.collection.findMany({
-      where: { forTrade: true },
+      where: { userId, forTrade: true },
       orderBy: { name: "asc" }
     });
   },
 
-  async dashboard() {
-    const items = await prisma.collection.findMany();
+  async dashboard(userId: number) {
+    const items = await prisma.collection.findMany({ where: { userId } });
     const totalCards = items.reduce((sum, item) => sum + item.quantity, 0);
     const totalValue = items.reduce((sum, item) => sum + item.quantity * item.price, 0);
     const favorites = items.filter((item) => item.favorite).length;

@@ -46,6 +46,7 @@ export type PaginatedCards = {
 
 export type CollectionItem = {
   id: number;
+  userId: number;
   cardId: string;
   name: string;
   image: string;
@@ -56,4 +57,10 @@ export type CollectionItem = {
   forTrade: boolean;
   createdAt: Date;
   updatedAt: Date;
+};
+
+export type AuthUser = {
+  id: number;
+  name: string;
+  email: string;
 };

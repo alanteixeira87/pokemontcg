@@ -9,7 +9,9 @@ datasource db {
 
 model Collection {
   id        Int      @id @default(autoincrement())
-  cardId    String   @unique @map("card_id")
+  userId    Int      @default(1) @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cardId    String   @map("card_id")
   name      String
   image     String
   set       String
@@ -20,9 +22,23 @@ model Collection {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  @@unique([userId, cardId])
   @@index([name])
+  @@index([userId])
   @@index([set])
   @@index([favorite])
   @@index([forTrade])
   @@map("collection")
+}
+
+model User {
+  id           Int          @id @default(autoincrement())
+  name         String
+  email        String       @unique
+  passwordHash String       @map("password_hash")
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+  collection   Collection[]
+
+  @@map("users")
 }

@@ -5,9 +5,11 @@ import { Dashboard } from "./pages/Dashboard";
 import { Explore } from "./pages/Explore";
 import { Collection } from "./pages/Collection";
 import { useAppStore } from "./store/useAppStore";
+import { AuthPage } from "./pages/AuthPage";
 
 export function App() {
   const view = useAppStore((state) => state.view);
+  const token = useAppStore((state) => state.token);
   const [toast, setToast] = useState<ToastState>(null);
 
   const showToast = useCallback((next: ToastState) => {
@@ -19,6 +21,15 @@ export function App() {
     const timeout = window.setTimeout(() => setToast(null), 3500);
     return () => window.clearTimeout(timeout);
   }, [toast]);
+
+  if (!token) {
+    return (
+      <>
+        <AuthPage onToast={showToast} />
+        <Toast toast={toast} onClose={() => setToast(null)} />
+      </>
+    );
+  }
 
   return (
     <Layout>

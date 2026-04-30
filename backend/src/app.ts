@@ -3,6 +3,7 @@ import express from "express";
 import helmet from "helmet";
 import morgan from "morgan";
 import { cardsRoutes } from "./routes/cards.routes.js";
+import { authRoutes } from "./routes/auth.routes.js";
 import { collectionRoutes } from "./routes/collection.routes.js";
 import { exportRoutes } from "./routes/export.routes.js";
 import { importRoutes } from "./routes/import.routes.js";
@@ -60,10 +61,12 @@ app.get("/health", (_req, res) => {
 });
 
 app.use("/api", cardsRoutes);
+app.use("/api", authRoutes);
 app.use("/api", collectionRoutes);
 app.use("/api", exportRoutes);
 app.use("/api", importRoutes);
 app.use("/", cardsRoutes);
+app.use("/", authRoutes);
 app.use("/", collectionRoutes);
 app.use("/", exportRoutes);
 app.use("/", importRoutes);

@@ -1,4 +1,4 @@
-import { BarChart3, Boxes, HeartHandshake, Library, Menu, Search, ShieldCheck } from "lucide-react";
+import { BarChart3, Boxes, HeartHandshake, Library, LogOut, Menu, Search, ShieldCheck } from "lucide-react";
 import type { ReactNode } from "react";
 import { useAppStore } from "../store/useAppStore";
 import { Button } from "./ui/Button";
@@ -12,6 +12,8 @@ const nav = [
 
 export function Layout({ children }: { children: ReactNode }) {
   const { view, setView } = useAppStore();
+  const user = useAppStore((state) => state.user);
+  const logout = useAppStore((state) => state.logout);
 
   return (
     <div className="min-h-screen">
@@ -37,8 +39,14 @@ export function Layout({ children }: { children: ReactNode }) {
           </div>
           <div className="hidden items-center gap-2 rounded-md bg-red-900/25 px-3 py-2 text-xs font-semibold lg:flex">
             <ShieldCheck size={16} />
-            Banco local
+            {user ? user.name : "Conta protegida"}
           </div>
+          {user && (
+            <Button variant="ghost" className="text-white hover:bg-red-900/25 hover:text-white" onClick={logout}>
+              <LogOut size={16} />
+              Sair
+            </Button>
+          )}
         </div>
       </header>
 

@@ -45,6 +45,7 @@ PORT=3001
 DATABASE_URL="file:./dev.db"
 POKEMON_TCG_API_URL="https://api.pokemontcg.io/v2"
 POKEMON_TCG_API_KEY=""
+JWT_SECRET="dev-secret-change-me"
 ```
 
 A chave da Pokemon TCG API e opcional para uso basico, mas pode ser preenchida em `POKEMON_TCG_API_KEY`.
@@ -57,6 +58,7 @@ A chave da Pokemon TCG API e opcional para uso basico, mas pode ser preenchida e
 - Usar valor estimado como preco inicial, mantendo edicao manual livre
 - Colecao com edicao inline de quantidade, preco manual, favorito e troca
 - Importar planilha Excel `.xlsx` com colunas `serie`, `numero`, `sequencia` e `status`
+- Login e cadastro com colecao separada por usuario
 - Quantidade minima igual a 1 e preco minimo igual a 0
 - Dashboard com total de cartas, unicas, valor total, favoritas e troca
 - Tela exclusiva de trocas
@@ -68,6 +70,9 @@ A chave da Pokemon TCG API e opcional para uso basico, mas pode ser preenchida e
 
 - `GET /api/cards?page=1&pageSize=24&search=pikachu&set=base1`
 - `GET /api/sets`
+- `POST /api/auth/register`
+- `POST /api/auth/login`
+- `GET /api/auth/me`
 - `GET /api/collection`
 - `POST /api/collection`
 - `PATCH /api/collection/:id`

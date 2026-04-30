@@ -1,6 +1,7 @@
 import { Router } from "express";
 import multer from "multer";
 import { importController } from "../controllers/import.controller.js";
+import { requireAuth } from "../middlewares/authMiddleware.js";
 
 export const importRoutes = Router();
 
@@ -18,4 +19,4 @@ const upload = multer({
   }
 });
 
-importRoutes.post("/import/collection", upload.single("file"), importController.upload);
+importRoutes.post("/import/collection", requireAuth, upload.single("file"), importController.upload);

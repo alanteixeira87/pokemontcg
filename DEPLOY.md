@@ -19,7 +19,7 @@ Crie um repositorio no GitHub e envie a pasta `Pokemon 2`.
 
 ```text
 Root Directory: backend
-Build Command: npm install && npm run prisma:generate && npm run build
+Build Command: npm install --include=dev && npm run prisma:generate && npm run build
 Start Command: npm start
 Health Check Path: /health
 ```
@@ -32,6 +32,7 @@ DATABASE_URL=file:/data/dev.db
 POKEMON_TCG_API_URL=https://api.pokemontcg.io/v2
 POKEMON_TCG_API_KEY=
 FRONTEND_URL=https://sua-url-da-vercel.vercel.app
+JWT_SECRET=uma-chave-grande-e-secreta
 ```
 
 Crie um disco persistente:
@@ -66,6 +67,8 @@ Depois do deploy do frontend, volte ao Render e atualize:
 ```text
 FRONTEND_URL=https://sua-url-da-vercel.vercel.app
 ```
+
+Mantenha `JWT_SECRET` fixo. Se trocar esse valor, os usuarios precisarão fazer login novamente.
 
 ## 4. Validar
 

@@ -9,13 +9,17 @@ type ExportParams = {
 };
 
 export const exportService = {
-  async buildWorkbook(params: ExportParams): Promise<ExcelJS.Workbook> {
-    const where =
+  async buildWorkbook(userId: number, params: ExportParams): Promise<ExcelJS.Workbook> {
+    const where = {
+      userId,
+      ...(
       params.type === "set"
         ? { set: params.set }
         : params.type === "card"
           ? { cardId: params.id }
-          : {};
+          : {}
+      )
+    };
 
     if (params.type === "set" && !params.set) {
       throw new HttpError(400, "Informe o parametro set para exportar por colecao.");

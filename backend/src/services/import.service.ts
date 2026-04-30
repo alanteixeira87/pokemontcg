@@ -57,7 +57,7 @@ function readRow(sheet: ExcelJS.Worksheet, rowNumber: number, headerMap: Map<str
 }
 
 export const importService = {
-  async importCollection(buffer: Buffer): Promise<ImportResult> {
+  async importCollection(userId: number, buffer: Buffer): Promise<ImportResult> {
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(buffer as unknown as ExcelJS.Buffer);
     const sheet = workbook.worksheets[0];
@@ -86,7 +86,7 @@ export const importService = {
         continue;
       }
 
-      await collectionService.add({
+      await collectionService.add(userId, {
         cardId: card.id,
         name: card.name,
         image: card.image,
