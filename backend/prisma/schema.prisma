@@ -1,0 +1,28 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Collection {
+  id        Int      @id @default(autoincrement())
+  cardId    String   @unique @map("card_id")
+  name      String
+  image     String
+  set       String
+  quantity  Int      @default(1)
+  price     Float    @default(0)
+  favorite  Boolean  @default(false)
+  forTrade  Boolean  @default(false) @map("for_trade")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([name])
+  @@index([set])
+  @@index([favorite])
+  @@index([forTrade])
+  @@map("collection")
+}

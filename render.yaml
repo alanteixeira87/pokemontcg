@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: pokemon-tcg-local-api
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install && npm run prisma:generate && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        value: file:/data/dev.db
+      - key: POKEMON_TCG_API_URL
+        value: https://api.pokemontcg.io/v2
+      - key: POKEMON_TCG_API_KEY
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+    disk:
+      name: pokemon-tcg-sqlite
+      mountPath: /data
+      sizeGB: 1
