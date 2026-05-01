@@ -74,3 +74,57 @@ export type AuthResponse = {
   token: string;
   user: AuthUser;
 };
+
+export type TradeUser = {
+  id: number;
+  name: string;
+  avatarUrl?: string | null;
+  interests?: string | null;
+  tradeCardsCount: number;
+  mainCollections: string[];
+};
+
+export type TradeCard = CollectionItem;
+
+export type TradeCardsResponse = {
+  user?: {
+    id: number;
+    name: string;
+    avatarUrl?: string | null;
+  };
+  sets: string[];
+  cards: TradeCard[];
+};
+
+export type TradeStatus = "PENDING" | "ACCEPTED" | "DECLINED" | "CANCELED";
+
+export type TradeCardSnapshot = {
+  collectionId: number;
+  cardId: string;
+  name: string;
+  image: string;
+  set: string;
+  number: string | null;
+  quantity: number;
+};
+
+export type TradeProposal = {
+  id: number;
+  requesterId: number;
+  receiverId: number;
+  requester: {
+    id: number;
+    name: string;
+    avatarUrl?: string | null;
+  };
+  receiver: {
+    id: number;
+    name: string;
+    avatarUrl?: string | null;
+  };
+  offeredCards: TradeCardSnapshot[];
+  requestedCards: TradeCardSnapshot[];
+  status: TradeStatus;
+  createdAt: string;
+  updatedAt: string;
+};

@@ -38,9 +38,39 @@ model User {
   name         String
   email        String       @unique
   passwordHash String       @map("password_hash")
+  avatarUrl    String?      @map("avatar_url")
+  interests    String?
   createdAt    DateTime     @default(now()) @map("created_at")
   updatedAt    DateTime     @updatedAt @map("updated_at")
   collection   Collection[]
+  sentTrades   Trade[]      @relation("RequesterTrades")
+  receivedTrades Trade[]    @relation("ReceiverTrades")
 
   @@map("users")
+}
+
+model Trade {
+  id             Int         @id @default(autoincrement())
+  requesterId    Int         @map("requester_id")
+  receiverId     Int         @map("receiver_id")
+  requester      User        @relation("RequesterTrades", fields: [requesterId], references: [id], onDelete: Cascade)
+  receiver       User        @relation("ReceiverTrades", fields: [receiverId], references: [id], onDelete: Cascade)
+  offeredCards   Json        @map("offered_cards")
+  requestedCards Json        @map("requested_cards")
+  status         TradeStatus @default(PENDING)
+  createdAt      DateTime    @default(now()) @map("created_at")
+  updatedAt      DateTime    @updatedAt @map("updated_at")
+
+  @@index([requesterId])
+  @@index([receiverId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("trades")
+}
+
+enum TradeStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  CANCELED
 }

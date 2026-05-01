@@ -1,5 +1,19 @@
 import axios from "axios";
-import type { AuthResponse, CollectionItem, DashboardStats, ExploreCard, ExploreSortOption, ImportResult, PaginatedCards, PokemonSet, SortOption } from "../types";
+import type {
+  AuthResponse,
+  CollectionItem,
+  DashboardStats,
+  ExploreCard,
+  ExploreSortOption,
+  ImportResult,
+  PaginatedCards,
+  PokemonSet,
+  SortOption,
+  TradeCardsResponse,
+  TradeProposal,
+  TradeStatus,
+  TradeUser
+} from "../types";
 
 const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
 const apiBaseUrl = isLocalhost
@@ -122,6 +136,36 @@ export const apiService = {
 
   async dashboard(): Promise<DashboardStats> {
     const response = await api.get<DashboardStats>("/dashboard");
+    return response.data;
+  },
+
+  async tradeUsers(params: { search?: string; interest?: string } = {}): Promise<TradeUser[]> {
+    const response = await api.get<TradeUser[]>("/trade/users", { params });
+    return response.data;
+  },
+
+  async tradeUserCards(userId: number, params: { set?: string; search?: string } = {}): Promise<TradeCardsResponse> {
+    const response = await api.get<TradeCardsResponse>(`/trade/users/${userId}/cards`, { params });
+    return response.data;
+  },
+
+  async myTradeCards(params: { set?: string; search?: string } = {}): Promise<TradeCardsResponse> {
+    const response = await api.get<TradeCardsResponse>("/trade/my-cards", { params });
+    return response.data;
+  },
+
+  async tradeProposals(): Promise<TradeProposal[]> {
+    const response = await api.get<TradeProposal[]>("/trade/proposals");
+    return response.data;
+  },
+
+  async createTradeProposal(input: { receiverId: number; requestedCardIds: number[]; offeredCardIds: number[] }): Promise<TradeProposal> {
+    const response = await api.post<TradeProposal>("/trade/proposals", input);
+    return response.data;
+  },
+
+  async updateTradeStatus(id: number, status: Exclude<TradeStatus, "PENDING">): Promise<TradeProposal> {
+    const response = await api.patch<TradeProposal>(`/trade/proposals/${id}/status`, { status });
     return response.data;
   },
 
