@@ -21,5 +21,5 @@ export const collectionQuerySchema = z.object({
   set: z.string().trim().optional(),
   favorite: z.enum(["true", "false"]).optional(),
   forTrade: z.enum(["true", "false"]).optional(),
-  sort: z.enum(["name", "price", "quantity"]).default("name")
+  sort: z.enum(["name", "price", "quantity", "numberAsc", "numberDesc"]).default("numberAsc")
 });

@@ -8,7 +8,7 @@ import { Select } from "../components/ui/Select";
 import { Skeleton } from "../components/ui/Skeleton";
 import { useDebounce } from "../hooks/useDebounce";
 import { apiService } from "../services/api";
-import type { ExploreCard, PokemonSet } from "../types";
+import type { ExploreCard, ExploreSortOption, PokemonSet } from "../types";
 import type { ToastState } from "../components/ui/Toast";
 
 export function Explore({ onToast }: { onToast: (toast: ToastState) => void }) {
@@ -17,6 +17,7 @@ export function Explore({ onToast }: { onToast: (toast: ToastState) => void }) {
   const [search, setSearch] = useState("");
   const [series, setSeries] = useState("");
   const [setId, setSetId] = useState("");
+  const [sort, setSort] = useState<ExploreSortOption>("numberAsc");
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -27,7 +28,7 @@ export function Explore({ onToast }: { onToast: (toast: ToastState) => void }) {
     [series, sets]
   );
   const seriesOptions = useMemo(() => Array.from(new Set(sets.map((set) => set.series).filter(Boolean))).sort(), [sets]);
-  const hasFilters = Boolean(search || setId || series);
+  const hasFilters = Boolean(search || setId || series || sort !== "numberAsc");
 
   useEffect(() => {
     void apiService.sets().then(setSets).catch(() => onToast({ type: "error", message: "Nao foi possivel carregar colecoes." }));
@@ -36,14 +37,14 @@ export function Explore({ onToast }: { onToast: (toast: ToastState) => void }) {
   useEffect(() => {
     setLoading(true);
     void apiService
-      .cards({ page, pageSize, search: debouncedSearch || undefined, set: setId || undefined })
+      .cards({ page, pageSize, search: debouncedSearch || undefined, set: setId || undefined, sort })
       .then((result) => {
         setCards(result.cards);
         setTotal(result.totalCount);
       })
       .catch(() => onToast({ type: "error", message: "Falha ao buscar cartas Pokemon." }))
       .finally(() => setLoading(false));
-  }, [debouncedSearch, onToast, page, setId]);
+  }, [debouncedSearch, onToast, page, setId, sort]);
 
   const totalPages = useMemo(() => Math.max(1, Math.ceil(total / pageSize)), [total]);
 
@@ -51,6 +52,7 @@ export function Explore({ onToast }: { onToast: (toast: ToastState) => void }) {
     setSearch("");
     setSeries("");
     setSetId("");
+    setSort("numberAsc");
     setPage(1);
   }
 
@@ -77,7 +79,7 @@ export function Explore({ onToast }: { onToast: (toast: ToastState) => void }) {
         </div>
         </div>
         <div className="space-y-3 p-4">
-          <div className="grid gap-3 lg:grid-cols-[1fr_220px_280px_auto]">
+          <div className="grid gap-3 lg:grid-cols-[1fr_190px_260px_220px_auto]">
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-3 text-muted-foreground" size={16} />
               <Input
@@ -118,6 +120,17 @@ export function Explore({ onToast }: { onToast: (toast: ToastState) => void }) {
                   {set.name}
                 </option>
               ))}
+            </Select>
+            <Select
+              value={sort}
+              onChange={(event) => {
+                setSort(event.target.value as ExploreSortOption);
+                setPage(1);
+              }}
+            >
+              <option value="numberAsc">Numero: menor para maior</option>
+              <option value="numberDesc">Numero: maior para menor</option>
+              <option value="name">Nome A-Z</option>
             </Select>
             <Button variant="secondary" disabled={!hasFilters} onClick={clearFilters}>
               <FilterX size={16} />

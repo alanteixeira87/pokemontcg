@@ -182,6 +182,8 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
             <option value="true">Apenas troca</option>
           </Select>
           <Select value={filters.sort} onChange={(event) => setFilters({ sort: event.target.value as typeof filters.sort })}>
+            <option value="numberAsc">Numero menor-maior</option>
+            <option value="numberDesc">Numero maior-menor</option>
             <option value="name">Nome A-Z</option>
             <option value="price">Preco</option>
             <option value="quantity">Quantidade</option>

@@ -6,7 +6,7 @@ export const cardsController = {
   async list(req: Request, res: Response, next: NextFunction) {
     try {
       const query = cardsQuerySchema.parse(req.query);
-      const result = await pokemonService.listCards(query.page, query.pageSize, query.search, query.set);
+      const result = await pokemonService.listCards(query.page, query.pageSize, query.search, query.set, query.sort);
       res.json(result);
     } catch (error) {
       next(error);

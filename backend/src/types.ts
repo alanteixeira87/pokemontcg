@@ -54,6 +54,7 @@ export type CollectionItem = {
   name: string;
   image: string;
   set: string;
+  number?: string | null;
   quantity: number;
   price: number;
   favorite: boolean;

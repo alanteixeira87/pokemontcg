@@ -1,5 +1,5 @@
 import axios from "axios";
-import type { AuthResponse, CollectionItem, DashboardStats, ExploreCard, ImportResult, PaginatedCards, PokemonSet, SortOption } from "../types";
+import type { AuthResponse, CollectionItem, DashboardStats, ExploreCard, ExploreSortOption, ImportResult, PaginatedCards, PokemonSet, SortOption } from "../types";
 
 const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
 const apiBaseUrl = isLocalhost
@@ -57,7 +57,7 @@ export const apiService = {
     return response.data;
   },
 
-  async cards(params: { page: number; pageSize: number; search?: string; set?: string }): Promise<PaginatedCards> {
+  async cards(params: { page: number; pageSize: number; search?: string; set?: string; sort?: ExploreSortOption }): Promise<PaginatedCards> {
     const response = await api.get<PaginatedCards>("/cards", { params });
     return response.data;
   },

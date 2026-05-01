@@ -44,6 +44,7 @@ export type CollectionItem = {
   name: string;
   image: string;
   set: string;
+  number?: string | null;
   quantity: number;
   price: number;
   favorite: boolean;
@@ -60,7 +61,8 @@ export type DashboardStats = {
   forTrade: number;
 };
 
-export type SortOption = "name" | "price" | "quantity";
+export type SortOption = "name" | "price" | "quantity" | "numberAsc" | "numberDesc";
+export type ExploreSortOption = "numberAsc" | "numberDesc" | "name";
 
 export type AuthUser = {
   id: number;

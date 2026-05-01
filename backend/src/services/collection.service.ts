@@ -25,7 +25,7 @@ type ListFilters = {
   set?: string;
   favorite?: "true" | "false";
   forTrade?: "true" | "false";
-  sort: "name" | "price" | "quantity";
+  sort: "name" | "price" | "quantity" | "numberAsc" | "numberDesc";
 };
 
 function orderBy(sort: ListFilters["sort"]): Prisma.CollectionOrderByWithRelationInput {
@@ -34,9 +34,26 @@ function orderBy(sort: ListFilters["sort"]): Prisma.CollectionOrderByWithRelatio
   return { name: "asc" };
 }
 
+function cardNumberValue(item: CollectionItem): number {
+  const rawNumber = item.number ?? item.cardId.split("-").at(-1) ?? "";
+  const parsed = Number(rawNumber.match(/\d+/)?.[0] ?? Number.MAX_SAFE_INTEGER);
+  return Number.isFinite(parsed) ? parsed : Number.MAX_SAFE_INTEGER;
+}
+
+function sortCollectionItems(items: CollectionItem[], sort: ListFilters["sort"]): CollectionItem[] {
+  if (sort !== "numberAsc" && sort !== "numberDesc") return items;
+
+  const direction = sort === "numberDesc" ? -1 : 1;
+  return [...items].sort((a, b) => {
+    const diff = cardNumberValue(a) - cardNumberValue(b);
+    if (diff !== 0) return diff * direction;
+    return a.name.localeCompare(b.name);
+  });
+}
+
 export const collectionService = {
   async list(userId: number, filters: ListFilters): Promise<CollectionItem[]> {
-    return prisma.collection.findMany({
+    const items = await prisma.collection.findMany({
       where: {
         userId,
         set: filters.set || undefined,
@@ -45,6 +62,8 @@ export const collectionService = {
       },
       orderBy: orderBy(filters.sort)
     });
+
+    return sortCollectionItems(items, filters.sort);
   },
 
   async add(userId: number, input: AddCardInput): Promise<CollectionItem> {
@@ -76,6 +95,7 @@ export const collectionService = {
         name: input.name,
         image: input.image,
         set: input.set,
+        number: input.number,
         quantity: input.quantity,
         price: estimatedPrice
       }

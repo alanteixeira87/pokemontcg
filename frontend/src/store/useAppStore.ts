@@ -26,7 +26,7 @@ const tokenKey = "pokemon-tcg-token";
 const userKey = "pokemon-tcg-user";
 
 function loadFilters(): PersistedFilters {
-  const fallback: PersistedFilters = { set: "", favorite: false, forTrade: false, sort: "name" };
+  const fallback: PersistedFilters = { set: "", favorite: false, forTrade: false, sort: "numberAsc" };
   const raw = localStorage.getItem(storageKey);
   if (!raw) return fallback;
   try {

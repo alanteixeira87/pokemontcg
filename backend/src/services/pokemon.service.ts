@@ -63,6 +63,20 @@ function buildCardQuery(search?: string, set?: string): string | undefined {
   return terms.length ? terms.join(" ") : undefined;
 }
 
+function sortCards(cards: ReturnType<typeof normalizeCard>[], sort: "numberAsc" | "numberDesc" | "name") {
+  const numericPart = (number?: string) => {
+    const parsed = Number((number ?? "").match(/\d+/)?.[0] ?? Number.MAX_SAFE_INTEGER);
+    return Number.isFinite(parsed) ? parsed : Number.MAX_SAFE_INTEGER;
+  };
+
+  return [...cards].sort((a, b) => {
+    if (sort === "name") return a.name.localeCompare(b.name);
+    const direction = sort === "numberDesc" ? -1 : 1;
+    const numberDiff = numericPart(a.number) - numericPart(b.number);
+    return numberDiff !== 0 ? numberDiff * direction : a.name.localeCompare(b.name);
+  });
+}
+
 function escapeQuery(value: string): string {
   return value.replaceAll("\\", "\\\\").replaceAll('"', '\\"').trim();
 }
@@ -180,8 +194,8 @@ async function resolveSetCandidates(input: string, setTotal?: string): Promise<P
 }
 
 export const pokemonService = {
-  async listCards(page: number, pageSize: number, search?: string, set?: string): Promise<PaginatedCards> {
-    const cacheKey = `cards:${page}:${pageSize}:${search ?? ""}:${set ?? ""}`;
+  async listCards(page: number, pageSize: number, search?: string, set?: string, sort: "numberAsc" | "numberDesc" | "name" = "numberAsc"): Promise<PaginatedCards> {
+    const cacheKey = `cards:${page}:${pageSize}:${search ?? ""}:${set ?? ""}:${sort}`;
     const cached = getCached<PaginatedCards>(cacheKey);
     if (cached) return cached;
 
@@ -193,7 +207,7 @@ export const pokemonService = {
     );
 
     return setCached(cacheKey, {
-      cards: response.data.data.map(normalizeCard),
+      cards: sortCards(response.data.data.map(normalizeCard), sort),
       page,
       pageSize,
       totalCount: response.data.totalCount
