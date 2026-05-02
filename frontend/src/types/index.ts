@@ -84,7 +84,21 @@ export type TradeUser = {
   mainCollections: string[];
 };
 
-export type TradeCard = CollectionItem;
+export type VariantType = "NORMAL" | "FOIL" | "REVERSE_FOIL" | "RARE_ILLUSTRATION";
+
+export type CardVariant = {
+  id: number;
+  userCardId: number;
+  variantType: VariantType;
+  ownedQuantity: number;
+  tradeQuantity: number;
+  label?: string;
+};
+
+export type TradeCard = CollectionItem & {
+  variantSummary?: CardVariant[];
+  variants?: CardVariant[];
+};
 
 export type TradeCardsResponse = {
   user?: {
@@ -96,7 +110,7 @@ export type TradeCardsResponse = {
   cards: TradeCard[];
 };
 
-export type TradeStatus = "PENDING" | "ACCEPTED" | "DECLINED" | "CANCELED";
+export type TradeStatus = "PENDING" | "ACCEPTED" | "DECLINED" | "CANCELED" | "REJECTED" | "CANCELLED";
 
 export type TradeCardSnapshot = {
   collectionId: number;
@@ -105,7 +119,25 @@ export type TradeCardSnapshot = {
   image: string;
   set: string;
   number: string | null;
+  variantType?: VariantType;
   quantity: number;
+};
+
+export type TradeCardLine = TradeCardSnapshot & {
+  id: number;
+  tradeId: number;
+  side: "OFFERED" | "REQUESTED";
+  variantType: VariantType;
+};
+
+export type TradeMessage = {
+  id: number;
+  tradeId: number;
+  senderId: number;
+  receiverId: number;
+  message: string;
+  isRead: boolean;
+  createdAt: string;
 };
 
 export type TradeProposal = {
@@ -124,7 +156,15 @@ export type TradeProposal = {
   };
   offeredCards: TradeCardSnapshot[];
   requestedCards: TradeCardSnapshot[];
+  cards?: TradeCardLine[];
+  messages?: TradeMessage[];
   status: TradeStatus;
   createdAt: string;
   updatedAt: string;
+};
+
+export type TradeSelectionInput = {
+  collectionId: number;
+  variantType: VariantType;
+  quantity: number;
 };

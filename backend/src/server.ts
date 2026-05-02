@@ -1,10 +1,12 @@
 import { app } from "./app.js";
 import { prisma } from "./database/prisma.js";
 import { env } from "./utils/env.js";
+import { initSocket } from "./services/socket.service.js";
 
 const server = app.listen(env.port, () => {
   console.log(JSON.stringify({ level: "info", message: `API running on port ${env.port}` }));
 });
+initSocket(server);
 
 server.on("error", async (error: NodeJS.ErrnoException) => {
   if (error.code === "EADDRINUSE") {

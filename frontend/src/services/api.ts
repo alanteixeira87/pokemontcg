@@ -10,7 +10,9 @@ import type {
   PokemonSet,
   SortOption,
   TradeCardsResponse,
+  TradeMessage,
   TradeProposal,
+  TradeSelectionInput,
   TradeStatus,
   TradeUser
 } from "../types";
@@ -159,13 +161,28 @@ export const apiService = {
     return response.data;
   },
 
-  async createTradeProposal(input: { receiverId: number; requestedCardIds: number[]; offeredCardIds: number[] }): Promise<TradeProposal> {
+  async createTradeProposal(input: { receiverId: number; requestedCards: TradeSelectionInput[]; offeredCards: TradeSelectionInput[] }): Promise<TradeProposal> {
     const response = await api.post<TradeProposal>("/trade/proposals", input);
     return response.data;
   },
 
-  async updateTradeStatus(id: number, status: Exclude<TradeStatus, "PENDING">): Promise<TradeProposal> {
+  async updateTradeStatus(id: number, status: "ACCEPTED" | "REJECTED" | "CANCELLED"): Promise<TradeProposal> {
     const response = await api.patch<TradeProposal>(`/trade/proposals/${id}/status`, { status });
+    return response.data;
+  },
+
+  async updateCardVariants(collectionId: number, variants: Array<{ variantType: string; ownedQuantity: number; tradeQuantity: number }>): Promise<CollectionItem> {
+    const response = await api.put<CollectionItem>(`/trade/collection/${collectionId}/variants`, { variants });
+    return response.data;
+  },
+
+  async tradeMessages(id: number): Promise<TradeMessage[]> {
+    const response = await api.get<TradeMessage[]>(`/trade/proposals/${id}/messages`);
+    return response.data;
+  },
+
+  async sendTradeMessage(id: number, message: string): Promise<TradeMessage> {
+    const response = await api.post<TradeMessage>(`/trade/proposals/${id}/messages`, { message });
     return response.data;
   },
 

@@ -22,6 +22,8 @@ model Collection {
   forTrade  Boolean  @default(false) @map("for_trade")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
+  variants  CardVariant[]
+  tradeCards TradeCard[]
 
   @@unique([userId, cardId])
   @@index([name])
@@ -31,6 +33,22 @@ model Collection {
   @@index([favorite])
   @@index([forTrade])
   @@map("collection")
+}
+
+model CardVariant {
+  id            Int         @id @default(autoincrement())
+  userCardId    Int         @map("user_card_id")
+  userCard      Collection  @relation(fields: [userCardId], references: [id], onDelete: Cascade)
+  variantType   VariantType @map("variant_type")
+  ownedQuantity Int         @default(0) @map("owned_quantity")
+  tradeQuantity Int         @default(0) @map("trade_quantity")
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+
+  @@unique([userCardId, variantType])
+  @@index([userCardId])
+  @@index([variantType])
+  @@map("card_variants")
 }
 
 model User {
@@ -45,6 +63,8 @@ model User {
   collection   Collection[]
   sentTrades   Trade[]      @relation("RequesterTrades")
   receivedTrades Trade[]    @relation("ReceiverTrades")
+  sentMessages TradeMessage[] @relation("SentTradeMessages")
+  receivedMessages TradeMessage[] @relation("ReceivedTradeMessages")
 
   @@map("users")
 }
@@ -60,6 +80,8 @@ model Trade {
   status         TradeStatus @default(PENDING)
   createdAt      DateTime    @default(now()) @map("created_at")
   updatedAt      DateTime    @updatedAt @map("updated_at")
+  cards          TradeCard[]
+  messages       TradeMessage[]
 
   @@index([requesterId])
   @@index([receiverId])
@@ -68,9 +90,64 @@ model Trade {
   @@map("trades")
 }
 
+model TradeCard {
+  id           Int           @id @default(autoincrement())
+  tradeId      Int           @map("trade_id")
+  trade        Trade         @relation(fields: [tradeId], references: [id], onDelete: Cascade)
+  collectionId Int           @map("collection_id")
+  collection   Collection    @relation(fields: [collectionId], references: [id], onDelete: Restrict)
+  cardId       String        @map("card_id")
+  variantType  VariantType   @map("variant_type")
+  quantity     Int
+  side         TradeCardSide
+  name         String
+  image        String
+  set          String
+  number       String?
+  createdAt    DateTime      @default(now()) @map("created_at")
+
+  @@index([tradeId])
+  @@index([collectionId])
+  @@index([side])
+  @@map("trade_cards")
+}
+
+model TradeMessage {
+  id         Int      @id @default(autoincrement())
+  tradeId    Int      @map("trade_id")
+  trade      Trade    @relation(fields: [tradeId], references: [id], onDelete: Cascade)
+  senderId   Int      @map("sender_id")
+  sender     User     @relation("SentTradeMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  receiverId Int      @map("receiver_id")
+  receiver   User     @relation("ReceivedTradeMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+  message    String
+  isRead     Boolean  @default(false) @map("is_read")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([tradeId])
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([isRead])
+  @@map("trade_messages")
+}
+
 enum TradeStatus {
   PENDING
   ACCEPTED
   DECLINED
   CANCELED
+  REJECTED
+  CANCELLED
+}
+
+enum VariantType {
+  NORMAL
+  FOIL
+  REVERSE_FOIL
+  RARE_ILLUSTRATION
+}
+
+enum TradeCardSide {
+  OFFERED
+  REQUESTED
 }

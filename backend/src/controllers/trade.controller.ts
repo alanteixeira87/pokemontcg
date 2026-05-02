@@ -1,7 +1,14 @@
 import type { NextFunction, Request, Response } from "express";
 import { z } from "zod";
 import { getAuthenticatedUserId } from "../middlewares/authMiddleware.js";
-import { createTradeSchema, tradeCardsQuerySchema, updateTradeStatusSchema, userSearchSchema } from "../schemas/trade.schema.js";
+import {
+  createTradeSchema,
+  sendTradeMessageSchema,
+  tradeCardsQuerySchema,
+  updateTradeStatusSchema,
+  updateVariantsSchema,
+  userSearchSchema
+} from "../schemas/trade.schema.js";
 import { tradeService } from "../services/trade.service.js";
 
 const idSchema = z.coerce.number().int().positive();
@@ -57,6 +64,35 @@ export const tradeController = {
       const id = idSchema.parse(req.params.id);
       const body = updateTradeStatusSchema.parse(req.body);
       res.json(await tradeService.updateStatus(getAuthenticatedUserId(req), id, body.status));
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async updateVariants(req: Request, res: Response, next: NextFunction) {
+    try {
+      const id = idSchema.parse(req.params.collectionId);
+      const body = updateVariantsSchema.parse(req.body);
+      res.json(await tradeService.updateVariants(getAuthenticatedUserId(req), id, body.variants));
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async listMessages(req: Request, res: Response, next: NextFunction) {
+    try {
+      const id = idSchema.parse(req.params.id);
+      res.json(await tradeService.listMessages(getAuthenticatedUserId(req), id));
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async sendMessage(req: Request, res: Response, next: NextFunction) {
+    try {
+      const id = idSchema.parse(req.params.id);
+      const body = sendTradeMessageSchema.parse(req.body);
+      res.status(201).json(await tradeService.sendMessage(getAuthenticatedUserId(req), id, body.message));
     } catch (error) {
       next(error);
     }

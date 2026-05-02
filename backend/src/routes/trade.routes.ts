@@ -11,3 +11,6 @@ tradeRoutes.get("/trade/my-cards", tradeController.myCards);
 tradeRoutes.get("/trade/proposals", tradeController.list);
 tradeRoutes.post("/trade/proposals", tradeController.create);
 tradeRoutes.patch("/trade/proposals/:id/status", tradeController.updateStatus);
+tradeRoutes.get("/trade/proposals/:id/messages", tradeController.listMessages);
+tradeRoutes.post("/trade/proposals/:id/messages", tradeController.sendMessage);
+tradeRoutes.put("/trade/collection/:collectionId/variants", tradeController.updateVariants);

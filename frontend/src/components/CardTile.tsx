@@ -1,4 +1,5 @@
-import { Download, Minus, Plus, Repeat2, Star, Trash2 } from "lucide-react";
+import { Download, Minus, Plus, Repeat2, Star, Trash2, X } from "lucide-react";
+import { useState } from "react";
 import type { CollectionItem, ExploreCard } from "../types";
 import { currency } from "../lib/utils";
 import { Button } from "./ui/Button";
@@ -21,18 +22,19 @@ type CollectionProps = {
 export function CardTile(props: ExploreProps | CollectionProps) {
   const card = props.card;
   const isExplore = props.mode === "explore";
+  const [zoomOpen, setZoomOpen] = useState(false);
 
   return (
     <article className="group overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:border-red-300 hover:shadow-glow">
       <div className="relative bg-gradient-to-b from-slate-100 via-white to-slate-50 px-4 pt-4">
-        <div className="mx-auto aspect-[63/88] max-w-[190px]">
+        <button type="button" className="mx-auto block aspect-[63/88] max-w-[190px]" onClick={() => setZoomOpen(true)}>
         <img
           src={card.image}
           alt={card.name}
           loading="lazy"
           className="h-full w-full object-contain drop-shadow-[0_14px_18px_rgba(15,23,42,0.22)] transition duration-300 group-hover:scale-[1.04]"
         />
-        </div>
+        </button>
         <div className="absolute right-3 top-3 rounded-full border border-slate-200 bg-white/95 px-2 py-1 text-[11px] font-bold text-slate-600 shadow-sm">
           {isExplore ? props.card.number ? `#${props.card.number}` : "TCG" : `x${props.card.quantity}`}
         </div>
@@ -137,6 +139,34 @@ export function CardTile(props: ExploreProps | CollectionProps) {
           </div>
         )}
       </div>
+      {zoomOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 p-4">
+          <div className="max-h-[92vh] w-full max-w-4xl overflow-auto rounded-xl bg-white p-4 shadow-glow">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-black text-slate-950">{card.name}</h2>
+                <p className="text-sm font-semibold text-slate-500">{card.set}</p>
+              </div>
+              <Button variant="ghost" size="icon" onClick={() => setZoomOpen(false)} aria-label="Fechar visualizacao">
+                <X size={18} />
+              </Button>
+            </div>
+            <div className="grid gap-5 md:grid-cols-[minmax(240px,420px)_1fr]">
+              <div className="rounded-xl bg-slate-100 p-4">
+                <img src={card.image} alt={card.name} className="mx-auto max-h-[70vh] object-contain" />
+              </div>
+              <div className="space-y-3">
+                <p className="text-xs font-black uppercase text-primary">Carta ampliada</p>
+                <p className="text-3xl font-black text-slate-950">#{isExplore ? props.card.number ?? "N/D" : props.card.number ?? "N/D"}</p>
+                <span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-sm font-black text-slate-700">
+                  {isExplore ? "Explorar" : props.card.forTrade ? "Disponivel para troca" : "Minha colecao"}
+                </span>
+                <p className="text-sm text-slate-600">Use esta visualizacao para conferir imagem, colecao e numeracao da carta.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </article>
   );
 }
