@@ -266,10 +266,26 @@ export function TradeMarket({ onToast }: { onToast: (toast: ToastState) => void 
                     <Avatar name={user.name} avatarUrl={user.avatarUrl} />
                     <div className="min-w-0 flex-1">
                       <h4 className="truncate text-base font-black text-slate-950">{user.name}</h4>
-                      <p className="mt-1 text-xs font-semibold text-slate-500">{user.tradeCardsCount} cartas para troca</p>
+                      <p className="mt-1 text-xs font-semibold text-slate-500">
+                        {user.readyTradeCardsCount ?? user.tradeCardsCount} prontas
+                        {(user.pendingVariantCardsCount ?? 0) > 0 ? ` · ${user.pendingVariantCardsCount} aguardando tipo` : ""}
+                      </p>
                       <div className="mt-3 flex flex-wrap gap-1">
                         {user.mainCollections.length ? user.mainCollections.map((set) => <Badge key={set}>{set}</Badge>) : <span className="text-xs text-slate-500">Sem colecoes principais</span>}
                       </div>
+                      {user.suggestedCards?.length ? (
+                        <div className="mt-3 space-y-1">
+                          {user.suggestedCards.slice(0, 3).map((card) => (
+                            <div key={card.id} className="flex items-center gap-2 rounded-md bg-slate-50 px-2 py-1">
+                              <img src={card.image} alt={card.name} loading="lazy" className="h-8 w-6 object-contain" />
+                              <span className="min-w-0 flex-1 truncate text-xs font-bold text-slate-700">{card.name}</span>
+                              <span className={`rounded-full px-2 py-0.5 text-[10px] font-black ${card.readyForTrade ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-800"}`}>
+                                {card.readyForTrade ? "pronta" : "sem tipo"}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : null}
                     </div>
                   </div>
                 </button>

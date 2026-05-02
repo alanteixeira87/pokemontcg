@@ -29,6 +29,15 @@ type TradeCardsFilters = {
   search?: string;
 };
 
+type DiscoveryCard = {
+  id: number;
+  name: string;
+  image: string;
+  set: string;
+  number: string | null;
+  readyForTrade: boolean;
+};
+
 const variantLabels: Record<VariantType, string> = {
   NORMAL: "Normal",
   FOIL: "Foil",
@@ -60,6 +69,29 @@ function uniqueSets(items: Array<{ set: string }>): string[] {
   return Array.from(new Set(items.map((item) => item.set))).sort((a, b) => a.localeCompare(b));
 }
 
+function tradeConfiguredWhere(): Prisma.CollectionWhereInput {
+  return { variants: { some: { tradeQuantity: { gt: 0 } } } };
+}
+
+function tradeCandidateWhere(): Prisma.CollectionWhereInput {
+  return {
+    OR: [{ variants: { some: { tradeQuantity: { gt: 0 } } } }, { forTrade: true, quantity: { gt: 0 } }]
+  };
+}
+
+function suggestedCards(cards: DiscoveryCard[]) {
+  return sortTradeCards(cards.map((card) => ({ ...card, cardId: String(card.id) })))
+    .slice(0, 5)
+    .map((card) => ({
+      id: card.id,
+      name: card.name,
+      image: card.image,
+      set: card.set,
+      number: card.number,
+      readyForTrade: card.readyForTrade
+    }));
+}
+
 function buildUserWhere(currentUserId: number, filters: UserSearchFilters): Prisma.UserWhereInput {
   const search = filters.search?.trim();
   const interest = filters.interest?.trim();
@@ -69,8 +101,8 @@ function buildUserWhere(currentUserId: number, filters: UserSearchFilters): Pris
     terms.push({
       OR: [
         { name: { contains: search, mode: "insensitive" } },
-        { collection: { some: { name: { contains: search, mode: "insensitive" }, variants: { some: { tradeQuantity: { gt: 0 } } } } } },
-        { collection: { some: { set: { contains: search, mode: "insensitive" }, variants: { some: { tradeQuantity: { gt: 0 } } } } } }
+        { collection: { some: { name: { contains: search, mode: "insensitive" }, ...tradeCandidateWhere() } } },
+        { collection: { some: { set: { contains: search, mode: "insensitive" }, ...tradeCandidateWhere() } } }
       ]
     });
   }
@@ -79,15 +111,15 @@ function buildUserWhere(currentUserId: number, filters: UserSearchFilters): Pris
     terms.push({
       OR: [
         { interests: { contains: interest, mode: "insensitive" } },
-        { collection: { some: { name: { contains: interest, mode: "insensitive" }, variants: { some: { tradeQuantity: { gt: 0 } } } } } },
-        { collection: { some: { set: { contains: interest, mode: "insensitive" }, variants: { some: { tradeQuantity: { gt: 0 } } } } } }
+        { collection: { some: { name: { contains: interest, mode: "insensitive" }, ...tradeCandidateWhere() } } },
+        { collection: { some: { set: { contains: interest, mode: "insensitive" }, ...tradeCandidateWhere() } } }
       ]
     });
   }
 
   return {
     id: { not: currentUserId },
-    collection: { some: { variants: { some: { tradeQuantity: { gt: 0 } } } } },
+    collection: { some: tradeCandidateWhere() },
     AND: terms
   };
 }
@@ -116,17 +148,17 @@ function getSelections(input: { requestedCards?: TradeSelectionInput[]; offeredC
   };
 }
 
-async function getTradeCardsForUser(userId: number, filters: TradeCardsFilters = {}, includeAllUserCards = false) {
+async function getTradeCardsForUser(userId: number, filters: TradeCardsFilters = {}, mode: "public" | "mine" = "public") {
   const cards = await prisma.collection.findMany({
     where: {
       userId,
       set: filters.set || undefined,
       name: filters.search ? { contains: filters.search, mode: "insensitive" } : undefined,
-      variants: includeAllUserCards ? undefined : { some: { tradeQuantity: { gt: 0 } } }
+      OR: mode === "mine" ? undefined : [tradeConfiguredWhere(), { forTrade: true, quantity: { gt: 0 } }]
     },
     include: {
       variants: {
-        where: includeAllUserCards ? undefined : { tradeQuantity: { gt: 0 } },
+        where: mode === "mine" ? undefined : { tradeQuantity: { gt: 0 } },
         orderBy: { variantType: "asc" }
       }
     }
@@ -134,6 +166,7 @@ async function getTradeCardsForUser(userId: number, filters: TradeCardsFilters =
 
   return sortTradeCards(cards).map((card) => ({
     ...card,
+    readyForTrade: card.variants.some((variant) => variant.tradeQuantity > 0),
     variantSummary: card.variants.map((variant) => ({
       ...variant,
       label: variantLabels[variant.variantType]
@@ -232,7 +265,7 @@ export const tradeService = {
   async searchUsers(currentUserId: number, filters: UserSearchFilters) {
     const users = await prisma.user.findMany({
       where: buildUserWhere(currentUserId, filters),
-      take: 30,
+      take: 50,
       orderBy: { name: "asc" },
       select: {
         id: true,
@@ -240,24 +273,55 @@ export const tradeService = {
         avatarUrl: true,
         interests: true,
         collection: {
-          where: { variants: { some: { tradeQuantity: { gt: 0 } } } },
-          select: { set: true },
-          take: 80
+          where: tradeCandidateWhere(),
+          select: {
+            id: true,
+            name: true,
+            image: true,
+            set: true,
+            number: true,
+            variants: {
+              where: { tradeQuantity: { gt: 0 } },
+              select: { id: true }
+            }
+          },
+          take: 120
         },
         _count: {
-          select: { collection: { where: { variants: { some: { tradeQuantity: { gt: 0 } } } } } }
+          select: {
+            collection: {
+              where: tradeCandidateWhere()
+            }
+          }
         }
       }
     });
 
-    return users.map((user) => ({
-      id: user.id,
-      name: user.name,
-      avatarUrl: user.avatarUrl,
-      interests: user.interests,
-      tradeCardsCount: user._count.collection,
-      mainCollections: uniqueSets(user.collection).slice(0, 4)
-    }));
+    return users
+      .map((user) => {
+        const readyTradeCardsCount = user.collection.filter((card) => card.variants.length > 0).length;
+        return {
+          id: user.id,
+          name: user.name,
+          avatarUrl: user.avatarUrl,
+          interests: user.interests,
+          tradeCardsCount: user._count.collection,
+          readyTradeCardsCount,
+          pendingVariantCardsCount: user.collection.filter((card) => card.variants.length === 0).length,
+          mainCollections: uniqueSets(user.collection).slice(0, 4),
+          suggestedCards: suggestedCards(
+            user.collection.map((card) => ({
+              id: card.id,
+              name: card.name,
+              image: card.image,
+              set: card.set,
+              number: card.number,
+              readyForTrade: card.variants.length > 0
+            }))
+          )
+        };
+      })
+      .sort((a, b) => b.readyTradeCardsCount - a.readyTradeCardsCount || b.tradeCardsCount - a.tradeCardsCount || a.name.localeCompare(b.name));
   },
 
   async listUserTradeCards(currentUserId: number, userId: number, filters: TradeCardsFilters) {
@@ -274,12 +338,12 @@ export const tradeService = {
       throw new HttpError(404, "Usuario nao encontrado.");
     }
 
-    const cards = await getTradeCardsForUser(userId, filters);
+    const cards = await getTradeCardsForUser(userId, filters, "public");
     return { user, sets: uniqueSets(cards), cards };
   },
 
   async listMyTradeCards(userId: number, filters: TradeCardsFilters = {}) {
-    const cards = await getTradeCardsForUser(userId, filters, true);
+    const cards = await getTradeCardsForUser(userId, filters, "mine");
     return { sets: uniqueSets(cards), cards };
   },
 

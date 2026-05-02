@@ -81,7 +81,17 @@ export type TradeUser = {
   avatarUrl?: string | null;
   interests?: string | null;
   tradeCardsCount: number;
+  readyTradeCardsCount?: number;
+  pendingVariantCardsCount?: number;
   mainCollections: string[];
+  suggestedCards?: Array<{
+    id: number;
+    name: string;
+    image: string;
+    set: string;
+    number: string | null;
+    readyForTrade: boolean;
+  }>;
 };
 
 export type VariantType = "NORMAL" | "FOIL" | "REVERSE_FOIL" | "RARE_ILLUSTRATION";
@@ -98,6 +108,7 @@ export type CardVariant = {
 export type TradeCard = CollectionItem & {
   variantSummary?: CardVariant[];
   variants?: CardVariant[];
+  readyForTrade?: boolean;
 };
 
 export type TradeCardsResponse = {
