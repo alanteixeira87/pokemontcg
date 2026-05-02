@@ -116,17 +116,17 @@ function getSelections(input: { requestedCards?: TradeSelectionInput[]; offeredC
   };
 }
 
-async function getTradeCardsForUser(userId: number, filters: TradeCardsFilters = {}) {
+async function getTradeCardsForUser(userId: number, filters: TradeCardsFilters = {}, includeAllUserCards = false) {
   const cards = await prisma.collection.findMany({
     where: {
       userId,
       set: filters.set || undefined,
       name: filters.search ? { contains: filters.search, mode: "insensitive" } : undefined,
-      variants: { some: { tradeQuantity: { gt: 0 } } }
+      variants: includeAllUserCards ? undefined : { some: { tradeQuantity: { gt: 0 } } }
     },
     include: {
       variants: {
-        where: { tradeQuantity: { gt: 0 } },
+        where: includeAllUserCards ? undefined : { tradeQuantity: { gt: 0 } },
         orderBy: { variantType: "asc" }
       }
     }
@@ -279,7 +279,7 @@ export const tradeService = {
   },
 
   async listMyTradeCards(userId: number, filters: TradeCardsFilters = {}) {
-    const cards = await getTradeCardsForUser(userId, filters);
+    const cards = await getTradeCardsForUser(userId, filters, true);
     return { sets: uniqueSets(cards), cards };
   },
 

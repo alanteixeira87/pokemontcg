@@ -140,30 +140,32 @@ export function CardTile(props: ExploreProps | CollectionProps) {
         )}
       </div>
       {zoomOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 p-4">
-          <div className="max-h-[92vh] w-full max-w-4xl overflow-auto rounded-xl bg-white p-4 shadow-glow">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-black text-slate-950">{card.name}</h2>
-                <p className="text-sm font-semibold text-slate-500">{card.set}</p>
-              </div>
-              <Button variant="ghost" size="icon" onClick={() => setZoomOpen(false)} aria-label="Fechar visualizacao">
-                <X size={18} />
-              </Button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 p-2 sm:p-5">
+          <div className="grid h-[94vh] w-full max-w-7xl overflow-hidden rounded-2xl bg-white shadow-glow lg:grid-cols-[minmax(0,1fr)_320px]">
+            <div className="flex min-h-0 items-center justify-center bg-slate-950 p-3 sm:p-6">
+              <img src={card.image} alt={card.name} className="h-full max-h-[88vh] w-full object-contain drop-shadow-[0_24px_40px_rgba(0,0,0,0.45)]" />
             </div>
-            <div className="grid gap-5 md:grid-cols-[minmax(240px,420px)_1fr]">
-              <div className="rounded-xl bg-slate-100 p-4">
-                <img src={card.image} alt={card.name} className="mx-auto max-h-[70vh] object-contain" />
+            <aside className="flex flex-col gap-4 border-t border-slate-200 p-5 lg:border-l lg:border-t-0">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-black uppercase text-primary">Carta ampliada</p>
+                  <h2 className="mt-1 text-2xl font-black leading-tight text-slate-950">{card.name}</h2>
+                </div>
+                <Button variant="ghost" size="icon" onClick={() => setZoomOpen(false)} aria-label="Fechar visualizacao">
+                  <X size={20} />
+                </Button>
               </div>
-              <div className="space-y-3">
-                <p className="text-xs font-black uppercase text-primary">Carta ampliada</p>
-                <p className="text-3xl font-black text-slate-950">#{isExplore ? props.card.number ?? "N/D" : props.card.number ?? "N/D"}</p>
+              <div className="space-y-2">
+                <p className="text-sm font-bold text-slate-500">{card.set}</p>
+                <p className="text-4xl font-black text-slate-950">#{isExplore ? props.card.number ?? "N/D" : props.card.number ?? "N/D"}</p>
                 <span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-sm font-black text-slate-700">
                   {isExplore ? "Explorar" : props.card.forTrade ? "Disponivel para troca" : "Minha colecao"}
                 </span>
-                <p className="text-sm text-slate-600">Use esta visualizacao para conferir imagem, colecao e numeracao da carta.</p>
               </div>
-            </div>
+              <p className="rounded-lg bg-slate-100 p-3 text-sm font-medium text-slate-600">
+                Conferencia em tamanho grande para imagem, colecao e numeracao da carta.
+              </p>
+            </aside>
           </div>
         </div>
       )}
