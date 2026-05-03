@@ -18,17 +18,6 @@ const api = axios.create({
   headers: env.pokemonApiKey ? { "X-Api-Key": env.pokemonApiKey } : undefined
 });
 
-const publicApi = axios.create({
-  baseURL: env.pokemonApiUrl,
-  timeout: 10000
-});
-
-const officialPokemonApiUrl = "https://api.pokemontcg.io/v2";
-const officialApi = axios.create({
-  baseURL: officialPokemonApiUrl,
-  timeout: 10000
-});
-
 function getCached<T>(key: string): T | null {
   const hit = cache.get(key);
   if (!hit || Date.now() > hit.expiresAt) {
@@ -56,31 +45,6 @@ async function withRetry<T>(request: () => Promise<T>, attempts = 3): Promise<T>
     }
   }
   throw lastError;
-}
-
-async function pokemonGet<T>(url: string, config?: Parameters<typeof api.get<T>>[1]): Promise<{ data: T }> {
-  try {
-    return await api.get<T>(url, config);
-  } catch (error) {
-    if (axios.isAxiosError(error) && (error.response?.status === 401 || error.response?.status === 403)) {
-      console.warn(JSON.stringify({ level: "warn", message: "Pokemon API key rejected. Retrying without key.", status: error.response.status }));
-      try {
-        return await publicApi.get<T>(url, config);
-      } catch (publicError) {
-        if (env.pokemonApiUrl !== officialPokemonApiUrl) {
-          console.warn(JSON.stringify({ level: "warn", message: "Configured Pokemon API failed after key retry. Falling back to official API.", error: String(publicError) }));
-          return officialApi.get<T>(url, config);
-        }
-        throw publicError;
-      }
-    }
-
-    if (env.pokemonApiUrl !== officialPokemonApiUrl) {
-      console.warn(JSON.stringify({ level: "warn", message: "Configured Pokemon API failed. Falling back to official API.", error: String(error) }));
-      return officialApi.get<T>(url, config);
-    }
-    throw error;
-  }
 }
 
 function buildCardQuery(search?: string, set?: string): string | undefined {
@@ -259,7 +223,7 @@ export const pokemonService = {
     if (cached) return cached;
 
     try {
-      const response = await withRetry(() => pokemonGet<{ data: PokemonCard }>(`/cards/${escapeQuery(id)}`));
+      const response = await withRetry(() => api.get<{ data: PokemonCard }>(`/cards/${escapeQuery(id)}`));
       return setCached(cacheKey, await normalizeCardWithPrice(response.data.data));
     } catch {
       return setCached(cacheKey, null);
@@ -273,7 +237,7 @@ export const pokemonService = {
 
     const q = buildCardQuery(search, set);
     const response = await withRetry(() =>
-      pokemonGet<{ data: PokemonCard[]; totalCount: number }>("/cards", {
+      api.get<{ data: PokemonCard[]; totalCount: number }>("/cards", {
         params: { page, pageSize, q }
       })
     );
@@ -291,7 +255,7 @@ export const pokemonService = {
     if (cached) return cached;
 
     const response = await withRetry(() =>
-      pokemonGet<{ data: PokemonSet[] }>("/sets", {
+      api.get<{ data: PokemonSet[] }>("/sets", {
         params: { orderBy: "-releaseDate" }
       })
     );
@@ -315,7 +279,7 @@ export const pokemonService = {
     if (cached) return cached;
 
     const first = await withRetry(() =>
-      pokemonGet<{ data: PokemonCard[]; totalCount: number }>("/cards", {
+      api.get<{ data: PokemonCard[]; totalCount: number }>("/cards", {
         params: {
           page: 1,
           pageSize: 250,
@@ -328,7 +292,7 @@ export const pokemonService = {
 
     for (let page = 2; page <= totalPages; page += 1) {
       const response = await withRetry(() =>
-        pokemonGet<{ data: PokemonCard[] }>("/cards", {
+        api.get<{ data: PokemonCard[] }>("/cards", {
           params: {
             page,
             pageSize: 250,
@@ -355,7 +319,7 @@ export const pokemonService = {
       for (const candidateNumber of numberCandidates) {
         const normalizedNumber = escapeQuery(candidateNumber);
         const response = await withRetry(() =>
-          pokemonGet<{ data: PokemonCard[] }>("/cards", {
+          api.get<{ data: PokemonCard[] }>("/cards", {
             params: {
               page: 1,
               pageSize: 5,
@@ -377,7 +341,7 @@ export const pokemonService = {
     for (const candidateNumber of numberCandidates) {
       const normalizedNumber = escapeQuery(candidateNumber);
       const response = await withRetry(() =>
-        pokemonGet<{ data: PokemonCard[] }>("/cards", {
+        api.get<{ data: PokemonCard[] }>("/cards", {
           params: {
             page: 1,
             pageSize: 5,
