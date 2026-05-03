@@ -199,6 +199,27 @@ function normalizeTcgDexCard(card: TcgDexCardDetail | TcgDexCardBrief, set: TcgD
   };
 }
 
+function tcgDexSetIdFromCardId(id: string): string {
+  return id.includes("-") ? id.slice(0, id.lastIndexOf("-")) : id;
+}
+
+async function listTcgDexCards(): Promise<TcgDexCardBrief[]> {
+  const cached = getCached<TcgDexCardBrief[]>("tcgdex:cards");
+  if (cached) return cached;
+
+  const response = await withRetry(() => tcgDexApi.get<TcgDexCardBrief[]>("/cards"));
+  return setCached("tcgdex:cards", response.data);
+}
+
+async function enrichTcgDexCard(card: TcgDexCardBrief, set: TcgDexSet): Promise<ExploreCard> {
+  try {
+    const detail = await withRetry(() => tcgDexApi.get<TcgDexCardDetail>(`/cards/${card.id}`), 1);
+    return normalizeTcgDexCard(detail.data, set);
+  } catch {
+    return normalizeTcgDexCard(card, set);
+  }
+}
+
 async function normalizeCardWithPrice(card: PokemonCard): Promise<ReturnType<typeof normalizeCard>> {
   const normalized = normalizeCard(card);
   if (normalized.marketPrice !== null) return normalized;
@@ -302,6 +323,36 @@ async function listTcgDexSets(): Promise<PokemonSet[]> {
       total: set.cardCount?.total
     }))
   );
+}
+
+async function listCardsFromTcgDex(page: number, pageSize: number, search?: string, set?: string, sort: "numberAsc" | "numberDesc" | "name" = "numberAsc"): Promise<PaginatedCards> {
+  const [cards, sets] = await Promise.all([listTcgDexCards(), listTcgDexSets()]);
+  const setById = new Map(sets.map((item) => [item.id, item]));
+  const cleanSearch = normalizeLookupText(search ?? "");
+
+  const filtered = cards.filter((card) => {
+    const setId = tcgDexSetIdFromCardId(card.id);
+    const matchesSet = set ? equivalentSetIds(setId).includes(set.toLowerCase()) || equivalentSetIds(set).includes(setId) : true;
+    const matchesSearch = cleanSearch ? normalizeLookupText(card.name).includes(cleanSearch) : true;
+    return matchesSet && matchesSearch;
+  });
+
+  const mapped = filtered.map((card) => {
+    const setId = tcgDexSetIdFromCardId(card.id);
+    return normalizeTcgDexCard(card, setById.get(setId) ?? { id: setId, name: setId });
+  });
+  const sorted = sortCards(mapped, sort);
+  const pageCards = sorted.slice((page - 1) * pageSize, page * pageSize);
+  const enriched = await Promise.all(
+    pageCards.map((card) => enrichTcgDexCard({ id: card.id, localId: card.number, name: card.name, image: card.image?.replace(/\/high\.png$/, "") }, setById.get(card.setId ?? "") ?? { id: card.setId ?? "", name: card.set }))
+  );
+
+  return {
+    cards: enriched,
+    page,
+    pageSize,
+    totalCount: filtered.length
+  };
 }
 
 async function resolveTcgDexSetCandidates(input: string, setTotal?: string): Promise<PokemonSet[]> {
@@ -431,42 +482,14 @@ export const pokemonService = {
     const cached = getCached<PaginatedCards>(cacheKey);
     if (cached) return cached;
 
-    const q = buildCardQuery(search, set);
-    const response = await withRetry(() =>
-      api.get<{ data: PokemonCard[]; totalCount: number }>("/cards", {
-        params: { page, pageSize, q }
-      })
-    );
-
-    return setCached(cacheKey, {
-      cards: sortCards(await Promise.all(response.data.data.map(normalizeCardWithPrice)), sort),
-      page,
-      pageSize,
-      totalCount: response.data.totalCount
-    });
+    return setCached(cacheKey, await listCardsFromTcgDex(page, pageSize, search, set, sort));
   },
 
   async listSets(): Promise<PokemonSet[]> {
     const cached = getCached<PokemonSet[]>("sets");
     if (cached) return cached;
 
-    const response = await withRetry(() =>
-      api.get<{ data: PokemonSet[] }>("/sets", {
-        params: { orderBy: "-releaseDate" }
-      })
-    );
-
-    return setCached(
-      "sets",
-      response.data.data.map((set) => ({
-        id: set.id,
-        name: set.name,
-        series: set.series,
-        ptcgoCode: set.ptcgoCode,
-        printedTotal: set.printedTotal,
-        total: set.total
-      }))
-    );
+    return setCached("sets", await listTcgDexSets());
   },
 
   async findCardBySetAndNumber(setName: string, number: string, setTotal?: string) {
@@ -477,13 +500,13 @@ export const pokemonService = {
     if (cached) return cached;
 
     try {
-      const primaryCard = await findCardBySetAndNumberFromPokemon(setName, number, setTotal);
+      const primaryCard = await findCardBySetAndNumberFromTcgDex(setName, number, setTotal);
       if (primaryCard) return setCached(cacheKey, primaryCard);
     } catch (error) {
       console.warn(
         JSON.stringify({
           level: "warn",
-          message: "Primary Pokemon card validation failed, trying TCGdex",
+          message: "Primary TCGdex card validation failed, trying Pokemon API",
           setName,
           number,
           error: String(error)
@@ -492,12 +515,12 @@ export const pokemonService = {
     }
 
     try {
-      const secondaryCard = await findCardBySetAndNumberFromTcgDex(setName, number, setTotal);
+      const secondaryCard = await findCardBySetAndNumberFromPokemon(setName, number, setTotal);
       if (secondaryCard) {
         console.info(
           JSON.stringify({
             level: "info",
-            message: "Card validated using TCGdex fallback",
+            message: "Card validated using Pokemon API fallback",
             setName,
             number,
             cardId: secondaryCard.id
@@ -509,7 +532,7 @@ export const pokemonService = {
       console.warn(
         JSON.stringify({
           level: "warn",
-          message: "Secondary TCGdex card validation failed",
+          message: "Secondary Pokemon API card validation failed",
           setName,
           number,
           error: String(error)
