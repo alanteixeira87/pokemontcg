@@ -6,6 +6,8 @@ import { currency } from "../lib/utils";
 import { Button } from "./ui/Button";
 import { Input } from "./ui/Input";
 
+const fallbackCardImage = "https://images.pokemontcg.io/base1/4.png";
+
 type ExploreProps = {
   mode: "explore";
   card: ExploreCard;
@@ -33,6 +35,9 @@ export function CardTile(props: ExploreProps | CollectionProps) {
             src={card.image}
             alt={card.name}
             loading="lazy"
+            onError={(event) => {
+              event.currentTarget.src = fallbackCardImage;
+            }}
             className="h-full w-full rounded-lg object-contain transition duration-150 group-hover:scale-[1.015]"
           />
         </button>
@@ -181,6 +186,9 @@ function CardZoomModal({ card, number, label, onClose }: { card: ExploreCard | C
             loading="eager"
             decoding="async"
             draggable={false}
+            onError={(event) => {
+              event.currentTarget.src = fallbackCardImage;
+            }}
             className="h-full max-h-[88dvh] w-full select-none object-contain"
           />
         </div>

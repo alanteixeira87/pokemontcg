@@ -221,6 +221,15 @@ async function enrichTcgDexCard(card: TcgDexCardBrief, set: TcgDexSet): Promise<
   }
 }
 
+async function getTcgDexSetDetail(setId: string): Promise<TcgDexSetDetail> {
+  const cacheKey = `tcgdex:set:${setId}`;
+  const cached = getCached<TcgDexSetDetail>(cacheKey);
+  if (cached) return cached;
+
+  const response = await withRetry(() => tcgDexApi.get<TcgDexSetDetail>(`/sets/${setId}`));
+  return setCached(cacheKey, response.data);
+}
+
 async function normalizeCardWithPrice(card: PokemonCard): Promise<ReturnType<typeof normalizeCard>> {
   const normalized = normalizeCard(card);
   if (normalized.marketPrice !== null) return normalized;
@@ -255,7 +264,7 @@ const setAliases = new Map<string, string>([
   ["paf", "sv04.5"],
   ["pal", "sv02"],
   ["par", "sv04"],
-  ["pfl", "sv06.5"],
+  ["pfl", "me02"],
   ["por", "me03"],
   ["pre", "sv08.5"],
   ["scr", "sv07"],
@@ -265,6 +274,7 @@ const setAliases = new Map<string, string>([
   ["svp", "svp"],
   ["tef", "sv05"],
   ["twm", "sv06"],
+  ["umb", "svp"],
   ["wht", "sv10.5w"],
   ["escarlate e violeta", "sv1"],
   ["scarlet violet", "sv1"],
@@ -471,20 +481,13 @@ async function findCardBySetAndNumberFromTcgDex(setName: string, number: string,
   const setCandidates = await resolveTcgDexSetCandidates(setName, setTotal);
 
   for (const set of setCandidates) {
-    const response = await withRetry(() => tcgDexApi.get<TcgDexSetDetail>(`/sets/${set.id}`));
-    const cards = response.data.cards ?? [];
+    const setDetail = await getTcgDexSetDetail(set.id);
+    const cards = setDetail.cards ?? [];
     const card = cards.find((item) =>
       normalizeCardNumbers(item.localId ?? "").some((candidate) => numberCandidates.includes(normalizeLookupText(candidate)))
     );
 
-    if (card) {
-      try {
-        const detail = await withRetry(() => tcgDexApi.get<TcgDexCardDetail>(`/cards/${card.id}`));
-        return normalizeTcgDexCard(detail.data, set);
-      } catch {
-        return normalizeTcgDexCard(card, set);
-      }
-    }
+    if (card) return normalizeTcgDexCard(card, setDetail);
   }
 
   return null;
@@ -517,6 +520,46 @@ export const pokemonService = {
     if (cached) return cached;
 
     return setCached("sets", await listTcgDexSets());
+  },
+
+  async findCardsBySetAndNumbers(setName: string, numbers: string[]): Promise<Map<string, ExploreCard>> {
+    const result = new Map<string, ExploreCard>();
+    const uniqueNumbers = Array.from(new Set(numbers.map((number) => normalizeCardNumbers(number)[0]).filter(Boolean)));
+    const requested = new Map(uniqueNumbers.map((number) => [number, normalizeCardNumbers(number).map(normalizeLookupText)]));
+
+    try {
+      const setCandidates = await resolveTcgDexSetCandidates(setName);
+
+      for (const set of setCandidates) {
+        const setDetail = await getTcgDexSetDetail(set.id);
+        const cards = setDetail.cards ?? [];
+
+        for (const card of cards) {
+          const cardNumbers = normalizeCardNumbers(card.localId ?? "").map(normalizeLookupText);
+          for (const [requestedNumber, requestedCandidates] of requested.entries()) {
+            if (result.has(requestedNumber)) continue;
+            if (cardNumbers.some((candidate) => requestedCandidates.includes(candidate))) {
+              const normalized = normalizeTcgDexCard(card, setDetail);
+              result.set(requestedNumber, normalized);
+              const cacheKey = `card-by-set-number:${escapeQuery(setName)}::${normalizeCardNumbers(requestedNumber).join("|")}`;
+              setCached(cacheKey, normalized);
+            }
+          }
+        }
+
+        if (result.size === uniqueNumbers.length) return result;
+      }
+    } catch (error) {
+      console.warn(JSON.stringify({ level: "warn", message: "Batch TCGdex validation failed", setName, error: String(error) }));
+    }
+
+    for (const number of uniqueNumbers) {
+      if (result.has(number)) continue;
+      const fallback = await this.findCardBySetAndNumber(setName, number);
+      if (fallback) result.set(number, fallback);
+    }
+
+    return result;
   },
 
   async findCardBySetAndNumber(setName: string, number: string, setTotal?: string) {

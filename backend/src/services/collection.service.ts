@@ -15,6 +15,10 @@ type AddCardInput = {
   number?: string;
 };
 
+type PreparedCardInput = AddCardInput & {
+  estimatedPrice: number;
+};
+
 type UpdateCardInput = {
   quantity?: number;
   price?: number;
@@ -52,6 +56,20 @@ function sortCollectionItems(items: CollectionItem[], sort: ListFilters["sort"])
   });
 }
 
+async function prepareCardInputs(inputs: AddCardInput[]): Promise<PreparedCardInput[]> {
+  return Promise.all(
+    inputs.map(async (input) => ({
+      ...input,
+      estimatedPrice: await priceService.estimate({
+        name: input.name,
+        set: input.set,
+        number: input.number,
+        fallback: input.price
+      })
+    }))
+  );
+}
+
 export const collectionService = {
   async list(userId: number, filters: ListFilters): Promise<CollectionItem[]> {
     const items = await prisma.collection.findMany({
@@ -68,12 +86,8 @@ export const collectionService = {
   },
 
   async add(userId: number, input: AddCardInput): Promise<CollectionItem> {
-    const estimatedPrice = await priceService.estimate({
-      name: input.name,
-      set: input.set,
-      number: input.number,
-      fallback: input.price
-    });
+    const [prepared] = await prepareCardInputs([input]);
+    const estimatedPrice = prepared.estimatedPrice;
 
     const existing = await prisma.collection.findUnique({
       where: { userId_cardId: { userId, cardId: input.cardId } }
@@ -84,7 +98,11 @@ export const collectionService = {
         where: { id: existing.id },
         data: {
           quantity: existing.quantity + input.quantity,
-          price: estimatedPrice
+          price: estimatedPrice,
+          name: input.name,
+          image: input.image,
+          set: input.set,
+          number: input.number
         }
       });
     }
@@ -101,6 +119,44 @@ export const collectionService = {
         price: estimatedPrice
       }
     });
+  },
+
+  async addMany(userId: number, inputs: AddCardInput[]): Promise<number> {
+    if (!inputs.length) return 0;
+
+    const preparedInputs = await prepareCardInputs(inputs);
+    const chunkSize = 100;
+
+    for (let index = 0; index < preparedInputs.length; index += chunkSize) {
+      const chunk = preparedInputs.slice(index, index + chunkSize);
+      await prisma.$transaction(
+        chunk.map((input) =>
+          prisma.collection.upsert({
+            where: { userId_cardId: { userId, cardId: input.cardId } },
+            update: {
+              quantity: { increment: input.quantity },
+              price: input.estimatedPrice,
+              name: input.name,
+              image: input.image,
+              set: input.set,
+              number: input.number
+            },
+            create: {
+              userId,
+              cardId: input.cardId,
+              name: input.name,
+              image: input.image,
+              set: input.set,
+              number: input.number,
+              quantity: input.quantity,
+              price: input.estimatedPrice
+            }
+          })
+        )
+      );
+    }
+
+    return inputs.reduce((sum, input) => sum + input.quantity, 0);
   },
 
   async update(userId: number, id: number, input: UpdateCardInput): Promise<CollectionItem> {

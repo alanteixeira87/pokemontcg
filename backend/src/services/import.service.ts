@@ -18,6 +18,14 @@ type ImportResult = {
   notFound: ImportRow[];
 };
 
+type PreparedImportRow = {
+  row: ImportRow;
+  cardNumber: string;
+  quantity: number;
+};
+
+type CollectionImportInput = Parameters<typeof collectionService.addMany>[1][number];
+
 function normalizeHeader(value: string): string {
   return value
     .normalize("NFD")
@@ -100,6 +108,17 @@ function isEmptyRow(row: ImportRow): boolean {
   return !row.series && !row.number && !row.sequence && !row.status && !row.quantity;
 }
 
+function groupRowsBySeries(rows: PreparedImportRow[]): Map<string, PreparedImportRow[]> {
+  const grouped = new Map<string, PreparedImportRow[]>();
+  rows.forEach((row) => {
+    const key = row.row.series.trim().toUpperCase();
+    const current = grouped.get(key) ?? [];
+    current.push(row);
+    grouped.set(key, current);
+  });
+  return grouped;
+}
+
 export const importService = {
   async importCollection(userId: number, buffer: Buffer): Promise<ImportResult> {
     const workbook = new ExcelJS.Workbook();
@@ -112,6 +131,8 @@ export const importService = {
 
     const { headerMap, rowNumber: headerRowNumber } = findHeaderRow(sheet);
     const result: ImportResult = { imported: 0, skipped: 0, notFound: [] };
+    const preparedRows: PreparedImportRow[] = [];
+    const collectionInputs: CollectionImportInput[] = [];
 
     for (let rowNumber = headerRowNumber + 1; rowNumber <= sheet.rowCount; rowNumber += 1) {
       const row = readRow(sheet, rowNumber, headerMap);
@@ -132,28 +153,43 @@ export const importService = {
         continue;
       }
 
-      const card = await pokemonService.findCardBySetAndNumber(row.series, cardNumber);
-
-      if (!card) {
-        result.notFound.push({
-          ...row,
-          number: cardNumber,
-          reason: `Nao encontrei a carta numero "${cardNumber}" dentro da colecao oficial "${row.series}".`
-        });
-        continue;
-      }
-
-      await collectionService.add(userId, {
-        cardId: card.id,
-        name: card.name,
-        image: card.image,
-        set: card.set,
-        quantity,
-        price: card.marketPrice ?? 0,
-        number: card.number
-      });
-      result.imported += quantity;
+      preparedRows.push({ row, cardNumber, quantity });
     }
+
+    const groupedRows = groupRowsBySeries(preparedRows);
+
+    for (const [series, rows] of groupedRows.entries()) {
+      const cards = await pokemonService.findCardsBySetAndNumbers(
+        series,
+        rows.map((row) => row.cardNumber)
+      );
+
+      for (const { row, cardNumber, quantity } of rows) {
+        const card = cards.get(cardNumber);
+
+        if (!card) {
+          result.notFound.push({
+            ...row,
+            number: cardNumber,
+            reason: `Nao encontrei a carta numero "${cardNumber}" dentro da colecao oficial "${row.series}".`
+          });
+          continue;
+        }
+
+        collectionInputs.push({
+          cardId: card.id,
+          name: card.name,
+          image: card.image,
+          set: card.set,
+          quantity,
+          price: card.marketPrice ?? 0,
+          number: card.number
+        });
+        result.imported += quantity;
+      }
+    }
+
+    await collectionService.addMany(userId, collectionInputs);
 
     return result;
   }
