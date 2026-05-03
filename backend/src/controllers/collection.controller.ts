@@ -53,6 +53,14 @@ export const collectionController = {
     }
   },
 
+  async refreshPrices(req: Request, res: Response, next: NextFunction) {
+    try {
+      res.json(await collectionService.refreshPrices(getAuthenticatedUserId(req)));
+    } catch (error) {
+      next(error);
+    }
+  },
+
   async trades(req: Request, res: Response, next: NextFunction) {
     try {
       res.json(await collectionService.trades(getAuthenticatedUserId(req)));

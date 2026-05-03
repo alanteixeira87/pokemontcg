@@ -194,6 +194,19 @@ async function resolveSetCandidates(input: string, setTotal?: string): Promise<P
 }
 
 export const pokemonService = {
+  async findCardById(id: string): Promise<ReturnType<typeof normalizeCard> | null> {
+    const cacheKey = `card:${id}`;
+    const cached = getCached<ReturnType<typeof normalizeCard> | null>(cacheKey);
+    if (cached) return cached;
+
+    try {
+      const response = await withRetry(() => api.get<{ data: PokemonCard }>(`/cards/${escapeQuery(id)}`));
+      return setCached(cacheKey, normalizeCard(response.data.data));
+    } catch {
+      return setCached(cacheKey, null);
+    }
+  },
+
   async listCards(page: number, pageSize: number, search?: string, set?: string, sort: "numberAsc" | "numberDesc" | "name" = "numberAsc"): Promise<PaginatedCards> {
     const cacheKey = `cards:${page}:${pageSize}:${search ?? ""}:${set ?? ""}:${sort}`;
     const cached = getCached<PaginatedCards>(cacheKey);

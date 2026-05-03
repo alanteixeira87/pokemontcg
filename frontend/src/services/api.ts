@@ -131,6 +131,11 @@ export const apiService = {
     return response.data;
   },
 
+  async refreshCollectionPrices(): Promise<{ updated: number; skipped: number }> {
+    const response = await api.post<{ updated: number; skipped: number }>("/collection/reprice");
+    return response.data;
+  },
+
   async trades(): Promise<CollectionItem[]> {
     const response = await api.get<CollectionItem[]>("/trades");
     return response.data;

@@ -10,14 +10,28 @@ export type PokemonCard = {
     id?: string;
     name?: string;
   };
+  rarity?: string;
   tcgplayer?: {
     prices?: Record<
       string,
       {
+        low?: number;
         market?: number;
         mid?: number;
+        high?: number;
+        directLow?: number;
       }
     >;
+  };
+  cardmarket?: {
+    prices?: {
+      averageSellPrice?: number;
+      lowPrice?: number;
+      trendPrice?: number;
+      avg1?: number;
+      avg7?: number;
+      avg30?: number;
+    };
   };
 };
 

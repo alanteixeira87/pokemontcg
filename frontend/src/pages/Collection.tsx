@@ -1,4 +1,4 @@
-import { AlertTriangle, BarChart3, Download, Layers3, Trash2, Trophy, Upload } from "lucide-react";
+import { AlertTriangle, BarChart3, Download, Layers3, RefreshCw, Trash2, Trophy, Upload } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CardTile } from "../components/CardTile";
 import { EmptyState } from "../components/EmptyState";
@@ -17,6 +17,7 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
   const [pokemonSets, setPokemonSets] = useState<PokemonSet[]>([]);
   const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);
+  const [repricing, setRepricing] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
   const { filters, setFilters } = useAppStore();
 
@@ -138,6 +139,20 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
     }
   }
 
+  async function refreshPrices() {
+    setRepricing(true);
+    try {
+      const result = await apiService.refreshCollectionPrices();
+      await load();
+      await loadMeta();
+      onToast({ type: "success", message: `${result.updated} precos atualizados. ${result.skipped} mantidos.` });
+    } catch {
+      onToast({ type: "error", message: "Nao foi possivel atualizar os precos agora." });
+    } finally {
+      setRepricing(false);
+    }
+  }
+
   return (
     <div className="space-y-5">
       {!tradeOnly && (
@@ -255,6 +270,12 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
               }}
             />
           </label>
+        )}
+        {!tradeOnly && (
+          <Button variant="secondary" disabled={repricing || allItems.length === 0} onClick={refreshPrices}>
+            <RefreshCw size={16} className={repricing ? "animate-spin" : ""} />
+            {repricing ? "Atualizando..." : "Atualizar precos"}
+          </Button>
         )}
         {!tradeOnly && (
           <Button variant={confirmClear ? "danger" : "secondary"} disabled={allItems.length === 0} onClick={clearCollection}>

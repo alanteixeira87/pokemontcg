@@ -315,7 +315,10 @@ function brazilReference(input: PriceLookupInput): CardPrice | null {
 
   const variant = normalizeVariant(input.variantType);
   const cardClass = normalizeClass(input.cardClass, input.rarity, variant);
-  const reference = manual * variantMultipliers[variant] * classMultipliers[cardClass] * 0.72;
+  const reference =
+    input.manualValue && input.manualValue > 0
+      ? manual
+      : manual * (0.92 + classMultipliers[cardClass] * 0.08) * (0.95 + variantMultipliers[variant] * 0.05);
   return buildPrice(input, {
     minPrice: reference * 0.92,
     avgPrice: reference,
@@ -344,14 +347,25 @@ function internalHistory(input: PriceLookupInput): CardPrice | null {
 async function internationalPrice(input: PriceLookupInput): Promise<CardPrice | null> {
   if (!env.pokeWalletApiKey) return null;
 
-  const response = await api.get<PokeWalletSearchResponse>("/search", {
-    params: {
-      q: [input.cardName, input.collectionName, input.setCode, input.cardNumber].filter(Boolean).join(" "),
-      page: 1,
-      limit: 10
+  const searchText = [input.cardName, input.collectionName, input.setCode, input.cardNumber].filter(Boolean).join(" ");
+  const attempts = [
+    { url: "/search", params: { q: searchText, page: 1, limit: 10 } },
+    { url: "/cards/search", params: { q: searchText, page: 1, limit: 10 } },
+    { url: "/prices/search", params: { q: searchText, page: 1, limit: 10 } }
+  ];
+  let results: PokeWalletSearchResult[] = [];
+
+  for (const attempt of attempts) {
+    try {
+      const response = await api.get<PokeWalletSearchResponse>(attempt.url, { params: attempt.params });
+      results = response.data.results ?? [];
+      if (results.length) break;
+    } catch (error) {
+      const isLast = attempt === attempts.at(-1);
+      if (isLast) throw error;
     }
-  });
-  const results = response.data.results ?? [];
+  }
+
   const best = results.sort((a, b) => resultScore(b, input) - resultScore(a, input))[0];
   const usd = firstPrice(best?.tcgplayer?.prices) ?? firstPrice(best?.cardmarket?.prices);
   if (!usd || usd <= 0) return null;
@@ -463,8 +477,7 @@ export const priceService = {
       variantType: input.variantType ?? "NORMAL",
       rarity: input.rarity,
       cardClass: input.cardClass,
-      fallback: input.fallback,
-      manualValue: input.fallback
+      fallback: input.fallback
     });
     return price.estimatedPrice;
   }

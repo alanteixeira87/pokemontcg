@@ -3,6 +3,7 @@ import { prisma } from "../database/prisma.js";
 import type { CollectionItem } from "../types.js";
 import { HttpError } from "../utils/httpError.js";
 import { priceService } from "./price.service.js";
+import { pokemonService } from "./pokemon.service.js";
 
 type AddCardInput = {
   cardId: string;
@@ -129,6 +130,35 @@ export const collectionService = {
     });
 
     return { deleted: result.count };
+  },
+
+  async refreshPrices(userId: number): Promise<{ updated: number; skipped: number }> {
+    const items = await prisma.collection.findMany({ where: { userId } });
+    let updated = 0;
+    let skipped = 0;
+
+    for (const item of items) {
+      const apiCard = await pokemonService.findCardById(item.cardId);
+      const marketPrice = apiCard?.marketPrice ?? null;
+      const estimatedPrice = await priceService.estimate({
+        name: item.name,
+        set: item.set,
+        number: item.number ?? undefined,
+        fallback: marketPrice ?? item.price
+      });
+
+      if (estimatedPrice > 0 && Math.abs(estimatedPrice - item.price) >= 0.01) {
+        await prisma.collection.update({
+          where: { id: item.id },
+          data: { price: estimatedPrice }
+        });
+        updated += 1;
+      } else {
+        skipped += 1;
+      }
+    }
+
+    return { updated, skipped };
   },
 
   async trades(userId: number): Promise<CollectionItem[]> {
