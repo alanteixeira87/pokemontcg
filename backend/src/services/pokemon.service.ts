@@ -177,10 +177,11 @@ const setAliases = new Map<string, string>([
   ["destined rivals", "sv10"]
 ]);
 
-async function resolveSetCandidates(input: string): Promise<PokemonSet[]> {
+async function resolveSetCandidates(input: string, setTotal?: string): Promise<PokemonSet[]> {
   const sets = await pokemonService.listSets();
   const normalizedInput = normalizeLookupText(input);
   const compactInput = compactCode(input);
+  const totalNumber = Number(setTotal);
   const aliasId = setAliases.get(normalizedInput);
 
   const exact = sets.filter(
@@ -192,7 +193,18 @@ async function resolveSetCandidates(input: string): Promise<PokemonSet[]> {
       (aliasId ? set.id === aliasId : false)
   );
   if (exact.length) {
-    return exact;
+    const exactWithTotal = Number.isFinite(totalNumber)
+      ? exact.filter((set) => set.printedTotal === totalNumber || set.total === totalNumber)
+      : exact;
+    return exactWithTotal.length ? exactWithTotal : exact;
+  }
+
+  if (Number.isFinite(totalNumber)) {
+    const byTotal = sets.filter((set) => set.printedTotal === totalNumber || set.total === totalNumber);
+    if (byTotal.length) {
+      const byCode = byTotal.filter((set) => setCodeCandidates(set).includes(compactInput));
+      return byCode.length ? byCode : byTotal.slice(0, 5);
+    }
   }
 
   return sets
@@ -306,14 +318,14 @@ export const pokemonService = {
     return setCached(cacheKey, sortCards(await Promise.all(cards.map(normalizeCardWithPrice)), "numberAsc"));
   },
 
-  async findCardBySetAndNumber(setName: string, number: string) {
+  async findCardBySetAndNumber(setName: string, number: string, setTotal?: string) {
     const normalizedSet = escapeQuery(setName);
     const numberCandidates = normalizeCardNumbers(number);
-    const cacheKey = `card-by-set-number:${normalizedSet}:${numberCandidates.join("|")}`;
+    const cacheKey = `card-by-set-number:${normalizedSet}:${setTotal ?? ""}:${numberCandidates.join("|")}`;
     const cached = getCached<ReturnType<typeof normalizeCard> | null>(cacheKey);
     if (cached) return cached;
 
-    const setCandidates = await resolveSetCandidates(setName);
+    const setCandidates = await resolveSetCandidates(setName, setTotal);
 
     for (const set of setCandidates) {
       for (const candidateNumber of numberCandidates) {
