@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import type { AuthUser, SortOption } from "../types";
 
-type View = "dashboard" | "explore" | "collection" | "trades";
+export type View = "dashboard" | "explore" | "collection" | "trades";
 
 type PersistedFilters = {
   set: string;
@@ -27,6 +27,29 @@ const storageKey = "pokemon-tcg-local-filters";
 const tokenKey = "pokemon-tcg-token";
 const userKey = "pokemon-tcg-user";
 const themeKey = "pokemon-tcg-theme";
+const viewKey = "pokemon-tcg-view";
+const validViews: View[] = ["dashboard", "explore", "collection", "trades"];
+
+function isView(value: string | null): value is View {
+  return Boolean(value && validViews.includes(value as View));
+}
+
+function readHashView(): View | null {
+  const value = window.location.hash.replace(/^#\/?/, "");
+  return isView(value) ? value : null;
+}
+
+function loadView(): View {
+  return readHashView() ?? (isView(localStorage.getItem(viewKey)) ? localStorage.getItem(viewKey) as View : "explore");
+}
+
+function persistView(view: View) {
+  localStorage.setItem(viewKey, view);
+  const nextHash = `#/${view}`;
+  if (window.location.hash !== nextHash) {
+    window.history.pushState(null, "", nextHash);
+  }
+}
 
 function loadFilters(): PersistedFilters {
   const fallback: PersistedFilters = { set: "", favorite: false, forTrade: false, sort: "numberAsc" };
@@ -50,12 +73,15 @@ function loadUser(): AuthUser | null {
 }
 
 export const useAppStore = create<AppState>((set) => ({
-  view: "explore",
+  view: loadView(),
   filters: loadFilters(),
   token: localStorage.getItem(tokenKey),
   user: loadUser(),
   theme: localStorage.getItem(themeKey) === "dark" ? "dark" : "light",
-  setView: (view) => set({ view }),
+  setView: (view) => {
+    persistView(view);
+    set({ view });
+  },
   setFilters: (filters) =>
     set((state) => {
       const next = { ...state.filters, ...filters };
@@ -76,6 +102,10 @@ export const useAppStore = create<AppState>((set) => ({
   logout: () => {
     localStorage.removeItem(tokenKey);
     localStorage.removeItem(userKey);
+    localStorage.removeItem(viewKey);
+    if (window.location.hash) {
+      window.history.pushState(null, "", window.location.pathname + window.location.search);
+    }
     set({ token: null, user: null, view: "explore" });
   }
 }));
