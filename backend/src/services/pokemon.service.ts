@@ -386,10 +386,21 @@ async function listTcgDexSets(): Promise<PokemonSet[]> {
     response.data.map((set) => ({
       id: set.id,
       name: set.name,
+      ptcgoCode: preferredSetCode(set.id),
       printedTotal: set.cardCount?.official,
       total: set.cardCount?.total
     }))
   );
+}
+
+function preferredSetCode(setId: string): string {
+  const setIds = equivalentSetIds(setId);
+  const alias = Array.from(setAliases.entries()).find(([key, value]) => {
+    const isCompactAlias = key.length <= 6 && /^[a-z0-9.]+$/.test(key);
+    return isCompactAlias && equivalentSetIds(value).some((id) => setIds.includes(id));
+  });
+
+  return (alias?.[0] ?? setId).toUpperCase();
 }
 
 async function listCardsFromTcgDex(page: number, pageSize: number, search?: string, set?: string, sort: "numberAsc" | "numberDesc" | "name" = "numberAsc"): Promise<PaginatedCards> {

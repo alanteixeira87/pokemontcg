@@ -28,6 +28,28 @@ export function Explore({ onToast }: { onToast: (toast: ToastState) => void }) {
     [series, sets]
   );
   const seriesOptions = useMemo(() => Array.from(new Set(sets.map((set) => set.series).filter(Boolean))).sort(), [sets]);
+  const selectedSet = useMemo(() => sets.find((set) => set.id === setId), [setId, sets]);
+  const collectionSuggestions = useMemo(() => {
+    const query = normalizeText(search);
+    if (query.length < 1) return [];
+
+    const compactQuery = query.replace(/\s+/g, "");
+    return filteredSets
+      .filter((set) => {
+        const code = normalizeText(setDisplayCode(set));
+        const id = normalizeText(set.id);
+        const name = normalizeText(set.name);
+        const compactName = name.replace(/\s+/g, "");
+
+        return (
+          code.startsWith(compactQuery) ||
+          id.startsWith(compactQuery) ||
+          name.includes(query) ||
+          compactName.includes(compactQuery)
+        );
+      })
+      .slice(0, 8);
+  }, [filteredSets, search]);
   const hasFilters = Boolean(search || setId || series || sort !== "numberAsc");
 
   useEffect(() => {
@@ -53,6 +75,12 @@ export function Explore({ onToast }: { onToast: (toast: ToastState) => void }) {
     setSeries("");
     setSetId("");
     setSort("numberAsc");
+    setPage(1);
+  }
+
+  function chooseCollection(set: PokemonSet) {
+    setSetId(set.id);
+    setSearch("");
     setPage(1);
   }
 
@@ -117,7 +145,7 @@ export function Explore({ onToast }: { onToast: (toast: ToastState) => void }) {
               <option value="">Todas as colecoes</option>
               {filteredSets.map((set) => (
                 <option key={set.id} value={set.id}>
-                  {set.name}
+                  {setDisplayCode(set)} - {set.name}
                 </option>
               ))}
             </Select>
@@ -137,6 +165,44 @@ export function Explore({ onToast }: { onToast: (toast: ToastState) => void }) {
               Limpar
             </Button>
           </div>
+          {collectionSuggestions.length > 0 && !setId && (
+            <div className="rounded-xl border border-indigo-100 bg-indigo-50/70 p-3 dark:border-indigo-900/60 dark:bg-indigo-950/20">
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-indigo-700 dark:text-indigo-200">Colecoes encontradas</p>
+                <span className="text-xs font-medium text-indigo-600 dark:text-indigo-300">clique para filtrar</span>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                {collectionSuggestions.map((set) => (
+                  <button
+                    key={set.id}
+                    type="button"
+                    onClick={() => chooseCollection(set)}
+                    className="rounded-lg border border-white bg-white p-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-md dark:border-slate-800 dark:bg-slate-900"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="rounded-md bg-slate-950 px-2 py-1 text-xs font-semibold text-white dark:bg-indigo-600">{setDisplayCode(set)}</span>
+                      <span className="text-xs font-semibold text-slate-500">{set.printedTotal ?? set.total ?? "?"} cartas</span>
+                    </div>
+                    <p className="mt-2 line-clamp-1 text-sm font-semibold text-slate-950 dark:text-white">{set.name}</p>
+                    <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">ID oficial: {set.id}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          {selectedSet && (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950/40">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Colecao filtrada</p>
+                <p className="text-sm font-semibold text-slate-950 dark:text-white">
+                  {setDisplayCode(selectedSet)} - {selectedSet.name}
+                </p>
+              </div>
+              <Button variant="secondary" size="sm" onClick={() => setSetId("")}>
+                Remover colecao
+              </Button>
+            </div>
+          )}
           <div className="flex flex-wrap gap-2">
             {["ASC", "SSP", "Prismatic Evolutions", "charizard", "pikachu"].map((term) => (
               <button
@@ -187,6 +253,20 @@ export function Explore({ onToast }: { onToast: (toast: ToastState) => void }) {
       </div>
     </div>
   );
+}
+
+function normalizeText(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\p{L}\p{N}.]+/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+function setDisplayCode(set: PokemonSet): string {
+  return (set.ptcgoCode || set.id).toUpperCase();
 }
 
 
