@@ -29,15 +29,6 @@ type ListFilters = {
   sort: "name" | "price" | "quantity" | "numberAsc" | "numberDesc";
 };
 
-type WantedInput = {
-  cardId: string;
-  name: string;
-  image: string;
-  set: string;
-  setId?: string;
-  number?: string;
-};
-
 function orderBy(sort: ListFilters["sort"]): Prisma.CollectionOrderByWithRelationInput {
   if (sort === "price") return { price: "desc" };
   if (sort === "quantity") return { quantity: "desc" };
@@ -168,73 +159,6 @@ export const collectionService = {
     }
 
     return { updated, skipped };
-  },
-
-  async missingBySet(userId: number, setName: string) {
-    const officialSet = await pokemonService.resolveSetReference(setName);
-    if (!officialSet) {
-      throw new HttpError(404, "Colecao oficial nao encontrada.");
-    }
-
-    const [officialCards, wantedCards] = await Promise.all([
-      pokemonService.listCardsBySetId(officialSet.id),
-      prisma.wantedCard.findMany({
-        where: { userId, setId: officialSet.id },
-        select: { cardId: true }
-      })
-    ]);
-    const officialIds = officialCards.map((card) => card.id);
-    const owned = await prisma.collection.findMany({
-      where: { userId, cardId: { in: officialIds } },
-      select: { cardId: true }
-    });
-    const ownedIds = new Set(owned.map((item) => item.cardId));
-    const wantedIds = new Set(wantedCards.map((item) => item.cardId));
-
-    return {
-      set: officialSet,
-      cards: officialCards
-        .filter((card) => !ownedIds.has(card.id))
-        .map((card) => ({
-          ...card,
-          isWanted: wantedIds.has(card.id)
-        }))
-    };
-  },
-
-  async wanted(userId: number) {
-    return prisma.wantedCard.findMany({
-      where: { userId },
-      orderBy: [{ set: "asc" }, { number: "asc" }]
-    });
-  },
-
-  async markWanted(userId: number, input: WantedInput) {
-    return prisma.wantedCard.upsert({
-      where: { userId_cardId: { userId, cardId: input.cardId } },
-      update: {
-        name: input.name,
-        image: input.image,
-        set: input.set,
-        setId: input.setId,
-        number: input.number
-      },
-      create: {
-        userId,
-        cardId: input.cardId,
-        name: input.name,
-        image: input.image,
-        set: input.set,
-        setId: input.setId,
-        number: input.number
-      }
-    });
-  },
-
-  async unmarkWanted(userId: number, cardId: string): Promise<void> {
-    await prisma.wantedCard.deleteMany({
-      where: { userId, cardId }
-    });
   },
 
   async trades(userId: number): Promise<CollectionItem[]> {

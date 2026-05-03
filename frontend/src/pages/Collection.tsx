@@ -1,4 +1,4 @@
-import { AlertTriangle, BarChart3, Download, EyeOff, Layers3, RefreshCw, Trash2, Trophy, Upload } from "lucide-react";
+import { AlertTriangle, BarChart3, Download, Layers3, RefreshCw, Trash2, Trophy, Upload } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CardTile } from "../components/CardTile";
 import { EmptyState } from "../components/EmptyState";
@@ -7,7 +7,7 @@ import { Select } from "../components/ui/Select";
 import { Skeleton } from "../components/ui/Skeleton";
 import { apiService } from "../services/api";
 import { useAppStore } from "../store/useAppStore";
-import type { CollectionItem, MissingCard, PokemonSet, WantedCard } from "../types";
+import type { CollectionItem, PokemonSet } from "../types";
 import type { ToastState } from "../components/ui/Toast";
 
 export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean; onToast: (toast: ToastState) => void }) {
@@ -16,12 +16,8 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
   const [availableSets, setAvailableSets] = useState<string[]>([]);
   const [pokemonSets, setPokemonSets] = useState<PokemonSet[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadingMissing, setLoadingMissing] = useState(false);
   const [importing, setImporting] = useState(false);
   const [repricing, setRepricing] = useState(false);
-  const [showMissing, setShowMissing] = useState(false);
-  const [missingCards, setMissingCards] = useState<MissingCard[]>([]);
-  const [wantedCards, setWantedCards] = useState<WantedCard[]>([]);
   const [confirmClear, setConfirmClear] = useState(false);
   const { filters, setFilters } = useAppStore();
 
@@ -56,15 +52,6 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
     }
   }, [filters.favorite, filters.forTrade, filters.set, filters.sort, onToast, tradeOnly]);
 
-  const loadWanted = useCallback(async () => {
-    if (!tradeOnly) return;
-    try {
-      setWantedCards(await apiService.wanted());
-    } catch {
-      onToast({ type: "error", message: "Nao foi possivel carregar cartas em busca." });
-    }
-  }, [onToast, tradeOnly]);
-
   useEffect(() => {
     void load();
   }, [load]);
@@ -72,17 +59,6 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
   useEffect(() => {
     void loadMeta();
   }, [loadMeta]);
-
-  useEffect(() => {
-    void loadWanted();
-  }, [loadWanted]);
-
-  useEffect(() => {
-    if (!filters.set) {
-      setShowMissing(false);
-      setMissingCards([]);
-    }
-  }, [filters.set]);
 
   const sets = useMemo(() => availableSets, [availableSets]);
   const collectionSummary = useMemo(() => buildCollectionSummary(allItems, pokemonSets), [allItems, pokemonSets]);
@@ -131,12 +107,9 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
       const notFoundMessage = result.notFound.length
         ? ` ${result.notFound.length} nao encontradas. ${firstIssue?.reason ?? ""}`
         : "";
-      const rowSummary = result.totalRows !== undefined
-        ? ` Linhas lidas: ${result.totalRows}. Validas: ${result.validRows ?? 0}. Ignoradas: ${result.ignoredRows ?? result.skipped}.`
-        : "";
       onToast({
         type: result.imported > 0 ? "success" : "error",
-        message: `${result.imported} cartas importadas.${rowSummary}${notFoundMessage}`
+        message: `${result.imported} cartas importadas. ${result.skipped} linhas ignoradas.${notFoundMessage}`
       });
     } catch {
       onToast({ type: "error", message: "Nao foi possivel importar a planilha. Confira as colunas e tente novamente." });
@@ -177,58 +150,6 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
       onToast({ type: "error", message: "Nao foi possivel atualizar os precos agora." });
     } finally {
       setRepricing(false);
-    }
-  }
-
-  async function loadMissingCards() {
-    if (!filters.set) {
-      onToast({ type: "error", message: "Selecione uma colecao para ver as cartas faltantes." });
-      return;
-    }
-
-    setLoadingMissing(true);
-    try {
-      const result = await apiService.missingCards(filters.set);
-      setMissingCards(result.cards);
-      setShowMissing(true);
-      onToast({ type: "success", message: `${result.cards.length} cartas faltantes carregadas em ${result.set.name}.` });
-    } catch {
-      onToast({ type: "error", message: "Nao foi possivel carregar cartas faltantes dessa colecao." });
-    } finally {
-      setLoadingMissing(false);
-    }
-  }
-
-  async function addMissingToCollection(card: MissingCard) {
-    try {
-      await apiService.addToCollection(card);
-      await apiService.unmarkWanted(card.id);
-      setMissingCards((current) => current.filter((item) => item.id !== card.id));
-      setWantedCards((current) => current.filter((item) => item.cardId !== card.id));
-      await load();
-      await loadMeta();
-      onToast({ type: "success", message: "Carta incluida na colecao." });
-    } catch {
-      onToast({ type: "error", message: "Nao foi possivel incluir a carta na colecao." });
-    }
-  }
-
-  async function toggleWanted(card: MissingCard) {
-    const nextWanted = !card.isWanted;
-    setMissingCards((current) => current.map((item) => (item.id === card.id ? { ...item, isWanted: nextWanted } : item)));
-    try {
-      if (nextWanted) {
-        await apiService.markWanted(card);
-        await loadWanted();
-        onToast({ type: "success", message: "Carta marcada como estou em busca." });
-      } else {
-        await apiService.unmarkWanted(card.id);
-        setWantedCards((current) => current.filter((item) => item.cardId !== card.id));
-        onToast({ type: "success", message: "Carta removida da lista de busca." });
-      }
-    } catch {
-      setMissingCards((current) => current.map((item) => (item.id === card.id ? { ...item, isWanted: !nextWanted } : item)));
-      onToast({ type: "error", message: "Nao foi possivel atualizar a busca dessa carta." });
     }
   }
 
@@ -335,17 +256,6 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
 
       <div className="flex flex-wrap justify-end gap-2">
         {!tradeOnly && (
-          <Button variant={showMissing ? "primary" : "secondary"} disabled={!filters.set || loadingMissing} onClick={loadMissingCards}>
-            <EyeOff size={16} />
-            {loadingMissing ? "Carregando..." : showMissing ? "Atualizar faltantes" : "Ver faltantes"}
-          </Button>
-        )}
-        {!tradeOnly && showMissing && (
-          <Button variant="secondary" onClick={() => setShowMissing(false)}>
-            Ocultar faltantes
-          </Button>
-        )}
-        {!tradeOnly && (
           <label className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
             <Upload size={16} />
             {importing ? "Importando..." : "Importar Excel"}
@@ -402,68 +312,6 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
           title={tradeOnly ? "Nenhuma carta para troca" : "Colecao vazia"}
           description={tradeOnly ? "Marque cartas como troca para visualiza-las aqui." : "Explore cartas e adicione os primeiros itens a sua colecao local."}
         />
-      )}
-
-      {tradeOnly && wantedCards.length > 0 && (
-        <section className="space-y-3">
-          <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <h3 className="text-xl font-semibold text-slate-950 dark:text-white">Estou em busca</h3>
-              <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Cartas que voce ainda nao possui e quer encontrar em trocas.</p>
-            </div>
-            <span className="text-sm font-semibold text-slate-500">{wantedCards.length} procuradas</span>
-          </div>
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-            {wantedCards.map((card) => {
-              const missingCard: MissingCard = {
-                id: card.cardId,
-                name: card.name,
-                image: card.image,
-                set: card.set,
-                setId: card.setId ?? undefined,
-                number: card.number ?? undefined,
-                marketPrice: null,
-                isWanted: true
-              };
-              return (
-                <CardTile
-                  key={card.cardId}
-                  mode="missing"
-                  card={missingCard}
-                  onAdd={addMissingToCollection}
-                  onToggleWanted={toggleWanted}
-                />
-              );
-            })}
-          </div>
-        </section>
-      )}
-
-      {!tradeOnly && showMissing && (
-        <section className="space-y-3">
-          <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <h3 className="text-xl font-semibold text-slate-950 dark:text-white">Cartas faltantes</h3>
-              <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Cartas em cinza ainda nao estao na sua colecao. Marque como busca ou inclua quando conseguir uma copia.</p>
-            </div>
-            <span className="text-sm font-semibold text-slate-500">{missingCards.length} faltantes</span>
-          </div>
-          {loadingMissing ? (
-            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-              {Array.from({ length: 8 }).map((_, index) => (
-                <Skeleton key={index} className="h-96" />
-              ))}
-            </div>
-          ) : missingCards.length ? (
-            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-              {missingCards.map((card) => (
-                <CardTile key={card.id} mode="missing" card={card} onAdd={addMissingToCollection} onToggleWanted={toggleWanted} />
-              ))}
-            </div>
-          ) : (
-            <EmptyState title="Nenhuma faltante nesse filtro" description="Sua colecao ja cobre as cartas retornadas para esse set." />
-          )}
-        </section>
       )}
     </div>
   );
