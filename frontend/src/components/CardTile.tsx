@@ -1,5 +1,6 @@
 import { Download, Minus, Plus, Repeat2, Star, Trash2, X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import type { CollectionItem, ExploreCard } from "../types";
 import { currency } from "../lib/utils";
 import { Button } from "./ui/Button";
@@ -140,37 +141,71 @@ export function CardTile(props: ExploreProps | CollectionProps) {
         )}
       </div>
       {zoomOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-2 backdrop-blur-sm sm:p-5">
-          <div className="grid h-[94vh] w-full max-w-7xl overflow-hidden rounded-xl bg-white shadow-lg dark:bg-slate-900 lg:grid-cols-[minmax(0,1fr)_320px]">
-            <div className="flex min-h-0 items-center justify-center bg-slate-950 p-3 sm:p-6">
-              <img src={card.image} alt={card.name} className="h-full max-h-[88vh] w-full object-contain" />
-            </div>
-            <aside className="flex flex-col gap-4 border-t border-slate-200 p-5 dark:border-slate-800 lg:border-l lg:border-t-0">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-xs font-semibold uppercase text-indigo-600 dark:text-indigo-300">Carta ampliada</p>
-                  <h2 className="mt-1 text-2xl font-semibold leading-tight text-slate-950 dark:text-white">{card.name}</h2>
-                </div>
-                <Button variant="ghost" size="icon" onClick={() => setZoomOpen(false)} aria-label="Fechar visualizacao">
-                  <X size={20} />
-                </Button>
-              </div>
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{card.set}</p>
-                <p className="text-4xl font-semibold text-slate-950 dark:text-white">#{isExplore ? props.card.number ?? "N/D" : props.card.number ?? "N/D"}</p>
-                <span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-sm font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                  {isExplore ? "Explorar" : props.card.forTrade ? "Disponivel para troca" : "Minha colecao"}
-                </span>
-              </div>
-              <p className="rounded-lg bg-slate-100 p-3 text-sm font-medium text-slate-600 dark:bg-slate-950/60 dark:text-slate-300">
-                Conferencia em tamanho grande para imagem, colecao e numeracao da carta.
-              </p>
-            </aside>
-          </div>
-        </div>
+        <CardZoomModal
+          card={card}
+          number={isExplore ? props.card.number : props.card.number}
+          label={isExplore ? "Explorar" : props.card.forTrade ? "Disponivel para troca" : "Minha colecao"}
+          onClose={() => setZoomOpen(false)}
+        />
       )}
     </article>
   );
 }
 
+function CardZoomModal({ card, number, label, onClose }: { card: ExploreCard | CollectionItem; number?: string | null; label: string; onClose: () => void }) {
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [onClose]);
+
+  return createPortal(
+    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/80 p-2 sm:p-5" role="dialog" aria-modal="true">
+      <button className="absolute inset-0 cursor-default" type="button" aria-label="Fechar visualizacao" onClick={onClose} />
+      <div className="relative grid h-[94dvh] w-full max-w-7xl overflow-hidden rounded-xl bg-white shadow-lg dark:bg-slate-900 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="flex min-h-0 items-center justify-center bg-slate-950 p-3 sm:p-6">
+          <img
+            src={card.image}
+            alt={card.name}
+            loading="eager"
+            decoding="async"
+            draggable={false}
+            className="h-full max-h-[88dvh] w-full select-none object-contain"
+          />
+        </div>
+        <aside className="flex flex-col gap-4 border-t border-slate-200 p-5 dark:border-slate-800 lg:border-l lg:border-t-0">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase text-indigo-600 dark:text-indigo-300">Carta ampliada</p>
+              <h2 className="mt-1 text-2xl font-semibold leading-tight text-slate-950 dark:text-white">{card.name}</h2>
+            </div>
+            <Button variant="ghost" size="icon" onClick={onClose} aria-label="Fechar visualizacao">
+              <X size={20} />
+            </Button>
+          </div>
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{card.set}</p>
+            <p className="text-4xl font-semibold text-slate-950 dark:text-white">#{number ?? "N/D"}</p>
+            <span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-sm font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+              {label}
+            </span>
+          </div>
+          <p className="rounded-lg bg-slate-100 p-3 text-sm font-medium text-slate-600 dark:bg-slate-950/60 dark:text-slate-300">
+            Conferencia em tamanho grande para imagem, colecao e numeracao da carta.
+          </p>
+        </aside>
+      </div>
+    </div>,
+    document.body
+  );
+}
 

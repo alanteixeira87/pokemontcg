@@ -1,5 +1,6 @@
 import { Check, Clock, Eye, FilterX, Handshake, MessageCircle, Save, Search, Send, Settings2, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { EmptyState } from "../components/EmptyState";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
@@ -536,11 +537,35 @@ function CardZoom({ data, onClose }: { data: { card: TradeCard | TradeCardSnapsh
   const card = data.card;
   const snapshotVariant = "variantType" in card ? card.variantType : undefined;
   const currentVariant = data.variantType ?? snapshotVariant;
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-2 backdrop-blur-sm sm:p-5">
-      <div className="grid h-[94vh] w-full max-w-7xl overflow-hidden rounded-xl bg-white shadow-lg dark:bg-slate-900 lg:grid-cols-[minmax(0,1fr)_320px]">
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [onClose]);
+
+  return createPortal(
+    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/80 p-2 sm:p-5" role="dialog" aria-modal="true">
+      <button className="absolute inset-0 cursor-default" type="button" aria-label="Fechar visualizacao" onClick={onClose} />
+      <div className="relative grid h-[94dvh] w-full max-w-7xl overflow-hidden rounded-xl bg-white shadow-lg dark:bg-slate-900 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="flex min-h-0 items-center justify-center bg-slate-950 p-3 sm:p-6">
-          <img src={card.image} alt={card.name} className="h-full max-h-[88vh] w-full object-contain" />
+          <img
+            src={card.image}
+            alt={card.name}
+            loading="eager"
+            decoding="async"
+            draggable={false}
+            className="h-full max-h-[88dvh] w-full select-none object-contain"
+          />
         </div>
         <aside className="flex flex-col gap-4 border-t border-slate-200 p-5 dark:border-slate-800 lg:border-l lg:border-t-0">
           <div className="flex items-start justify-between gap-3">
@@ -562,7 +587,8 @@ function CardZoom({ data, onClose }: { data: { card: TradeCard | TradeCardSnapsh
           </p>
         </aside>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
