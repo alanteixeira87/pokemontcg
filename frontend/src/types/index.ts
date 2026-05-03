@@ -11,7 +11,20 @@ export type ExploreCard = {
 export type ImportResult = {
   imported: number;
   skipped: number;
+  totalRows?: number;
+  validRows?: number;
+  ignoredRows?: number;
+  headerRow?: number;
   notFound: Array<{
+    series: string;
+    number: string;
+    sequence: string;
+    status: string;
+    quantity: string;
+    rowNumber?: number;
+    reason?: string;
+  }>;
+  errors?: Array<{
     series: string;
     number: string;
     sequence: string;

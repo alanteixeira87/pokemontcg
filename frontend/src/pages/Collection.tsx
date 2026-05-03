@@ -107,9 +107,12 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
       const notFoundMessage = result.notFound.length
         ? ` ${result.notFound.length} nao encontradas. ${firstIssue?.reason ?? ""}`
         : "";
+      const rowSummary = result.totalRows !== undefined
+        ? ` Linhas lidas: ${result.totalRows}. Validas: ${result.validRows ?? 0}. Ignoradas: ${result.ignoredRows ?? result.skipped}.`
+        : "";
       onToast({
         type: result.imported > 0 ? "success" : "error",
-        message: `${result.imported} cartas importadas. ${result.skipped} linhas ignoradas.${notFoundMessage}`
+        message: `${result.imported} cartas importadas.${rowSummary}${notFoundMessage}`
       });
     } catch {
       onToast({ type: "error", message: "Nao foi possivel importar a planilha. Confira as colunas e tente novamente." });

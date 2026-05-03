@@ -16,6 +16,11 @@ type ImportResult = {
   imported: number;
   skipped: number;
   notFound: ImportRow[];
+  totalRows: number;
+  validRows: number;
+  ignoredRows: number;
+  errors: ImportRow[];
+  headerRow?: number;
 };
 
 const importColumns = {
@@ -45,7 +50,9 @@ function cellText(value: ExcelJS.CellValue): string {
 }
 
 function readHeaderMap(sheet: ExcelJS.Worksheet): Map<string, number> {
-  const header = sheet.getRow(1);
+  const headerRow = findHeaderRow(sheet);
+  if (!headerRow) return new Map();
+  const header = sheet.getRow(headerRow);
   const map = new Map<string, number>();
 
   header.eachCell((cell, columnNumber) => {
@@ -53,6 +60,33 @@ function readHeaderMap(sheet: ExcelJS.Worksheet): Map<string, number> {
   });
 
   return map;
+}
+
+function headerScore(values: string[]): number {
+  const normalized = values.map(normalizeHeader).filter(Boolean);
+  return Object.values(importColumns).reduce((score, aliases) => {
+    return aliases.some((alias) => normalized.includes(normalizeHeader(alias))) ? score + 1 : score;
+  }, 0);
+}
+
+function findHeaderRow(sheet: ExcelJS.Worksheet): number | null {
+  let bestRow: number | null = null;
+  let bestScore = 0;
+
+  sheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+    const values: string[] = [];
+    row.eachCell({ includeEmpty: false }, (cell) => {
+      values.push(cellText(cell.value));
+    });
+
+    const score = headerScore(values);
+    if (score > bestScore) {
+      bestScore = score;
+      bestRow = rowNumber;
+    }
+  });
+
+  return bestScore >= 3 ? bestRow : null;
 }
 
 function readRow(sheet: ExcelJS.Worksheet, rowNumber: number, headerMap: Map<string, number>): ImportRow {
@@ -76,11 +110,11 @@ function hasImportData(row: ImportRow): boolean {
   return Boolean(row.series || row.number || row.sequence || row.status || row.quantity);
 }
 
-function importRowNumbers(sheet: ExcelJS.Worksheet, headerMap: Map<string, number>): number[] {
+function importRowNumbers(sheet: ExcelJS.Worksheet, headerMap: Map<string, number>, headerRow: number): number[] {
   const rows: number[] = [];
 
   sheet.eachRow({ includeEmpty: false }, (_row, rowNumber) => {
-    if (rowNumber === 1) return;
+    if (rowNumber <= headerRow) return;
     if (hasImportData(readRow(sheet, rowNumber, headerMap))) {
       rows.push(rowNumber);
     }
@@ -95,6 +129,11 @@ function normalizeCardNumber(value: string): string {
   return beforeSlash.replace(/^#/, "").replace(/^0+(\d)/, "$1");
 }
 
+function normalizeStatus(value: string): string {
+  const normalized = normalizeHeader(value);
+  return normalized || "pendente";
+}
+
 function isOwnedStatus(value: string): boolean {
   const normalized = normalizeHeader(value);
   return ["ok", "sim", "s", "x", "tenho", "possuo", "owned", "yes", "y", "1"].includes(normalized);
@@ -103,8 +142,12 @@ function isOwnedStatus(value: string): boolean {
 function parseQuantity(value: string): number {
   const normalized = value.replace(",", ".").trim();
   const parsed = Number(normalized);
-  if (!Number.isFinite(parsed) || parsed < 1) return 1;
+  if (!Number.isFinite(parsed) || parsed < 1) return 0;
   return Math.floor(parsed);
+}
+
+function buildEmptyResult(): ImportResult {
+  return { imported: 0, skipped: 0, notFound: [], totalRows: 0, validRows: 0, ignoredRows: 0, errors: [] };
 }
 
 export const importService = {
@@ -114,52 +157,81 @@ export const importService = {
     const sheet = workbook.worksheets[0];
 
     if (!sheet) {
-      return { imported: 0, skipped: 0, notFound: [] };
+      return buildEmptyResult();
+    }
+
+    const headerRow = findHeaderRow(sheet);
+    if (!headerRow) {
+      return {
+        ...buildEmptyResult(),
+        ignoredRows: sheet.actualRowCount,
+        errors: [{ series: "", number: "", sequence: "", status: "", quantity: "", reason: "Header nao encontrado. Esperado: serie, numero, sequencia, status e qtde." }]
+      };
     }
 
     const headerMap = readHeaderMap(sheet);
-    const result: ImportResult = { imported: 0, skipped: 0, notFound: [] };
+    const result: ImportResult = { imported: 0, skipped: 0, notFound: [], totalRows: 0, validRows: 0, ignoredRows: 0, errors: [], headerRow };
 
-    const rowsToImport = importRowNumbers(sheet, headerMap);
+    const rowsToImport = importRowNumbers(sheet, headerMap, headerRow);
+    result.totalRows = rowsToImport.length;
 
     for (const rowNumber of rowsToImport) {
-      const row = readRow(sheet, rowNumber, headerMap);
-      const hasCard = isOwnedStatus(row.status);
-      const cardNumber = normalizeCardNumber(row.number);
-      const quantity = parseQuantity(row.quantity);
-
-      if (!hasCard || !row.series || !cardNumber) {
-        if (hasCard && (!row.series || !cardNumber)) {
-          result.notFound.push({
-            ...row,
-            reason: !row.series ? "Linha marcada como OK, mas sem serie/colecao." : "Linha marcada como OK, mas sem numero/sequencia."
-          });
-        }
-        result.skipped += 1;
-        continue;
-      }
-
-      const card = await pokemonService.findCardBySetAndNumber(row.series, cardNumber, row.sequence);
-
-      if (!card) {
-        result.notFound.push({
+      try {
+        const row = readRow(sheet, rowNumber, headerMap);
+        const hasCard = isOwnedStatus(row.status);
+        const cardNumber = normalizeCardNumber(row.number);
+        const quantity = parseQuantity(row.quantity);
+        const normalizedRow = {
           ...row,
+          series: row.series.trim(),
           number: cardNumber,
-          reason: `Nao encontrei carta para serie "${row.series}", sequencia "${row.sequence}" e numero "${cardNumber}".`
-        });
-        continue;
-      }
+          sequence: row.sequence.trim(),
+          status: normalizeStatus(row.status),
+          quantity: String(quantity)
+        };
 
-      await collectionService.add(userId, {
-        cardId: card.id,
-        name: card.name,
-        image: card.image,
-        set: card.set,
-        quantity,
-        price: card.marketPrice ?? 0,
-        number: card.number
-      });
-      result.imported += quantity;
+        if (!normalizedRow.series || !cardNumber) {
+          result.ignoredRows += 1;
+          result.skipped += 1;
+          continue;
+        }
+
+        if (!hasCard) {
+          result.ignoredRows += 1;
+          result.skipped += 1;
+          continue;
+        }
+
+        const importQuantity = quantity > 0 ? quantity : 1;
+        result.validRows += 1;
+
+        const card = await pokemonService.findCardBySetAndNumber(normalizedRow.series, cardNumber, normalizedRow.sequence);
+
+        if (!card) {
+          result.notFound.push({
+            ...normalizedRow,
+            reason: `Nao encontrei carta para serie "${normalizedRow.series}", sequencia "${normalizedRow.sequence}" e numero "${cardNumber}".`
+          });
+          result.errors.push(result.notFound[result.notFound.length - 1]);
+          continue;
+        }
+
+        await collectionService.add(userId, {
+          cardId: card.id,
+          name: card.name,
+          image: card.image,
+          set: card.set,
+          quantity: importQuantity,
+          price: card.marketPrice ?? 0,
+          number: card.number
+        });
+        result.imported += importQuantity;
+      } catch (error) {
+        const failed = readRow(sheet, rowNumber, headerMap);
+        const rowError = { ...failed, reason: error instanceof Error ? error.message : "Erro inesperado ao processar linha." };
+        result.errors.push(rowError);
+        result.ignoredRows += 1;
+      }
     }
 
     return result;
