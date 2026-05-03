@@ -18,6 +18,14 @@ type ImportResult = {
   notFound: ImportRow[];
 };
 
+const importColumns = {
+  series: ["serie", "s rie", "set", "colecao", "colecao set", "expansao", "edicao"],
+  number: ["numero", "n mero", "n", "num", "card", "carta"],
+  sequence: ["sequencia", "seq encia", "seq", "ordem", "codigo"],
+  status: ["status", "situacao", "possuo", "tenho"],
+  quantity: ["qtde", "qtd", "quantidade", "quantity"]
+};
+
 function normalizeHeader(value: string): string {
   return value
     .normalize("NFD")
@@ -30,6 +38,9 @@ function cellText(value: ExcelJS.CellValue): string {
   if (value === null || value === undefined) return "";
   if (typeof value === "object" && "text" in value) return String(value.text ?? "").trim();
   if (typeof value === "object" && "result" in value) return String(value.result ?? "").trim();
+  if (typeof value === "object" && "richText" in value) {
+    return value.richText.map((part) => part.text).join("").trim();
+  }
   return String(value).trim();
 }
 
@@ -53,12 +64,29 @@ function readRow(sheet: ExcelJS.Worksheet, rowNumber: number, headerMap: Map<str
 
   return {
     rowNumber,
-    series: value(1, "serie", "s rie", "set", "colecao", "colecao set", "expansao", "edicao"),
-    number: value(2, "numero", "n mero", "n", "num", "card", "carta"),
-    sequence: value(3, "sequencia", "seq encia", "seq", "ordem", "codigo"),
-    status: value(4, "status", "situacao", "possuo", "tenho"),
-    quantity: value(5, "qtde", "qtd", "quantidade", "quantity")
+    series: value(1, ...importColumns.series),
+    number: value(2, ...importColumns.number),
+    sequence: value(3, ...importColumns.sequence),
+    status: value(4, ...importColumns.status),
+    quantity: value(5, ...importColumns.quantity)
   };
+}
+
+function hasImportData(row: ImportRow): boolean {
+  return Boolean(row.series || row.number || row.sequence || row.status || row.quantity);
+}
+
+function importRowNumbers(sheet: ExcelJS.Worksheet, headerMap: Map<string, number>): number[] {
+  const rows: number[] = [];
+
+  sheet.eachRow({ includeEmpty: false }, (_row, rowNumber) => {
+    if (rowNumber === 1) return;
+    if (hasImportData(readRow(sheet, rowNumber, headerMap))) {
+      rows.push(rowNumber);
+    }
+  });
+
+  return rows;
 }
 
 function normalizeCardNumber(value: string): string {
@@ -92,7 +120,9 @@ export const importService = {
     const headerMap = readHeaderMap(sheet);
     const result: ImportResult = { imported: 0, skipped: 0, notFound: [] };
 
-    for (let rowNumber = 2; rowNumber <= sheet.rowCount; rowNumber += 1) {
+    const rowsToImport = importRowNumbers(sheet, headerMap);
+
+    for (const rowNumber of rowsToImport) {
       const row = readRow(sheet, rowNumber, headerMap);
       const hasCard = isOwnedStatus(row.status);
       const cardNumber = normalizeCardNumber(row.number);
