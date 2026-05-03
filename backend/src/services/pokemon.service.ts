@@ -13,6 +13,7 @@ const cache = new Map<string, CacheEntry<unknown>>();
 const ttlMs = 60 * 60 * 1000;
 
 const officialPokemonApiUrl = "https://api.pokemontcg.io/v2";
+const tcgDexApiUrl = "https://api.tcgdex.net/v2/en";
 const apiClients = [
   axios.create({
     baseURL: env.pokemonApiUrl,
@@ -24,6 +25,26 @@ const apiClients = [
     timeout: 10000
   })
 ];
+const tcgDexApi = axios.create({
+  baseURL: tcgDexApiUrl,
+  timeout: 12000
+});
+
+type TcgDexSet = {
+  id: string;
+  name: string;
+  cardCount?: {
+    total?: number;
+    official?: number;
+  };
+};
+
+type TcgDexCard = {
+  id: string;
+  localId?: string;
+  name: string;
+  image?: string;
+};
 
 function getCached<T>(key: string): T | null {
   const hit = cache.get(key);
@@ -174,6 +195,74 @@ async function normalizeCardWithPrice(card: PokemonCard): Promise<ReturnType<typ
   }
 }
 
+function tcgDexImage(image?: string): string {
+  return image ? `${image}/high.png` : "https://images.pokemontcg.io/base1/4.png";
+}
+
+function tcgDexSetIdFromCardId(id: string): string {
+  return id.includes("-") ? id.slice(0, id.lastIndexOf("-")) : id;
+}
+
+async function tcgDexSets(): Promise<PokemonSet[]> {
+  const cached = getCached<PokemonSet[]>("tcgdex:sets");
+  if (cached) return cached;
+
+  const response = await tcgDexApi.get<TcgDexSet[]>("/sets");
+  return setCached(
+    "tcgdex:sets",
+    response.data.map((set) => ({
+      id: set.id,
+      name: set.name,
+      printedTotal: set.cardCount?.official,
+      total: set.cardCount?.total
+    }))
+  );
+}
+
+async function tcgDexCards(): Promise<TcgDexCard[]> {
+  const cached = getCached<TcgDexCard[]>("tcgdex:cards");
+  if (cached) return cached;
+
+  const response = await tcgDexApi.get<TcgDexCard[]>("/cards");
+  return setCached("tcgdex:cards", response.data);
+}
+
+async function listCardsFromTcgDex(page: number, pageSize: number, search?: string, set?: string, sort: "numberAsc" | "numberDesc" | "name" = "numberAsc"): Promise<PaginatedCards> {
+  const [cards, sets] = await Promise.all([tcgDexCards(), tcgDexSets()]);
+  const setNameById = new Map(sets.map((item) => [item.id, item.name]));
+  const cleanSearch = normalizeLookupText(search ?? "");
+
+  const filtered = cards.filter((card) => {
+    const setId = tcgDexSetIdFromCardId(card.id);
+    const matchesSet = set ? setId === set : true;
+    const matchesSearch = cleanSearch ? normalizeLookupText(card.name).includes(cleanSearch) : true;
+    return matchesSet && matchesSearch;
+  });
+  const totalCount = filtered.length;
+  const offset = (page - 1) * pageSize;
+
+  return {
+    cards: sortCards(
+      filtered.slice(offset, offset + pageSize).map((card) => {
+        const setId = tcgDexSetIdFromCardId(card.id);
+        return {
+          id: card.id,
+          name: card.name,
+          image: tcgDexImage(card.image),
+          set: setNameById.get(setId) ?? setId,
+          setId,
+          number: card.localId,
+          marketPrice: null
+        };
+      }),
+      sort
+    ),
+    page,
+    pageSize,
+    totalCount
+  };
+}
+
 const setAliases = new Map<string, string>([
   ["escarlate e violeta", "sv1"],
   ["scarlet violet", "sv1"],
@@ -286,7 +375,14 @@ export const pokemonService = {
       pokemonGet<{ data: PokemonCard[]; totalCount: number }>("/cards", {
         params: { page, pageSize, q }
       })
-    );
+    ).catch(async (error) => {
+      console.warn(JSON.stringify({ level: "warn", message: "Pokemon API listCards failed, using TCGdex fallback", error: String(error) }));
+      return null;
+    });
+
+    if (!response) {
+      return setCached(cacheKey, await listCardsFromTcgDex(page, pageSize, search, set, sort));
+    }
 
     return setCached(cacheKey, {
       cards: sortCards(await Promise.all(response.data.map(normalizeCardWithPrice)), sort),
@@ -304,7 +400,14 @@ export const pokemonService = {
       pokemonGet<{ data: PokemonSet[] }>("/sets", {
         params: { orderBy: "-releaseDate" }
       })
-    );
+    ).catch(async (error) => {
+      console.warn(JSON.stringify({ level: "warn", message: "Pokemon API listSets failed, using TCGdex fallback", error: String(error) }));
+      return null;
+    });
+
+    if (!response) {
+      return setCached("sets", await tcgDexSets());
+    }
 
     return setCached(
       "sets",

@@ -58,7 +58,10 @@ app.use(express.json({ limit: "1mb" }));
 app.use(morgan("combined"));
 
 app.get("/health", (_req, res) => {
-  res.json({ status: "ok" });
+  res.json({
+    status: "ok",
+    commit: process.env.RENDER_GIT_COMMIT ?? process.env.VERCEL_GIT_COMMIT_SHA ?? "local"
+  });
 });
 
 app.use("/api", cardsRoutes);
