@@ -84,7 +84,7 @@ export function Explore({ onToast }: { onToast: (toast: ToastState) => void }) {
               <Search className="pointer-events-none absolute left-3 top-3 text-muted-foreground" size={16} />
               <Input
                 className="pl-9"
-                placeholder="Buscar por nome, ex: Charizard EX"
+                placeholder="Buscar carta ou colecao, ex: Charizard, ASC, Surging Sparks"
                 value={search}
                 onChange={(event) => {
                   setSearch(event.target.value);
@@ -138,7 +138,7 @@ export function Explore({ onToast }: { onToast: (toast: ToastState) => void }) {
             </Button>
           </div>
           <div className="flex flex-wrap gap-2">
-            {["charizard", "pikachu", "eevee", "mew", "mega charizard"].map((term) => (
+            {["ASC", "SSP", "Prismatic Evolutions", "charizard", "pikachu"].map((term) => (
               <button
                 key={term}
                 type="button"

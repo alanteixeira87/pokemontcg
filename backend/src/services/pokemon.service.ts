@@ -159,7 +159,14 @@ function equivalentSetIds(id: string): string[] {
   const normalized = id.trim().toLowerCase();
   const scarletVioletShort = normalized.replace(/^sv0(\d)(.*)$/, "sv$1$2");
   const scarletVioletLong = normalized.replace(/^sv(\d)(.*)$/, "sv0$1$2");
-  return Array.from(new Set([normalized, scarletVioletShort, scarletVioletLong].filter(Boolean)));
+  const ptToDot = normalized.replace(/pt(\d+)$/, ".$1");
+  const dotToPt = normalized.replace(/\.(\d+)$/, "pt$1");
+  const ptShort = scarletVioletShort.replace(/pt(\d+)$/, ".$1");
+  const dotLong = ptToDot.replace(/^sv(\d)(\..*)$/, "sv0$1$2");
+  const dotShort = ptToDot.replace(/^sv0(\d)(\..*)$/, "sv$1$2");
+  const ptLong = dotToPt.replace(/^sv(\d)(pt.*)$/, "sv0$1$2");
+
+  return Array.from(new Set([normalized, scarletVioletShort, scarletVioletLong, ptToDot, dotToPt, ptShort, dotLong, dotShort, ptLong].filter(Boolean)));
 }
 
 function setCodeCandidates(set: PokemonSet): string[] {
@@ -202,6 +209,31 @@ function normalizeTcgDexCard(card: TcgDexCardDetail | TcgDexCardBrief, set: TcgD
 
 function tcgDexSetIdFromCardId(id: string): string {
   return id.includes("-") ? id.slice(0, id.lastIndexOf("-")) : id;
+}
+
+function resolveSearchSetIds(search: string | undefined, sets: PokemonSet[]): Set<string> {
+  const normalizedSearch = normalizeLookupText(search ?? "");
+  if (!normalizedSearch) return new Set();
+
+  const compactSearch = compactCode(search ?? "");
+  const searchIdCandidates = equivalentSetIds(compactSearch);
+  const aliasId = setAliases.get(normalizedSearch) ?? setAliases.get(compactSearch);
+  const aliasIds = aliasId ? equivalentSetIds(aliasId) : [];
+
+  const matches = sets.filter((set) => {
+    const setName = normalizeLookupText(set.name);
+    const setIds = equivalentSetIds(set.id);
+    const candidates = [...setCodeCandidates(set), ...setIds];
+
+    return (
+      setName === normalizedSearch ||
+      candidates.includes(compactSearch) ||
+      searchIdCandidates.some((id) => setIds.includes(id)) ||
+      aliasIds.some((id) => setIds.includes(id))
+    );
+  });
+
+  return new Set(matches.flatMap((set) => equivalentSetIds(set.id)));
 }
 
 async function listTcgDexCards(): Promise<TcgDexCardBrief[]> {
@@ -364,11 +396,16 @@ async function listCardsFromTcgDex(page: number, pageSize: number, search?: stri
   const [cards, sets] = await Promise.all([listTcgDexCards(), listTcgDexSets()]);
   const setById = new Map(sets.map((item) => [item.id, item]));
   const cleanSearch = normalizeLookupText(search ?? "");
+  const searchSetIds = resolveSearchSetIds(search, sets);
 
   const filtered = cards.filter((card) => {
     const setId = tcgDexSetIdFromCardId(card.id);
     const matchesSet = set ? equivalentSetIds(setId).includes(set.toLowerCase()) || equivalentSetIds(set).includes(setId) : true;
-    const matchesSearch = cleanSearch ? normalizeLookupText(card.name).includes(cleanSearch) : true;
+    const matchesSearch = cleanSearch
+      ? searchSetIds.size > 0
+        ? equivalentSetIds(setId).some((id) => searchSetIds.has(id))
+        : normalizeLookupText(card.name).includes(cleanSearch)
+      : true;
     return matchesSet && matchesSearch;
   });
 
