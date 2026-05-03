@@ -128,11 +128,8 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
       await load();
       await loadMeta();
       const firstIssue = result.notFound[0];
-      const firstError = result.errors?.[0];
       const notFoundMessage = result.notFound.length
         ? ` ${result.notFound.length} nao encontradas. ${firstIssue?.reason ?? ""}`
-        : firstError?.reason
-          ? ` ${firstError.reason}`
         : "";
       const rowSummary = result.totalRows !== undefined
         ? ` Linhas lidas: ${result.totalRows}. Validas: ${result.validRows ?? 0}. Ignoradas: ${result.ignoredRows ?? result.skipped}.`
@@ -141,9 +138,8 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
         type: result.imported > 0 ? "success" : "error",
         message: `${result.imported} cartas importadas.${rowSummary}${notFoundMessage}`
       });
-    } catch (error) {
-      const message = apiService.errorMessage(error, "Nao foi possivel importar a planilha. Confira as colunas e tente novamente.");
-      onToast({ type: "error", message });
+    } catch {
+      onToast({ type: "error", message: "Nao foi possivel importar a planilha. Confira as colunas e tente novamente." });
     } finally {
       setImporting(false);
     }

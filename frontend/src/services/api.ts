@@ -60,14 +60,6 @@ function booleanParam(value?: boolean): string | undefined {
 }
 
 export const apiService = {
-  errorMessage(error: unknown, fallback: string): string {
-    if (axios.isAxiosError<{ message?: string }>(error)) {
-      if (error.code === "ECONNABORTED") return "A importacao demorou mais que o esperado. Tente novamente com uma planilha menor ou aguarde o servidor finalizar.";
-      return error.response?.data?.message ?? fallback;
-    }
-    return fallback;
-  },
-
   async register(input: { name: string; email: string; password: string }): Promise<AuthResponse> {
     const response = await api.post<AuthResponse>("/auth/register", input);
     return response.data;
@@ -126,7 +118,9 @@ export const apiService = {
   async importCollection(file: File): Promise<ImportResult> {
     const formData = new FormData();
     formData.append("file", file);
-    const response = await api.post<ImportResult>("/import/collection", formData, { timeout: 180000 });
+    const response = await api.post<ImportResult>("/import/collection", formData, {
+      headers: { "Content-Type": "multipart/form-data" }
+    });
     return response.data;
   },
 
