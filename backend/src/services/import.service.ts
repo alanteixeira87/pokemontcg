@@ -30,7 +30,6 @@ type ImportResult = {
 const importColumns = {
   series: ["serie", "s rie", "set", "colecao", "colecao set", "expansao", "edicao"],
   number: ["numero", "n mero", "n", "num", "card", "carta"],
-  sequence: ["sequencia", "seq encia", "seq", "ordem", "codigo"],
   status: ["status", "situacao", "possuo", "tenho"],
   quantity: ["qtde", "qtd", "quantidade", "quantity"]
 };
@@ -104,7 +103,7 @@ function readRow(sheet: ExcelJS.Worksheet, rowNumber: number, headerMap: Map<str
     rowNumber,
     series: value(1, ...importColumns.series),
     number: value(2, ...importColumns.number),
-    sequence: value(3, ...importColumns.sequence),
+    sequence: value(3, "sequencia", "seq encia", "seq", "ordem", "codigo"),
     status: value(4, ...importColumns.status),
     quantity: value(5, ...importColumns.quantity)
   };
