@@ -62,6 +62,7 @@ type PriceLookupInput = {
   collectionName: string;
   setCode?: string;
   cardNumber?: string;
+  setTotal?: number | null;
   language?: "PT_BR" | "EN" | "UNKNOWN";
   rarity?: string;
   cardClass?: string;
@@ -171,6 +172,11 @@ function numberOnly(value?: string): string {
   return (value ?? "").split("/")[0]?.replace(/^0+(\d)/, "$1").trim() ?? "";
 }
 
+function numberValue(value?: string): number | null {
+  const parsed = Number(numberOnly(value));
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
 function roundMoney(value: number): number {
   return Math.max(0, Math.round(value * 100) / 100);
 }
@@ -181,6 +187,15 @@ function stableHash(value: string): number {
     hash = (hash * 31 + value.charCodeAt(index)) % 100000;
   }
   return hash;
+}
+
+function demandFactor(cardName: string): number {
+  const name = normalize(cardName);
+  const highDemand = ["charizard", "pikachu", "umbreon", "sylveon", "leafeon", "glaceon", "rayquaza", "gengar", "mewtwo", "mew", "lugia", "gardevoir"];
+  if (highDemand.some((pokemon) => name.includes(pokemon))) return 1.65;
+  const mediumDemand = ["dragonite", "gyarados", "greninja", "lucario", "snorlax", "eevee", "espeon", "vaporeon", "jolteon", "flareon"];
+  if (mediumDemand.some((pokemon) => name.includes(pokemon))) return 1.3;
+  return 1;
 }
 
 function normalizeVariant(value?: string): PriceVariantType {
@@ -213,6 +228,17 @@ function normalizeClass(value?: string, rarity?: string, variant?: PriceVariantT
   return "RARE";
 }
 
+function inferClass(input: PriceLookupInput, current: CardClass): CardClass {
+  const cardNumber = numberValue(input.cardNumber);
+  const setTotal = input.setTotal ?? null;
+  const normalizedName = normalize(input.cardName);
+  if (normalizedName.includes("charizard") || normalizedName.includes("umbreon")) {
+    if (current === "COMMON" || current === "UNCOMMON" || current === "RARE") return "ULTRA_RARE";
+  }
+  if (setTotal && cardNumber && cardNumber > setTotal) return "SECRET_RARE";
+  return current;
+}
+
 function firstPrice(prices: undefined | InternationalPrices | InternationalPrices[]): number | null {
   const candidate = Array.isArray(prices) ? prices[0] : prices;
   if (!candidate) return null;
@@ -238,6 +264,7 @@ function buildCacheKey(input: PriceLookupInput): string {
     input.collectionName,
     input.setCode ?? "",
     numberOnly(input.cardNumber),
+    input.setTotal ? String(input.setTotal) : "",
     input.language ?? "UNKNOWN",
     normalizeVariant(input.variantType),
     normalizeClass(input.cardClass, input.rarity, normalizeVariant(input.variantType)),
@@ -247,7 +274,7 @@ function buildCacheKey(input: PriceLookupInput): string {
 
 function buildPrice(input: PriceLookupInput, partial: Omit<CardPrice, "cardName" | "collectionName" | "setCode" | "cardNumber" | "variantType" | "cardClass" | "updatedAt">): CardPrice {
   const variantType = normalizeVariant(input.variantType);
-  const cardClass = normalizeClass(input.cardClass, input.rarity, variantType);
+  const cardClass = inferClass(input, normalizeClass(input.cardClass, input.rarity, variantType));
   const estimatedPrice = roundMoney(partial.estimatedPrice);
   return {
     cardName: input.cardName,
@@ -293,7 +320,7 @@ function priceFromListings(input: PriceLookupInput, listings: MarketListing[]): 
 function simulatedMarketplaceListings(input: PriceLookupInput): MarketListing[] {
   const manual = input.manualValue ?? input.fallback ?? null;
   const variant = normalizeVariant(input.variantType);
-  const cardClass = normalizeClass(input.cardClass, input.rarity, variant);
+  const cardClass = inferClass(input, normalizeClass(input.cardClass, input.rarity, variant));
   const isBrazilian = input.language === "PT_BR" || normalize(input.collectionName).includes("brasil");
   if (!manual || manual <= 0 || !isBrazilian) return [];
 
@@ -314,7 +341,7 @@ function brazilReference(input: PriceLookupInput): CardPrice | null {
   if (!manual || manual <= 0) return null;
 
   const variant = normalizeVariant(input.variantType);
-  const cardClass = normalizeClass(input.cardClass, input.rarity, variant);
+  const cardClass = inferClass(input, normalizeClass(input.cardClass, input.rarity, variant));
   const reference =
     input.manualValue && input.manualValue > 0
       ? manual
@@ -371,7 +398,7 @@ async function internationalPrice(input: PriceLookupInput): Promise<CardPrice | 
   if (!usd || usd <= 0) return null;
 
   const variant = normalizeVariant(input.variantType);
-  const cardClass = normalizeClass(input.cardClass, input.rarity, variant);
+  const cardClass = inferClass(input, normalizeClass(input.cardClass, input.rarity, variant));
   const brl = usd * env.usdBrlRate * classMultipliers[cardClass] * variantMultipliers[variant];
   return buildPrice(input, {
     minPrice: brl * 0.88,
@@ -386,22 +413,23 @@ async function internationalPrice(input: PriceLookupInput): Promise<CardPrice | 
 
 function metadataEstimate(input: PriceLookupInput): CardPrice {
   const variant = normalizeVariant(input.variantType);
-  const cardClass = normalizeClass(input.cardClass, input.rarity, variant);
+  const cardClass = inferClass(input, normalizeClass(input.cardClass, input.rarity, variant));
   const baseByClass: Record<CardClass, number> = {
-    COMMON: 1.5,
-    UNCOMMON: 2.5,
-    RARE: 5,
-    DOUBLE_RARE: 12,
-    ULTRA_RARE: 25,
-    ILLUSTRATION_RARE: 35,
-    SPECIAL_ILLUSTRATION_RARE: 75,
-    HYPER_RARE: 55,
-    PROMO: 18,
-    SECRET_RARE: 65
+    COMMON: 2.5,
+    UNCOMMON: 3.5,
+    RARE: 8,
+    DOUBLE_RARE: 28,
+    ULTRA_RARE: 65,
+    ILLUSTRATION_RARE: 85,
+    SPECIAL_ILLUSTRATION_RARE: 240,
+    HYPER_RARE: 150,
+    PROMO: 45,
+    SECRET_RARE: 180
   };
   const signature = buildCacheKey(input);
   const variance = 0.85 + (stableHash(signature) % 35) / 100;
-  const estimate = baseByClass[cardClass] * variantMultipliers[variant] * variance;
+  const demandMultiplier = demandFactor(input.cardName);
+  const estimate = baseByClass[cardClass] * variantMultipliers[variant] * demandMultiplier * variance;
   return buildPrice(input, {
     minPrice: estimate * 0.75,
     avgPrice: estimate,
@@ -474,6 +502,7 @@ export const priceService = {
       cardName: input.name,
       collectionName: input.set,
       cardNumber: input.number,
+      setTotal: null,
       variantType: input.variantType ?? "NORMAL",
       rarity: input.rarity,
       cardClass: input.cardClass,

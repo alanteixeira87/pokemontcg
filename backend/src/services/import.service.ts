@@ -209,7 +209,7 @@ export const importService = {
         const importQuantity = quantity > 0 ? quantity : 1;
         result.validRows += 1;
 
-        const officialSet = await pokemonService.resolveSetReference(normalizedRow.series, normalizedRow.sequence);
+        const officialSet = await pokemonService.resolveSetReference(normalizedRow.series);
         const lookupSet = officialSet?.id ?? normalizedRow.series;
         const enrichedRow = {
           ...normalizedRow,
@@ -229,13 +229,6 @@ export const importService = {
           });
           result.errors.push(result.notFound[result.notFound.length - 1]);
           continue;
-        }
-
-        if (officialSet && !officialSet.totalMatches) {
-          result.errors.push({
-            ...enrichedRow,
-            reason: `Sequencia da planilha (${officialSet.userTotal}) difere do total oficial da colecao (${officialSet.printedTotal ?? officialSet.total ?? "desconhecido"}). A importacao usou o total oficial como referencia.`
-          });
         }
 
         await collectionService.add(userId, {

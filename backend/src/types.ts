@@ -9,6 +9,8 @@ export type PokemonCard = {
   set?: {
     id?: string;
     name?: string;
+    printedTotal?: number;
+    total?: number;
   };
   rarity?: string;
   tcgplayer?: {
