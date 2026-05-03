@@ -21,6 +21,10 @@ export type ImportResult = {
     sequence: string;
     status: string;
     quantity: string;
+    officialSetName?: string;
+    officialSetId?: string;
+    officialPrintedTotal?: number;
+    officialTotal?: number;
     rowNumber?: number;
     reason?: string;
   }>;
@@ -30,6 +34,10 @@ export type ImportResult = {
     sequence: string;
     status: string;
     quantity: string;
+    officialSetName?: string;
+    officialSetId?: string;
+    officialPrintedTotal?: number;
+    officialTotal?: number;
     rowNumber?: number;
     reason?: string;
   }>;

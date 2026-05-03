@@ -215,6 +215,25 @@ async function resolveSetCandidates(input: string, setTotal?: string): Promise<P
 }
 
 export const pokemonService = {
+  async resolveSetReference(setName: string, userTotal?: string): Promise<{ id: string; name: string; printedTotal?: number; total?: number; userTotal?: number; totalMatches: boolean } | null> {
+    const candidates = await resolveSetCandidates(setName);
+    const set = candidates[0] ?? null;
+    if (!set) return null;
+
+    const parsedUserTotal = Number(userTotal);
+    const hasUserTotal = Number.isFinite(parsedUserTotal) && parsedUserTotal > 0;
+    const totalMatches = hasUserTotal ? set.printedTotal === parsedUserTotal || set.total === parsedUserTotal : true;
+
+    return {
+      id: set.id,
+      name: set.name,
+      printedTotal: set.printedTotal,
+      total: set.total,
+      userTotal: hasUserTotal ? parsedUserTotal : undefined,
+      totalMatches
+    };
+  },
+
   async findCardById(id: string): Promise<ReturnType<typeof normalizeCard> | null> {
     const cacheKey = `card:${id}`;
     const cached = getCached<ReturnType<typeof normalizeCard> | null>(cacheKey);

@@ -8,6 +8,10 @@ type ImportRow = {
   sequence: string;
   status: string;
   quantity: string;
+  officialSetName?: string;
+  officialSetId?: string;
+  officialPrintedTotal?: number;
+  officialTotal?: number;
   rowNumber?: number;
   reason?: string;
 };
@@ -205,15 +209,33 @@ export const importService = {
         const importQuantity = quantity > 0 ? quantity : 1;
         result.validRows += 1;
 
-        const card = await pokemonService.findCardBySetAndNumber(normalizedRow.series, cardNumber, normalizedRow.sequence);
+        const officialSet = await pokemonService.resolveSetReference(normalizedRow.series, normalizedRow.sequence);
+        const lookupSet = officialSet?.id ?? normalizedRow.series;
+        const enrichedRow = {
+          ...normalizedRow,
+          officialSetName: officialSet?.name,
+          officialSetId: officialSet?.id,
+          officialPrintedTotal: officialSet?.printedTotal,
+          officialTotal: officialSet?.total
+        };
+        const card = await pokemonService.findCardBySetAndNumber(lookupSet, cardNumber);
 
         if (!card) {
           result.notFound.push({
-            ...normalizedRow,
-            reason: `Nao encontrei carta para serie "${normalizedRow.series}", sequencia "${normalizedRow.sequence}" e numero "${cardNumber}".`
+            ...enrichedRow,
+            reason: officialSet
+              ? `Nao encontrei carta numero "${cardNumber}" na colecao oficial "${officialSet.name}" (${officialSet.printedTotal ?? officialSet.total ?? "total desconhecido"} cartas oficiais).`
+              : `Nao encontrei colecao oficial para serie "${normalizedRow.series}" e numero "${cardNumber}".`
           });
           result.errors.push(result.notFound[result.notFound.length - 1]);
           continue;
+        }
+
+        if (officialSet && !officialSet.totalMatches) {
+          result.errors.push({
+            ...enrichedRow,
+            reason: `Sequencia da planilha (${officialSet.userTotal}) difere do total oficial da colecao (${officialSet.printedTotal ?? officialSet.total ?? "desconhecido"}). A importacao usou o total oficial como referencia.`
+          });
         }
 
         await collectionService.add(userId, {
