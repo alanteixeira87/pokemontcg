@@ -67,15 +67,15 @@ export function Explore({ onToast }: { onToast: (toast: ToastState) => void }) {
 
   return (
     <div className="space-y-5">
-      <section className="overflow-hidden rounded-3xl border border-slate-200/80 bg-white/88 shadow-[0_18px_55px_rgba(15,23,42,0.08)] backdrop-blur dark:border-slate-800 dark:bg-slate-900/80">
-        <div className="border-b border-slate-100 bg-[radial-gradient(circle_at_top_left,rgba(220,38,38,0.16),transparent_32%),linear-gradient(135deg,#ffffff_0%,#f8fafc_100%)] p-5 dark:border-slate-800 dark:bg-[radial-gradient(circle_at_top_left,rgba(248,113,113,0.16),transparent_32%),linear-gradient(135deg,#111827_0%,#0f172a_100%)]">
+      <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div className="border-b border-slate-100 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
         <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-red-600 dark:text-red-300">Explorar cartas</p>
-            <h2 className="mt-1 text-3xl font-black tracking-tight text-slate-950 dark:text-white">Marketplace de cartas</h2>
-            <p className="mt-1 text-sm font-medium text-slate-500 dark:text-slate-400">Pesquise por nome, serie ou colecao e adicione direto na sua pasta.</p>
+            <p className="text-xs font-medium uppercase tracking-[0.16em] text-indigo-600 dark:text-indigo-300">Explorar cartas</p>
+            <h2 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950 dark:text-white">Marketplace de cartas</h2>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Pesquise por nome, serie ou colecao e adicione direto na sua pasta.</p>
           </div>
-          <span className="rounded-full border border-amber-200 bg-amber-100 px-3 py-1 text-xs font-black text-slate-950 shadow-sm">{total.toLocaleString("pt-BR")} cartas</span>
+          <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300">{total.toLocaleString("pt-BR")} cartas</span>
         </div>
         </div>
         <div className="space-y-3 p-4">
@@ -146,7 +146,7 @@ export function Explore({ onToast }: { onToast: (toast: ToastState) => void }) {
                   setSearch(term);
                   setPage(1);
                 }}
-                className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-bold text-slate-600 transition hover:-translate-y-0.5 hover:border-red-200 hover:bg-white hover:text-red-600 hover:shadow-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-900"
+                className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-600 transition hover:border-indigo-200 hover:bg-white hover:text-indigo-600 hover:shadow-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-900"
               >
                 <Sparkles size={12} />
                 {term}
@@ -172,7 +172,7 @@ export function Explore({ onToast }: { onToast: (toast: ToastState) => void }) {
         <EmptyState title="Nenhuma carta encontrada" description="Ajuste a busca ou remova filtros para ver mais resultados." />
       )}
 
-      <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white/88 p-3 shadow-sm backdrop-blur dark:border-slate-800 dark:bg-slate-900/80">
+      <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-white p-3 shadow-sm  dark:border-slate-800 dark:bg-slate-900/80">
         <Button variant="secondary" disabled={page <= 1} onClick={() => setPage((current) => current - 1)}>
           <ChevronLeft size={16} />
           Anterior
@@ -188,3 +188,6 @@ export function Explore({ onToast }: { onToast: (toast: ToastState) => void }) {
     </div>
   );
 }
+
+
+

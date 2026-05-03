@@ -17,9 +17,9 @@ type VariantDraft = Record<VariantType, { ownedQuantity: number; tradeQuantity: 
 
 const variantOptions: Array<{ value: VariantType; label: string; tone: string }> = [
   { value: "NORMAL", label: "Normal", tone: "bg-slate-100 text-slate-700" },
-  { value: "FOIL", label: "Foil", tone: "bg-yellow-100 text-yellow-800" },
-  { value: "REVERSE_FOIL", label: "Foil Reverse", tone: "bg-sky-100 text-sky-800" },
-  { value: "RARE_ILLUSTRATION", label: "Ilustracao Rara", tone: "bg-fuchsia-100 text-fuchsia-800" }
+  { value: "FOIL", label: "Foil", tone: "bg-purple-50 text-purple-700" },
+  { value: "REVERSE_FOIL", label: "Foil Reverse", tone: "bg-sky-50 text-sky-700" },
+  { value: "RARE_ILLUSTRATION", label: "Ilustracao Rara", tone: "bg-amber-50 text-amber-700" }
 ];
 
 const statusLabel: Record<TradeStatus, string> = {
@@ -32,11 +32,11 @@ const statusLabel: Record<TradeStatus, string> = {
 };
 
 const statusClass: Record<TradeStatus, string> = {
-  PENDING: "bg-yellow-100 text-yellow-800",
-  ACCEPTED: "bg-emerald-100 text-emerald-800",
-  DECLINED: "bg-red-100 text-red-800",
+  PENDING: "bg-amber-50 text-amber-700",
+  ACCEPTED: "bg-emerald-50 text-emerald-700",
+  DECLINED: "bg-red-50 text-red-700",
   CANCELED: "bg-slate-100 text-slate-700",
-  REJECTED: "bg-red-100 text-red-800",
+  REJECTED: "bg-red-50 text-red-700",
   CANCELLED: "bg-slate-100 text-slate-700"
 };
 
@@ -227,12 +227,12 @@ export function TradeMarket({ onToast }: { onToast: (toast: ToastState) => void 
 
   return (
     <div className="space-y-5">
-      <section className="overflow-hidden rounded-3xl border border-slate-200/80 bg-white/88 shadow-[0_18px_55px_rgba(15,23,42,0.08)] backdrop-blur dark:border-slate-800 dark:bg-slate-900/80">
-        <div className="border-b border-slate-100 bg-[radial-gradient(circle_at_top_left,rgba(220,38,38,0.16),transparent_32%),linear-gradient(135deg,#ffffff_0%,#f8fafc_100%)] p-5 dark:border-slate-800 dark:bg-[radial-gradient(circle_at_top_left,rgba(248,113,113,0.16),transparent_32%),linear-gradient(135deg,#111827_0%,#0f172a_100%)]">
+      <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div className="border-b border-slate-100 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.2em] text-red-600 dark:text-red-300">Mercado de trocas</p>
-              <h2 className="mt-1 text-3xl font-black tracking-tight text-slate-950 dark:text-white">Trocas com variantes e negociacao em tempo real</h2>
+              <p className="text-xs font-medium uppercase tracking-[0.16em] text-indigo-600 dark:text-indigo-300">Mercado de trocas</p>
+              <h2 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950 dark:text-white">Trocas com variantes e negociacao em tempo real</h2>
               <p className="mt-1 text-sm font-medium text-slate-500 dark:text-slate-400">Escolha tipo, quantidade, confira imagens ampliadas e converse antes de fechar.</p>
             </div>
             <div className="grid grid-cols-2 gap-2 sm:min-w-[320px]">
@@ -257,15 +257,15 @@ export function TradeMarket({ onToast }: { onToast: (toast: ToastState) => void 
 
       <div className="grid gap-5 xl:grid-cols-[320px_1fr]">
         <section className="space-y-3">
-          <h3 className="text-lg font-black text-slate-950 dark:text-white">Usuarios encontrados</h3>
+          <h3 className="text-lg font-semibold text-slate-950 dark:text-white">Usuarios encontrados</h3>
           {loadingUsers ? <Skeleton className="h-80" /> : users.length ? (
             <div className="space-y-3">
               {users.map((user) => (
-                <button key={user.id} type="button" onClick={() => setSelectedUser(user)} className={`w-full rounded-3xl border bg-white/88 p-4 text-left shadow-[0_14px_35px_rgba(15,23,42,0.06)] backdrop-blur transition-all duration-200 hover:-translate-y-1 hover:border-red-200 hover:shadow-[0_22px_55px_rgba(15,23,42,0.12)] dark:bg-slate-900/80 ${selectedUser?.id === user.id ? "border-red-300 ring-4 ring-red-500/10 dark:border-red-500/60" : "border-slate-200 dark:border-slate-800"}`}>
+                <button key={user.id} type="button" onClick={() => setSelectedUser(user)} className={`w-full rounded-xl border bg-white p-4 text-left shadow-sm transition duration-150 hover:scale-[1.01] hover:border-indigo-200 hover:shadow-md dark:bg-slate-900 ${selectedUser?.id === user.id ? "border-indigo-300 ring-4 ring-indigo-500/10 dark:border-indigo-500/60" : "border-slate-200 dark:border-slate-800"}`}>
                   <div className="flex items-start gap-3">
                     <Avatar name={user.name} avatarUrl={user.avatarUrl} />
                     <div className="min-w-0 flex-1">
-                      <h4 className="truncate text-base font-black text-slate-950 dark:text-white">{user.name}</h4>
+                      <h4 className="truncate text-base font-semibold text-slate-950 dark:text-white">{user.name}</h4>
                       <p className="mt-1 text-xs font-semibold text-slate-500 dark:text-slate-400">
                         {user.readyTradeCardsCount ?? user.tradeCardsCount} prontas
                         {(user.pendingVariantCardsCount ?? 0) > 0 ? ` · ${user.pendingVariantCardsCount} aguardando tipo` : ""}
@@ -278,8 +278,8 @@ export function TradeMarket({ onToast }: { onToast: (toast: ToastState) => void 
                           {user.suggestedCards.slice(0, 3).map((card) => (
                             <div key={card.id} className="flex items-center gap-2 rounded-md bg-slate-50 px-2 py-1">
                               <img src={card.image} alt={card.name} loading="lazy" className="h-8 w-6 object-contain" />
-                              <span className="min-w-0 flex-1 truncate text-xs font-bold text-slate-700">{card.name}</span>
-                              <span className={`rounded-full px-2 py-0.5 text-[10px] font-black ${card.readyForTrade ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-800"}`}>
+                              <span className="min-w-0 flex-1 truncate text-xs font-medium text-slate-700">{card.name}</span>
+                              <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${card.readyForTrade ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
                                 {card.readyForTrade ? "pronta" : "sem tipo"}
                               </span>
                             </div>
@@ -295,11 +295,11 @@ export function TradeMarket({ onToast }: { onToast: (toast: ToastState) => void 
         </section>
 
         <section className="space-y-5">
-          <div className="rounded-3xl border border-slate-200/80 bg-white/88 p-4 shadow-[0_18px_45px_rgba(15,23,42,0.07)] backdrop-blur dark:border-slate-800 dark:bg-slate-900/80">
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
             <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
               <div>
-                <p className="text-xs font-black uppercase text-primary">Cartas para troca</p>
-                <h3 className="text-xl font-black text-slate-950 dark:text-white">{selectedUser ? selectedUser.name : "Selecione um usuario"}</h3>
+                <p className="text-xs font-semibold uppercase text-indigo-600">Cartas para troca</p>
+                <h3 className="text-xl font-semibold text-slate-950 dark:text-white">{selectedUser ? selectedUser.name : "Selecione um usuario"}</h3>
               </div>
               <div className="grid gap-2 sm:grid-cols-3 lg:min-w-[620px]">
                 <Input placeholder="Buscar carta selecionavel" value={cardSearch} onChange={(event) => setCardSearch(event.target.value)} />
@@ -342,11 +342,11 @@ export function TradeMarket({ onToast }: { onToast: (toast: ToastState) => void 
             </div>
           </div>
 
-          <section className="rounded-3xl border border-slate-200/80 bg-white/88 p-4 shadow-[0_18px_45px_rgba(15,23,42,0.07)] backdrop-blur dark:border-slate-800 dark:bg-slate-900/80">
+          <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div>
-                <p className="text-xs font-black uppercase text-primary">Proposta atual</p>
-                <h3 className="text-lg font-black text-slate-950 dark:text-white">{requested.length} tipos solicitados por {offered.length} tipos oferecidos</h3>
+                <p className="text-xs font-semibold uppercase text-indigo-600">Proposta atual</p>
+                <h3 className="text-lg font-semibold text-slate-950 dark:text-white">{requested.length} tipos solicitados por {offered.length} tipos oferecidos</h3>
               </div>
               <Button variant="primary" disabled={!selectedUser || requested.length === 0 || offered.length === 0 || sending} onClick={sendProposal}>
                 <Send size={16} />
@@ -361,11 +361,11 @@ export function TradeMarket({ onToast }: { onToast: (toast: ToastState) => void 
         </section>
       </div>
 
-      <section className="rounded-3xl border border-slate-200/80 bg-white/88 p-4 shadow-[0_18px_45px_rgba(15,23,42,0.07)] backdrop-blur dark:border-slate-800 dark:bg-slate-900/80">
+      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <div className="mb-4 flex items-center justify-between gap-3">
           <div>
-            <p className="text-xs font-black uppercase text-primary">Notificacoes, propostas e chat</p>
-            <h3 className="text-xl font-black text-slate-950">Historico de negociacoes</h3>
+            <p className="text-xs font-semibold uppercase text-indigo-600">Notificacoes, propostas e chat</p>
+            <h3 className="text-xl font-semibold text-slate-950">Historico de negociacoes</h3>
           </div>
           <Button variant="secondary" onClick={() => void loadProposals()}>
             <Clock size={16} />
@@ -403,16 +403,16 @@ function expandSelected(cards: TradeCard[], selection: SelectedLine[]) {
 }
 
 function Metric({ label, value }: { label: string; value: number }) {
-  return <div className="rounded-2xl border border-slate-200 bg-white/78 p-3 shadow-sm backdrop-blur dark:border-slate-700 dark:bg-slate-950/35"><p className="text-[11px] font-black uppercase text-slate-500 dark:text-slate-400">{label}</p><p className="text-2xl font-black text-slate-950 dark:text-white">{value}</p></div>;
+  return <div className="rounded-lg border border-slate-200 bg-white/78 p-3 shadow-sm  dark:border-slate-700 dark:bg-slate-950/35"><p className="text-[11px] font-semibold uppercase text-slate-500 dark:text-slate-400">{label}</p><p className="text-2xl font-semibold text-slate-950 dark:text-white">{value}</p></div>;
 }
 
 function Badge({ children }: { children: string }) {
-  return <span className="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-bold text-slate-600">{children}</span>;
+  return <span className="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-600">{children}</span>;
 }
 
 function Avatar({ name, avatarUrl }: { name: string; avatarUrl?: string | null }) {
   if (avatarUrl) return <img src={avatarUrl} alt={name} className="h-12 w-12 rounded-full object-cover" loading="lazy" />;
-  return <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary text-lg font-black text-white">{name.slice(0, 1).toUpperCase()}</div>;
+  return <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-lg font-semibold text-white">{name.slice(0, 1).toUpperCase()}</div>;
 }
 
 function TradeCardPanel(props: {
@@ -432,22 +432,22 @@ function TradeCardPanel(props: {
   return (
     <div>
       <div className="mb-3 flex items-center justify-between">
-        <h4 className="font-black text-slate-950">{props.title}</h4>
-        <span className="rounded-md bg-slate-100 px-2 py-1 text-xs font-bold text-slate-600">{props.selected.length} tipos</span>
+        <h4 className="font-semibold text-slate-950">{props.title}</h4>
+        <span className="rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600">{props.selected.length} tipos</span>
       </div>
       {props.cards.length ? (
         <div className="max-h-[650px] space-y-3 overflow-y-auto pr-1">
           {props.cards.map((card) => (
-            <div key={card.id} className="rounded-2xl border border-slate-200 bg-white/90 p-2 shadow-sm transition hover:border-red-200 hover:shadow-md dark:border-slate-800 dark:bg-slate-950/50">
+            <div key={card.id} className="rounded-lg border border-slate-200 bg-white p-2 shadow-sm transition hover:border-indigo-200 hover:shadow-md dark:border-slate-800 dark:bg-slate-950/50">
               <div className="grid grid-cols-[72px_1fr_auto] gap-3">
                 <button type="button" onClick={() => props.onZoom(card)} className="relative">
                   <img src={card.image} alt={card.name} loading="lazy" className="h-24 w-[68px] object-contain" />
                   <span className="absolute bottom-1 right-1 rounded-full bg-white p-1 shadow"><Eye size={13} /></span>
                 </button>
                 <div className="min-w-0">
-                  <p className="line-clamp-2 text-sm font-black text-slate-950">{card.name}</p>
+                  <p className="line-clamp-2 text-sm font-semibold text-slate-950">{card.name}</p>
                   <p className="mt-1 truncate text-xs font-semibold text-slate-500">{card.set}</p>
-                  <p className="mt-1 text-xs font-bold text-primary">#{card.number ?? card.cardId.split("-").at(-1) ?? "N/D"}</p>
+                  <p className="mt-1 text-xs font-medium text-indigo-600">#{card.number ?? card.cardId.split("-").at(-1) ?? "N/D"}</p>
                 </div>
                 {props.mine && (
                   <Button title="Configurar variantes" size="icon" variant="secondary" onClick={() => props.onConfigure?.(card)}>
@@ -460,15 +460,15 @@ function TradeCardPanel(props: {
                   const line = { collectionId: card.id, variantType: variant.variantType, quantity: 1 };
                   const selected = props.selected.find((item) => selectionKey(item) === selectionKey(line));
                   return (
-                    <div key={variant.variantType} className={`rounded-md border p-2 ${selected ? "border-primary bg-red-50" : "border-slate-200 bg-slate-50"}`}>
+                    <div key={variant.variantType} className={`rounded-md border p-2 ${selected ? "border-indigo-600 bg-indigo-50" : "border-slate-200 bg-slate-50"}`}>
                       <div className="flex flex-wrap items-center gap-2">
-                        <button type="button" onClick={() => props.onToggle(line)} className={`flex h-6 w-6 items-center justify-center rounded-full border ${selected ? "border-primary bg-primary text-white" : "border-slate-300 bg-white"}`}>
+                        <button type="button" onClick={() => props.onToggle(line)} className={`flex h-6 w-6 items-center justify-center rounded-full border ${selected ? "border-indigo-600 bg-indigo-600 text-white" : "border-slate-300 bg-white"}`}>
                           {selected && <Check size={14} />}
                         </button>
-                        <button type="button" onClick={() => props.onZoom(card, variant.variantType)} className={`rounded-full px-2 py-1 text-xs font-black ${variantTone(variant.variantType)}`}>
+                        <button type="button" onClick={() => props.onZoom(card, variant.variantType)} className={`rounded-full px-2 py-1 text-xs font-semibold ${variantTone(variant.variantType)}`}>
                           {variantLabel(variant.variantType)}
                         </button>
-                        <span className="text-xs font-bold text-slate-500">troca {variant.tradeQuantity} / possui {variant.ownedQuantity}</span>
+                        <span className="text-xs font-medium text-slate-500">troca {variant.tradeQuantity} / possui {variant.ownedQuantity}</span>
                         {selected && (
                           <Select className="ml-auto h-8 w-20" value={String(selected.quantity)} onChange={(event) => props.onQuantity(selected, Number(event.target.value))}>
                             {Array.from({ length: variant.tradeQuantity }).map((_, index) => <option key={index + 1} value={index + 1}>{index + 1}</option>)}
@@ -493,9 +493,9 @@ function TradeCardPanel(props: {
 
 function SelectionPreview({ title, rows }: { title: string; rows: Array<{ card: TradeCard; line: SelectedLine }> }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-3 dark:border-slate-800 dark:bg-slate-950/40">
-      <p className="mb-2 text-xs font-black uppercase text-slate-500">{title}</p>
-      {rows.length ? <div className="space-y-2">{rows.map(({ card, line }) => <div key={selectionKey(line)} className="flex items-center gap-2 text-sm font-semibold text-slate-700"><span className="h-2 w-2 rounded-full bg-primary" /><span className="truncate">{card.name}</span><span className={`rounded-full px-2 py-1 text-[11px] ${variantTone(line.variantType)}`}>{variantLabel(line.variantType)}</span><span className="ml-auto text-xs text-slate-500">x{line.quantity}</span></div>)}</div> : <p className="text-sm text-slate-500">Nenhuma carta selecionada.</p>}
+    <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-3 dark:border-slate-800 dark:bg-slate-950/40">
+      <p className="mb-2 text-xs font-semibold uppercase text-slate-500">{title}</p>
+      {rows.length ? <div className="space-y-2">{rows.map(({ card, line }) => <div key={selectionKey(line)} className="flex items-center gap-2 text-sm font-semibold text-slate-700"><span className="h-2 w-2 rounded-full bg-indigo-600" /><span className="truncate">{card.name}</span><span className={`rounded-full px-2 py-1 text-[11px] ${variantTone(line.variantType)}`}>{variantLabel(line.variantType)}</span><span className="ml-auto text-xs text-slate-500">x{line.quantity}</span></div>)}</div> : <p className="text-sm text-slate-500">Nenhuma carta selecionada.</p>}
     </div>
   );
 }
@@ -507,11 +507,11 @@ function ProposalCard({ proposal, currentUserId, onUpdate, onChat, onZoom }: { p
   const offered = proposal.cards?.filter((card) => card.side === "OFFERED") ?? proposal.offeredCards;
   const requested = proposal.cards?.filter((card) => card.side === "REQUESTED") ?? proposal.requestedCards;
   return (
-    <article className="rounded-3xl border border-slate-200 bg-white/90 p-4 shadow-[0_14px_35px_rgba(15,23,42,0.06)] backdrop-blur transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_22px_55px_rgba(15,23,42,0.12)] dark:border-slate-800 dark:bg-slate-950/55">
+    <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm  transition-all duration-200 hover:shadow-md dark:border-slate-800 dark:bg-slate-950/55">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <span className={`inline-flex rounded-full px-2 py-1 text-xs font-black ${statusClass[proposal.status]}`}>{statusLabel[proposal.status]}</span>
-          <h4 className="mt-2 text-base font-black text-slate-950">{incoming ? `${proposal.requester.name} quer trocar com voce` : `Proposta para ${proposal.receiver.name}`}</h4>
+          <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${statusClass[proposal.status]}`}>{statusLabel[proposal.status]}</span>
+          <h4 className="mt-2 text-base font-semibold text-slate-950">{incoming ? `${proposal.requester.name} quer trocar com voce` : `Proposta para ${proposal.receiver.name}`}</h4>
           <p className="text-xs font-semibold text-slate-500">{new Date(proposal.createdAt).toLocaleString("pt-BR")}</p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -529,7 +529,7 @@ function ProposalCard({ proposal, currentUserId, onUpdate, onChat, onZoom }: { p
 }
 
 function ProposalCards({ title, cards, onZoom }: { title: string; cards: TradeCardSnapshot[]; onZoom: (card: TradeCardSnapshot) => void }) {
-  return <div className="rounded-lg bg-slate-50 p-3"><p className="mb-2 text-xs font-black uppercase text-slate-500">{title}</p><div className="space-y-2">{cards.map((card) => <button type="button" key={`${card.collectionId}-${card.cardId}-${card.variantType ?? "legacy"}`} onClick={() => onZoom(card)} className="grid w-full grid-cols-[38px_1fr] items-center gap-2 text-left"><img src={card.image} alt={card.name} loading="lazy" className="h-12 w-9 object-contain" /><div className="min-w-0"><p className="truncate text-sm font-bold text-slate-800">{card.name}</p><p className="text-xs text-slate-500">{card.set} #{card.number ?? "N/D"} · {variantLabel(card.variantType)} · x{card.quantity}</p></div></button>)}</div></div>;
+  return <div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-950/40"><p className="mb-2 text-xs font-semibold uppercase text-slate-500">{title}</p><div className="space-y-2">{cards.map((card) => <button type="button" key={`${card.collectionId}-${card.cardId}-${card.variantType ?? "legacy"}`} onClick={() => onZoom(card)} className="grid w-full grid-cols-[38px_1fr] items-center gap-2 rounded-lg p-1 text-left transition duration-150 hover:bg-white dark:hover:bg-slate-900"><img src={card.image} alt={card.name} loading="lazy" className="h-12 w-9 object-contain" /><div className="min-w-0"><p className="truncate text-sm font-medium text-slate-800 dark:text-slate-100">{card.name}</p><p className="text-xs text-slate-500 dark:text-slate-400">{card.set} #{card.number ?? "N/D"} · {variantLabel(card.variantType)} · x{card.quantity}</p></div></button>)}</div></div>;
 }
 
 function CardZoom({ data, onClose }: { data: { card: TradeCard | TradeCardSnapshot; variantType?: VariantType }; onClose: () => void }) {
@@ -537,27 +537,27 @@ function CardZoom({ data, onClose }: { data: { card: TradeCard | TradeCardSnapsh
   const snapshotVariant = "variantType" in card ? card.variantType : undefined;
   const currentVariant = data.variantType ?? snapshotVariant;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 p-2 sm:p-5">
-      <div className="grid h-[94vh] w-full max-w-7xl overflow-hidden rounded-2xl bg-white shadow-glow lg:grid-cols-[minmax(0,1fr)_320px]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-2 backdrop-blur-sm sm:p-5">
+      <div className="grid h-[94vh] w-full max-w-7xl overflow-hidden rounded-xl bg-white shadow-lg dark:bg-slate-900 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="flex min-h-0 items-center justify-center bg-slate-950 p-3 sm:p-6">
-          <img src={card.image} alt={card.name} className="h-full max-h-[88vh] w-full object-contain drop-shadow-[0_24px_40px_rgba(0,0,0,0.45)]" />
+          <img src={card.image} alt={card.name} className="h-full max-h-[88vh] w-full object-contain" />
         </div>
-        <aside className="flex flex-col gap-4 border-t border-slate-200 p-5 lg:border-l lg:border-t-0">
+        <aside className="flex flex-col gap-4 border-t border-slate-200 p-5 dark:border-slate-800 lg:border-l lg:border-t-0">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-xs font-black uppercase text-primary">Visualizacao ampliada</p>
-              <h2 className="mt-1 text-2xl font-black leading-tight text-slate-950">{card.name}</h2>
+              <p className="text-xs font-semibold uppercase text-indigo-600">Visualizacao ampliada</p>
+              <h2 className="mt-1 text-2xl font-semibold leading-tight text-slate-950 dark:text-white">{card.name}</h2>
             </div>
             <Button size="icon" variant="ghost" onClick={onClose} aria-label="Fechar visualizacao">
               <X size={20} />
             </Button>
           </div>
           <div className="space-y-2">
-            <p className="text-sm font-bold text-slate-500">{card.set}</p>
-            <p className="text-4xl font-black text-slate-950">#{card.number ?? "N/D"}</p>
-            <span className={`inline-flex rounded-full px-3 py-1 text-sm font-black ${variantTone(currentVariant)}`}>{variantLabel(currentVariant)}</span>
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{card.set}</p>
+            <p className="text-4xl font-semibold text-slate-950 dark:text-white">#{card.number ?? "N/D"}</p>
+            <span className={`inline-flex rounded-full px-3 py-1 text-sm font-semibold ${variantTone(currentVariant)}`}>{variantLabel(currentVariant)}</span>
           </div>
-          <p className="rounded-lg bg-slate-100 p-3 text-sm font-medium text-slate-600">
+          <p className="rounded-lg bg-slate-100 p-3 text-sm font-medium text-slate-600 dark:bg-slate-950/60 dark:text-slate-300">
             Confira a arte em alta, numeracao, colecao e tipo antes de selecionar ou aceitar a troca.
           </p>
         </aside>
@@ -583,17 +583,17 @@ function VariantModal({ card, onClose, onSaved, onToast }: { card: TradeCard; on
     }
   }
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 p-3">
-      <div className="grid max-h-[94vh] w-full max-w-5xl overflow-hidden rounded-2xl bg-white shadow-glow lg:grid-cols-[280px_1fr]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 p-3 backdrop-blur-sm">
+      <div className="grid max-h-[94vh] w-full max-w-5xl overflow-hidden rounded-xl bg-white shadow-lg dark:bg-slate-900 lg:grid-cols-[280px_1fr]">
         <div className="flex items-center justify-center bg-slate-950 p-4">
-          <img src={card.image} alt={card.name} className="max-h-[72vh] w-full object-contain drop-shadow-[0_20px_34px_rgba(0,0,0,0.45)]" />
+          <img src={card.image} alt={card.name} className="max-h-[72vh] w-full object-contain" />
         </div>
         <div className="overflow-y-auto p-5">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
-              <p className="text-xs font-black uppercase text-primary">Variantes da carta</p>
-              <h2 className="text-xl font-black text-slate-950">{card.name}</h2>
-              <p className="text-sm font-semibold text-slate-500">{card.set} #{card.number ?? "N/D"}</p>
+              <p className="text-xs font-semibold uppercase text-indigo-600">Variantes da carta</p>
+              <h2 className="text-xl font-semibold text-slate-950 dark:text-white">{card.name}</h2>
+              <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{card.set} #{card.number ?? "N/D"}</p>
             </div>
             <Button size="icon" variant="ghost" onClick={onClose} aria-label="Fechar variantes">
               <X size={18} />
@@ -601,13 +601,13 @@ function VariantModal({ card, onClose, onSaved, onToast }: { card: TradeCard; on
           </div>
           <div className="space-y-3">
             {variantOptions.map((option) => (
-              <div key={option.value} className="grid gap-3 rounded-lg border border-slate-200 p-3 sm:grid-cols-[1fr_120px_120px] sm:items-center">
-                <span className={`w-fit rounded-full px-3 py-1 text-xs font-black ${option.tone}`}>{option.label}</span>
-                <label className="text-xs font-bold uppercase text-slate-500">
+              <div key={option.value} className="grid gap-3 rounded-lg border border-slate-200 p-3 dark:border-slate-800 sm:grid-cols-[1fr_120px_120px] sm:items-center">
+                <span className={`w-fit rounded-full px-3 py-1 text-xs font-semibold ${option.tone}`}>{option.label}</span>
+                <label className="text-xs font-medium uppercase text-slate-500">
                   Possui
                   <Input type="number" min={0} value={draft[option.value].ownedQuantity} onChange={(event) => setDraft((current) => ({ ...current, [option.value]: { ...current[option.value], ownedQuantity: Math.max(0, Number(event.target.value)) } }))} />
                 </label>
-                <label className="text-xs font-bold uppercase text-slate-500">
+                <label className="text-xs font-medium uppercase text-slate-500">
                   Troca
                   <Input type="number" min={0} value={draft[option.value].tradeQuantity} onChange={(event) => setDraft((current) => ({ ...current, [option.value]: { ...current[option.value], tradeQuantity: Math.max(0, Number(event.target.value)) } }))} />
                 </label>
@@ -625,5 +625,9 @@ function VariantModal({ card, onClose, onSaved, onToast }: { card: TradeCard; on
 }
 
 function ChatModal({ trade, currentUserId, messages, value, onChange, onSend, onClose }: { trade: TradeProposal; currentUserId: number; messages: TradeMessage[]; value: string; onChange: (value: string) => void; onSend: () => void; onClose: () => void }) {
-  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4"><div className="flex h-[82vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl bg-white shadow-glow"><div className="flex items-center justify-between border-b border-slate-200 p-4"><div><p className="text-xs font-black uppercase text-primary">MiniChat da troca #{trade.id}</p><h2 className="text-lg font-black text-slate-950">{trade.requester.name} ↔ {trade.receiver.name}</h2></div><Button size="icon" variant="ghost" onClick={onClose}><X size={18} /></Button></div><div className="flex-1 space-y-3 overflow-y-auto bg-slate-100 p-4">{messages.length ? messages.map((message) => { const mine = message.senderId === currentUserId; return <div key={message.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}><div className={`max-w-[78%] rounded-2xl px-3 py-2 shadow-sm ${mine ? "rounded-br-sm bg-primary text-white" : "rounded-bl-sm bg-white text-slate-800"}`}><p className="text-sm font-medium">{message.message}</p><p className={`mt-1 text-[10px] ${mine ? "text-red-100" : "text-slate-400"}`}>{new Date(message.createdAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}{message.isRead ? " · lida" : ""}</p></div></div>; }) : <EmptyState title="Comece a negociacao" description="Envie uma mensagem para combinar detalhes da troca." />}</div><div className="grid grid-cols-[1fr_auto] gap-2 border-t border-slate-200 p-3"><Input placeholder={trade.status === "CANCELLED" || trade.status === "CANCELED" ? "Troca cancelada" : "Digite sua mensagem"} value={value} disabled={trade.status === "CANCELLED" || trade.status === "CANCELED"} onChange={(event) => onChange(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") onSend(); }} /><Button variant="primary" disabled={!value.trim() || trade.status === "CANCELLED" || trade.status === "CANCELED"} onClick={onSend}><Send size={16} /></Button></div></div></div>;
+  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4"><div className="flex h-[82vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl bg-white shadow-lg"><div className="flex items-center justify-between border-b border-slate-200 p-4"><div><p className="text-xs font-semibold uppercase text-indigo-600">MiniChat da troca #{trade.id}</p><h2 className="text-lg font-semibold text-slate-950">{trade.requester.name} ↔ {trade.receiver.name}</h2></div><Button size="icon" variant="ghost" onClick={onClose}><X size={18} /></Button></div><div className="flex-1 space-y-3 overflow-y-auto bg-slate-50 p-4 dark:bg-slate-950/50">{messages.length ? messages.map((message) => { const mine = message.senderId === currentUserId; return <div key={message.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}><div className={`max-w-[78%] rounded-xl px-3 py-2 shadow-sm ${mine ? "rounded-br-sm bg-indigo-600 text-white" : "rounded-bl-sm bg-white text-slate-800 dark:bg-slate-800 dark:text-slate-100"}`}><p className="text-sm font-medium">{message.message}</p><p className={`mt-1 text-[10px] ${mine ? "text-indigo-100" : "text-slate-400"}`}>{new Date(message.createdAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}{message.isRead ? " · lida" : ""}</p></div></div>; }) : <EmptyState title="Comece a negociacao" description="Envie uma mensagem para combinar detalhes da troca." />}</div><div className="grid grid-cols-[1fr_auto] gap-2 border-t border-slate-200 p-3"><Input placeholder={trade.status === "CANCELLED" || trade.status === "CANCELED" ? "Troca cancelada" : "Digite sua mensagem"} value={value} disabled={trade.status === "CANCELLED" || trade.status === "CANCELED"} onChange={(event) => onChange(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") onSend(); }} /><Button variant="primary" disabled={!value.trim() || trade.status === "CANCELLED" || trade.status === "CANCELED"} onClick={onSend}><Send size={16} /></Button></div></div></div>;
 }
+
+
+
+

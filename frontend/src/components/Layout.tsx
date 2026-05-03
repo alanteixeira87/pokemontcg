@@ -22,16 +22,16 @@ export function Layout({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen text-slate-950 dark:text-slate-100">
-      <header className="sticky top-0 z-30 border-b border-white/70 bg-white/82 shadow-[0_10px_35px_rgba(15,23,42,0.08)] backdrop-blur-xl dark:border-slate-800/80 dark:bg-slate-950/80">
-        <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-3 md:px-6 lg:flex-row lg:items-center">
+      <header className="sticky top-0 z-30 border-b border-slate-200 bg-white -md dark:border-slate-800 dark:bg-slate-950/90">
+        <div className="mx-auto flex min-h-16 max-w-7xl flex-col gap-3 px-4 py-3 md:px-6 lg:flex-row lg:items-center lg:py-0">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-red-600 to-amber-400 text-lg font-black text-white shadow-[0_12px_28px_rgba(220,38,38,0.25)]">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-600 text-sm font-semibold text-white">
                 P
               </div>
               <div>
-                <p className="text-[11px] font-black uppercase tracking-[0.18em] text-red-600 dark:text-red-300">Pokemon TCG</p>
-                <h1 className="text-xl font-black tracking-tight text-slate-950 dark:text-white">Colecao Local</h1>
+                <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Pokemon TCG</p>
+                <h1 className="text-lg font-semibold tracking-tight text-slate-950 dark:text-white">Colecao Local</h1>
               </div>
             </div>
             <Button className="lg:hidden" size="icon" variant="ghost" aria-label="Menu">
@@ -39,15 +39,15 @@ export function Layout({ children }: { children: ReactNode }) {
             </Button>
           </div>
           <div className="relative flex-1">
-            <Search className="pointer-events-none absolute left-4 top-3.5 text-slate-400" size={17} />
+            <Search className="pointer-events-none absolute left-3 top-3 text-slate-400" size={16} />
             <input
               readOnly
               value="Busque, organize e importe suas cartas"
               onClick={() => setView("explore")}
-              className="h-12 w-full cursor-pointer rounded-2xl border border-slate-200 bg-slate-50/80 pl-11 pr-3 text-sm font-semibold text-slate-500 shadow-inner outline-none transition hover:bg-white focus:ring-4 focus:ring-red-500/10 dark:border-slate-800 dark:bg-slate-900/80 dark:text-slate-300 dark:hover:bg-slate-900"
+              className="h-10 w-full cursor-pointer rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-3 text-sm text-slate-500 outline-none transition hover:bg-white focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
             />
           </div>
-          <div className="hidden items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-sm lg:flex dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200">
+          <div className="hidden items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 lg:flex dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200">
             <ShieldCheck size={16} />
             {user ? user.name : "Conta protegida"}
           </div>
@@ -63,7 +63,7 @@ export function Layout({ children }: { children: ReactNode }) {
         </div>
       </header>
 
-      <div className="border-b border-slate-200 bg-white/70 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/65">
+      <div className="border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
         <nav className="mx-auto hidden max-w-7xl items-center gap-1 px-4 py-2 md:px-6 lg:flex">
           {nav.map((item) => {
             const Icon = item.icon;
@@ -71,10 +71,10 @@ export function Layout({ children }: { children: ReactNode }) {
               <button
                 key={item.id}
                 onClick={() => setView(item.id)}
-                className={`flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold transition-all duration-200 ${
+                className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-150 ${
                   view === item.id
-                    ? "bg-slate-950 text-white shadow-md dark:bg-white dark:text-slate-950"
-                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white"
+                    ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300"
+                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-slate-900 dark:hover:text-white"
                 }`}
               >
                 <Icon size={18} />
@@ -83,15 +83,15 @@ export function Layout({ children }: { children: ReactNode }) {
             );
           })}
         </nav>
-        <nav className="grid grid-cols-4 border-t border-slate-200 bg-white/95 lg:hidden dark:border-slate-800 dark:bg-slate-950/95">
+        <nav className="grid grid-cols-4 border-t border-slate-200 bg-white lg:hidden dark:border-slate-800 dark:bg-slate-950/95">
           {nav.map((item) => {
             const Icon = item.icon;
             return (
               <button
                 key={item.id}
                 onClick={() => setView(item.id)}
-                className={`flex flex-col items-center gap-1 px-2 py-3 text-[11px] font-bold transition ${
-                  view === item.id ? "bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-200" : "text-slate-500 dark:text-slate-400"
+                className={`flex flex-col items-center gap-1 px-2 py-3 text-[11px] font-medium transition ${
+                  view === item.id ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300" : "text-slate-500 dark:text-slate-400"
                 }`}
               >
                 <Icon size={17} />
@@ -106,3 +106,5 @@ export function Layout({ children }: { children: ReactNode }) {
     </div>
   );
 }
+
+

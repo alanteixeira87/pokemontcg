@@ -8,12 +8,12 @@ import { Skeleton } from "../components/ui/Skeleton";
 
 function StatCard({ label, value, icon: Icon }: { label: string; value: string | number; icon: typeof Package }) {
   return (
-    <div className="group rounded-3xl border border-slate-200/80 bg-white/88 p-5 shadow-[0_18px_45px_rgba(15,23,42,0.07)] backdrop-blur transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(15,23,42,0.12)] dark:border-slate-800 dark:bg-slate-900/80">
-      <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 text-red-600 transition group-hover:scale-105 dark:bg-amber-950/30 dark:text-red-300">
+    <div className="group rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition duration-150 hover:scale-[1.01] hover:shadow-md dark:border-slate-800 dark:bg-slate-900">
+      <div className="mb-5 flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-300">
         <Icon size={20} />
       </div>
       <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">{label}</p>
-      <p className="mt-1 text-2xl font-black text-slate-950 dark:text-white">{value}</p>
+      <p className="mt-1 text-2xl font-semibold text-slate-950 dark:text-white">{value}</p>
     </div>
   );
 }
@@ -35,13 +35,13 @@ export function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <section className="overflow-hidden rounded-3xl border border-slate-200/80 bg-white/88 shadow-[0_18px_55px_rgba(15,23,42,0.08)] backdrop-blur dark:border-slate-800 dark:bg-slate-900/80">
+      <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <div className="p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-red-600 dark:text-red-300">Dashboard</p>
-            <h2 className="mt-1 text-3xl font-black tracking-tight text-slate-950 dark:text-white">Visao geral da colecao</h2>
-            <p className="mt-1 text-sm font-medium text-slate-500 dark:text-slate-400">Valores e contagens calculados a partir da base local.</p>
+            <p className="text-xs font-medium uppercase tracking-[0.16em] text-indigo-600 dark:text-indigo-300">Dashboard</p>
+            <h2 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950 dark:text-white">Visao geral da colecao</h2>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Valores e contagens calculados a partir da base local.</p>
           </div>
           <Button variant="primary" onClick={() => window.open(apiService.exportUrl("full"), "_blank")}>
             <Download size={16} />
@@ -58,15 +58,18 @@ export function Dashboard() {
         <StatCard label="Para troca" value={stats?.forTrade ?? 0} icon={Repeat2} />
       </section>
 
-      <section className="rounded-3xl border border-slate-200/80 bg-white/88 p-6 shadow-[0_18px_45px_rgba(15,23,42,0.07)] backdrop-blur dark:border-slate-800 dark:bg-slate-900/80">
+      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h3 className="text-lg font-black text-slate-950 dark:text-white">Cartas unicas</h3>
-            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Cada carta e armazenada uma unica vez; novas adicoes somam quantidade.</p>
+            <h3 className="text-lg font-semibold text-slate-950 dark:text-white">Cartas unicas</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Cada carta e armazenada uma unica vez; novas adicoes somam quantidade.</p>
           </div>
-          <p className="text-4xl font-black text-red-600 dark:text-red-300">{stats?.uniqueCards ?? 0}</p>
+          <p className="text-4xl font-semibold text-indigo-600 dark:text-indigo-300">{stats?.uniqueCards ?? 0}</p>
         </div>
       </section>
     </div>
   );
 }
+
+
+
