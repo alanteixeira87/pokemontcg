@@ -33,8 +33,8 @@ function cellText(value: ExcelJS.CellValue): string {
   return String(value).trim();
 }
 
-function readHeaderMap(sheet: ExcelJS.Worksheet): Map<string, number> {
-  const header = sheet.getRow(1);
+function readHeaderMap(sheet: ExcelJS.Worksheet, rowNumber: number): Map<string, number> {
+  const header = sheet.getRow(rowNumber);
   const map = new Map<string, number>();
 
   header.eachCell((cell, columnNumber) => {
@@ -44,20 +44,37 @@ function readHeaderMap(sheet: ExcelJS.Worksheet): Map<string, number> {
   return map;
 }
 
+function findHeaderRow(sheet: ExcelJS.Worksheet): { headerMap: Map<string, number>; rowNumber: number } {
+  for (let rowNumber = 1; rowNumber <= Math.min(sheet.rowCount, 30); rowNumber += 1) {
+    const headerMap = readHeaderMap(sheet, rowNumber);
+    const hasSeries = ["serie", "s rie", "set", "colecao", "colecao set", "expansao", "edicao"].some((key) => headerMap.has(key));
+    const hasNumber = ["numero", "n mero", "n", "num", "card", "carta"].some((key) => headerMap.has(key));
+    const hasStatus = ["status", "situacao", "possuo", "tenho"].some((key) => headerMap.has(key));
+    const hasQuantity = ["qtde", "qtd", "quantidade", "quantity"].some((key) => headerMap.has(key));
+
+    if (hasSeries && hasNumber && (hasStatus || hasQuantity)) {
+      return { headerMap, rowNumber };
+    }
+  }
+
+  return { headerMap: readHeaderMap(sheet, 1), rowNumber: 1 };
+}
+
 function readRow(sheet: ExcelJS.Worksheet, rowNumber: number, headerMap: Map<string, number>): ImportRow {
   const row = sheet.getRow(rowNumber);
-  const value = (fallbackColumn: number, ...keys: string[]) => {
+  const value = (fallbackColumn: number, keys: string[], useFallback = true) => {
     const column = keys.map((key) => headerMap.get(key)).find(Boolean);
+    if (!column && !useFallback) return "";
     return cellText(row.getCell(column ?? fallbackColumn).value);
   };
 
   return {
     rowNumber,
-    series: value(1, "serie", "s rie", "set", "colecao", "colecao set", "expansao", "edicao"),
-    number: value(2, "numero", "n mero", "n", "num", "card", "carta"),
-    sequence: value(3, "sequencia", "seq encia", "seq", "ordem", "codigo"),
-    status: value(4, "status", "situacao", "possuo", "tenho"),
-    quantity: value(5, "qtde", "qtd", "quantidade", "quantity")
+    series: value(1, ["serie", "s rie", "set", "colecao", "colecao set", "expansao", "edicao"]),
+    number: value(2, ["numero", "n mero", "n", "num", "card", "carta"]),
+    sequence: value(3, ["sequencia", "seq encia", "seq", "ordem", "codigo"], false),
+    status: value(4, ["status", "situacao", "possuo", "tenho"]),
+    quantity: value(5, ["qtde", "qtd", "quantidade", "quantity"])
   };
 }
 
@@ -79,6 +96,10 @@ function parseQuantity(value: string): number {
   return Math.floor(parsed);
 }
 
+function isEmptyRow(row: ImportRow): boolean {
+  return !row.series && !row.number && !row.sequence && !row.status && !row.quantity;
+}
+
 export const importService = {
   async importCollection(userId: number, buffer: Buffer): Promise<ImportResult> {
     const workbook = new ExcelJS.Workbook();
@@ -89,11 +110,13 @@ export const importService = {
       return { imported: 0, skipped: 0, notFound: [] };
     }
 
-    const headerMap = readHeaderMap(sheet);
+    const { headerMap, rowNumber: headerRowNumber } = findHeaderRow(sheet);
     const result: ImportResult = { imported: 0, skipped: 0, notFound: [] };
 
-    for (let rowNumber = 2; rowNumber <= sheet.rowCount; rowNumber += 1) {
+    for (let rowNumber = headerRowNumber + 1; rowNumber <= sheet.rowCount; rowNumber += 1) {
       const row = readRow(sheet, rowNumber, headerMap);
+      if (isEmptyRow(row)) continue;
+
       const hasCard = isOwnedStatus(row.status);
       const cardNumber = normalizeCardNumber(row.number);
       const quantity = parseQuantity(row.quantity);
