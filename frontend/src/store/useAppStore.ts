@@ -15,8 +15,10 @@ type AppState = {
   filters: PersistedFilters;
   token: string | null;
   user: AuthUser | null;
+  theme: "light" | "dark";
   setView: (view: View) => void;
   setFilters: (filters: Partial<PersistedFilters>) => void;
+  toggleTheme: () => void;
   setAuth: (token: string, user: AuthUser) => void;
   logout: () => void;
 };
@@ -24,6 +26,7 @@ type AppState = {
 const storageKey = "pokemon-tcg-local-filters";
 const tokenKey = "pokemon-tcg-token";
 const userKey = "pokemon-tcg-user";
+const themeKey = "pokemon-tcg-theme";
 
 function loadFilters(): PersistedFilters {
   const fallback: PersistedFilters = { set: "", favorite: false, forTrade: false, sort: "numberAsc" };
@@ -51,12 +54,19 @@ export const useAppStore = create<AppState>((set) => ({
   filters: loadFilters(),
   token: localStorage.getItem(tokenKey),
   user: loadUser(),
+  theme: localStorage.getItem(themeKey) === "dark" ? "dark" : "light",
   setView: (view) => set({ view }),
   setFilters: (filters) =>
     set((state) => {
       const next = { ...state.filters, ...filters };
       localStorage.setItem(storageKey, JSON.stringify(next));
       return { filters: next };
+    }),
+  toggleTheme: () =>
+    set((state) => {
+      const theme = state.theme === "dark" ? "light" : "dark";
+      localStorage.setItem(themeKey, theme);
+      return { theme };
     }),
   setAuth: (token, user) => {
     localStorage.setItem(tokenKey, token);

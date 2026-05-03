@@ -227,13 +227,13 @@ export function TradeMarket({ onToast }: { onToast: (toast: ToastState) => void 
 
   return (
     <div className="space-y-5">
-      <section className="overflow-hidden rounded-xl border border-border bg-white shadow-sm">
-        <div className="border-b border-slate-100 bg-gradient-to-r from-slate-950 via-red-800 to-primary p-5 text-white">
+      <section className="overflow-hidden rounded-3xl border border-slate-200/80 bg-white/88 shadow-[0_18px_55px_rgba(15,23,42,0.08)] backdrop-blur dark:border-slate-800 dark:bg-slate-900/80">
+        <div className="border-b border-slate-100 bg-[radial-gradient(circle_at_top_left,rgba(220,38,38,0.16),transparent_32%),linear-gradient(135deg,#ffffff_0%,#f8fafc_100%)] p-5 dark:border-slate-800 dark:bg-[radial-gradient(circle_at_top_left,rgba(248,113,113,0.16),transparent_32%),linear-gradient(135deg,#111827_0%,#0f172a_100%)]">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <p className="text-xs font-black uppercase text-yellow-200">Mercado de trocas</p>
-              <h2 className="mt-1 text-2xl font-black">Trocas com variantes e negociacao em tempo real</h2>
-              <p className="mt-1 text-sm text-red-50">Escolha tipo, quantidade, confira imagens ampliadas e converse antes de fechar.</p>
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-red-600 dark:text-red-300">Mercado de trocas</p>
+              <h2 className="mt-1 text-3xl font-black tracking-tight text-slate-950 dark:text-white">Trocas com variantes e negociacao em tempo real</h2>
+              <p className="mt-1 text-sm font-medium text-slate-500 dark:text-slate-400">Escolha tipo, quantidade, confira imagens ampliadas e converse antes de fechar.</p>
             </div>
             <div className="grid grid-cols-2 gap-2 sm:min-w-[320px]">
               <Metric label="Usuarios" value={users.length} />
@@ -257,16 +257,16 @@ export function TradeMarket({ onToast }: { onToast: (toast: ToastState) => void 
 
       <div className="grid gap-5 xl:grid-cols-[320px_1fr]">
         <section className="space-y-3">
-          <h3 className="text-lg font-black text-slate-900">Usuarios encontrados</h3>
+          <h3 className="text-lg font-black text-slate-950 dark:text-white">Usuarios encontrados</h3>
           {loadingUsers ? <Skeleton className="h-80" /> : users.length ? (
             <div className="space-y-3">
               {users.map((user) => (
-                <button key={user.id} type="button" onClick={() => setSelectedUser(user)} className={`w-full rounded-xl border bg-white p-4 text-left shadow-sm transition hover:border-primary/50 ${selectedUser?.id === user.id ? "border-primary ring-2 ring-primary/10" : "border-slate-200"}`}>
+                <button key={user.id} type="button" onClick={() => setSelectedUser(user)} className={`w-full rounded-3xl border bg-white/88 p-4 text-left shadow-[0_14px_35px_rgba(15,23,42,0.06)] backdrop-blur transition-all duration-200 hover:-translate-y-1 hover:border-red-200 hover:shadow-[0_22px_55px_rgba(15,23,42,0.12)] dark:bg-slate-900/80 ${selectedUser?.id === user.id ? "border-red-300 ring-4 ring-red-500/10 dark:border-red-500/60" : "border-slate-200 dark:border-slate-800"}`}>
                   <div className="flex items-start gap-3">
                     <Avatar name={user.name} avatarUrl={user.avatarUrl} />
                     <div className="min-w-0 flex-1">
-                      <h4 className="truncate text-base font-black text-slate-950">{user.name}</h4>
-                      <p className="mt-1 text-xs font-semibold text-slate-500">
+                      <h4 className="truncate text-base font-black text-slate-950 dark:text-white">{user.name}</h4>
+                      <p className="mt-1 text-xs font-semibold text-slate-500 dark:text-slate-400">
                         {user.readyTradeCardsCount ?? user.tradeCardsCount} prontas
                         {(user.pendingVariantCardsCount ?? 0) > 0 ? ` · ${user.pendingVariantCardsCount} aguardando tipo` : ""}
                       </p>
@@ -295,11 +295,11 @@ export function TradeMarket({ onToast }: { onToast: (toast: ToastState) => void 
         </section>
 
         <section className="space-y-5">
-          <div className="rounded-xl border border-border bg-white p-4 shadow-sm">
+          <div className="rounded-3xl border border-slate-200/80 bg-white/88 p-4 shadow-[0_18px_45px_rgba(15,23,42,0.07)] backdrop-blur dark:border-slate-800 dark:bg-slate-900/80">
             <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
               <div>
                 <p className="text-xs font-black uppercase text-primary">Cartas para troca</p>
-                <h3 className="text-xl font-black text-slate-950">{selectedUser ? selectedUser.name : "Selecione um usuario"}</h3>
+                <h3 className="text-xl font-black text-slate-950 dark:text-white">{selectedUser ? selectedUser.name : "Selecione um usuario"}</h3>
               </div>
               <div className="grid gap-2 sm:grid-cols-3 lg:min-w-[620px]">
                 <Input placeholder="Buscar carta selecionavel" value={cardSearch} onChange={(event) => setCardSearch(event.target.value)} />
@@ -342,11 +342,11 @@ export function TradeMarket({ onToast }: { onToast: (toast: ToastState) => void 
             </div>
           </div>
 
-          <section className="rounded-xl border border-border bg-white p-4 shadow-sm">
+          <section className="rounded-3xl border border-slate-200/80 bg-white/88 p-4 shadow-[0_18px_45px_rgba(15,23,42,0.07)] backdrop-blur dark:border-slate-800 dark:bg-slate-900/80">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <p className="text-xs font-black uppercase text-primary">Proposta atual</p>
-                <h3 className="text-lg font-black text-slate-950">{requested.length} tipos solicitados por {offered.length} tipos oferecidos</h3>
+                <h3 className="text-lg font-black text-slate-950 dark:text-white">{requested.length} tipos solicitados por {offered.length} tipos oferecidos</h3>
               </div>
               <Button variant="primary" disabled={!selectedUser || requested.length === 0 || offered.length === 0 || sending} onClick={sendProposal}>
                 <Send size={16} />
@@ -361,7 +361,7 @@ export function TradeMarket({ onToast }: { onToast: (toast: ToastState) => void 
         </section>
       </div>
 
-      <section className="rounded-xl border border-border bg-white p-4 shadow-sm">
+      <section className="rounded-3xl border border-slate-200/80 bg-white/88 p-4 shadow-[0_18px_45px_rgba(15,23,42,0.07)] backdrop-blur dark:border-slate-800 dark:bg-slate-900/80">
         <div className="mb-4 flex items-center justify-between gap-3">
           <div>
             <p className="text-xs font-black uppercase text-primary">Notificacoes, propostas e chat</p>
@@ -403,7 +403,7 @@ function expandSelected(cards: TradeCard[], selection: SelectedLine[]) {
 }
 
 function Metric({ label, value }: { label: string; value: number }) {
-  return <div className="rounded-lg border border-white/15 bg-white/10 p-3 backdrop-blur"><p className="text-[11px] font-bold uppercase text-red-50">{label}</p><p className="text-2xl font-black text-white">{value}</p></div>;
+  return <div className="rounded-2xl border border-slate-200 bg-white/78 p-3 shadow-sm backdrop-blur dark:border-slate-700 dark:bg-slate-950/35"><p className="text-[11px] font-black uppercase text-slate-500 dark:text-slate-400">{label}</p><p className="text-2xl font-black text-slate-950 dark:text-white">{value}</p></div>;
 }
 
 function Badge({ children }: { children: string }) {
@@ -438,7 +438,7 @@ function TradeCardPanel(props: {
       {props.cards.length ? (
         <div className="max-h-[650px] space-y-3 overflow-y-auto pr-1">
           {props.cards.map((card) => (
-            <div key={card.id} className="rounded-lg border border-slate-200 bg-white p-2">
+            <div key={card.id} className="rounded-2xl border border-slate-200 bg-white/90 p-2 shadow-sm transition hover:border-red-200 hover:shadow-md dark:border-slate-800 dark:bg-slate-950/50">
               <div className="grid grid-cols-[72px_1fr_auto] gap-3">
                 <button type="button" onClick={() => props.onZoom(card)} className="relative">
                   <img src={card.image} alt={card.name} loading="lazy" className="h-24 w-[68px] object-contain" />
@@ -493,7 +493,7 @@ function TradeCardPanel(props: {
 
 function SelectionPreview({ title, rows }: { title: string; rows: Array<{ card: TradeCard; line: SelectedLine }> }) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+    <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-3 dark:border-slate-800 dark:bg-slate-950/40">
       <p className="mb-2 text-xs font-black uppercase text-slate-500">{title}</p>
       {rows.length ? <div className="space-y-2">{rows.map(({ card, line }) => <div key={selectionKey(line)} className="flex items-center gap-2 text-sm font-semibold text-slate-700"><span className="h-2 w-2 rounded-full bg-primary" /><span className="truncate">{card.name}</span><span className={`rounded-full px-2 py-1 text-[11px] ${variantTone(line.variantType)}`}>{variantLabel(line.variantType)}</span><span className="ml-auto text-xs text-slate-500">x{line.quantity}</span></div>)}</div> : <p className="text-sm text-slate-500">Nenhuma carta selecionada.</p>}
     </div>
@@ -507,7 +507,7 @@ function ProposalCard({ proposal, currentUserId, onUpdate, onChat, onZoom }: { p
   const offered = proposal.cards?.filter((card) => card.side === "OFFERED") ?? proposal.offeredCards;
   const requested = proposal.cards?.filter((card) => card.side === "REQUESTED") ?? proposal.requestedCards;
   return (
-    <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+    <article className="rounded-3xl border border-slate-200 bg-white/90 p-4 shadow-[0_14px_35px_rgba(15,23,42,0.06)] backdrop-blur transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_22px_55px_rgba(15,23,42,0.12)] dark:border-slate-800 dark:bg-slate-950/55">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <span className={`inline-flex rounded-full px-2 py-1 text-xs font-black ${statusClass[proposal.status]}`}>{statusLabel[proposal.status]}</span>

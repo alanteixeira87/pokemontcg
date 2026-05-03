@@ -11,6 +11,7 @@ import { TradeMarket } from "./pages/TradeMarket";
 export function App() {
   const view = useAppStore((state) => state.view);
   const token = useAppStore((state) => state.token);
+  const theme = useAppStore((state) => state.theme);
   const [toast, setToast] = useState<ToastState>(null);
 
   const showToast = useCallback((next: ToastState) => {
@@ -22,6 +23,11 @@ export function App() {
     const timeout = window.setTimeout(() => setToast(null), 3500);
     return () => window.clearTimeout(timeout);
   }, [toast]);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", theme === "dark");
+    document.body.classList.toggle("dark", theme === "dark");
+  }, [theme]);
 
   if (!token) {
     return (

@@ -141,13 +141,13 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
   return (
     <div className="space-y-5">
       {!tradeOnly && (
-        <section className="overflow-hidden rounded-xl border border-border bg-white shadow-sm">
-          <div className="border-b border-slate-100 bg-gradient-to-r from-red-700 via-primary to-red-500 p-5 text-white">
+        <section className="overflow-hidden rounded-3xl border border-slate-200/80 bg-white/88 shadow-[0_18px_55px_rgba(15,23,42,0.08)] backdrop-blur dark:border-slate-800 dark:bg-slate-900/80">
+          <div className="border-b border-slate-100 bg-[radial-gradient(circle_at_top_left,rgba(220,38,38,0.16),transparent_32%),linear-gradient(135deg,#ffffff_0%,#f8fafc_100%)] p-5 dark:border-slate-800 dark:bg-[radial-gradient(circle_at_top_left,rgba(248,113,113,0.16),transparent_32%),linear-gradient(135deg,#111827_0%,#0f172a_100%)]">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
               <div>
-                <p className="text-xs font-black uppercase text-red-100">Minha colecao Pokemon TCG</p>
-                <h2 className="mt-1 text-2xl font-black">Minha pasta</h2>
-                <p className="mt-1 text-sm text-red-50">Acompanhe progresso por colecao, quantidade, favoritos e cartas para troca.</p>
+                <p className="text-xs font-black uppercase tracking-[0.2em] text-red-600 dark:text-red-300">Minha colecao Pokemon TCG</p>
+                <h2 className="mt-1 text-3xl font-black tracking-tight text-slate-950 dark:text-white">Minha pasta</h2>
+                <p className="mt-1 text-sm font-medium text-slate-500 dark:text-slate-400">Acompanhe progresso por colecao, quantidade, favoritos e cartas para troca.</p>
               </div>
               <div className="grid grid-cols-3 gap-2 sm:min-w-[420px]">
                 <MetricCard icon={Layers3} label="Unicas" value={totalUnique} />
@@ -159,10 +159,10 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
           <div className="p-4">
           <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h3 className="text-lg font-black text-slate-900">Filtros e organizacao</h3>
-              <p className="text-sm text-muted-foreground">Controle quantidade, preco, favoritos e cartas para troca.</p>
+              <h3 className="text-lg font-black text-slate-950 dark:text-white">Filtros e organizacao</h3>
+              <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Controle quantidade, preco, favoritos e cartas para troca.</p>
             </div>
-            <span className="rounded-md bg-yellow-100 px-3 py-1 text-xs font-bold text-slate-900">{items.length} cartas no filtro</span>
+            <span className="rounded-full border border-amber-200 bg-amber-100 px-3 py-1 text-xs font-black text-slate-950">{items.length} cartas no filtro</span>
           </div>
           <div className="grid gap-3 md:grid-cols-4">
           <Select value={filters.set} onChange={(event) => setFilters({ set: event.target.value })}>
@@ -197,8 +197,8 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
         <section className="space-y-3">
           <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h3 className="text-xl font-black text-slate-900">Progresso por colecao</h3>
-              <p className="text-sm text-muted-foreground">Cada card mostra quantas cartas unicas voce ja tem naquele set.</p>
+              <h3 className="text-xl font-black text-slate-950 dark:text-white">Progresso por colecao</h3>
+              <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Cada card mostra quantas cartas unicas voce ja tem naquele set.</p>
             </div>
             <span className="text-sm font-semibold text-slate-500">{collectionSummary.length} colecoes iniciadas</span>
           </div>
@@ -208,7 +208,7 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
                 key={set.name}
                 type="button"
                 onClick={() => setFilters({ set: set.name })}
-                className="group rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-glow"
+                className="group rounded-3xl border border-slate-200/80 bg-white/88 p-4 text-left shadow-[0_14px_35px_rgba(15,23,42,0.06)] backdrop-blur transition-all duration-200 hover:-translate-y-1 hover:border-red-200 hover:shadow-[0_22px_55px_rgba(15,23,42,0.12)] dark:border-slate-800 dark:bg-slate-900/80"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -241,7 +241,7 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
 
       <div className="flex flex-wrap justify-end gap-2">
         {!tradeOnly && (
-          <label className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-md border border-border bg-white px-4 text-sm font-semibold text-foreground shadow-sm transition hover:bg-slate-50">
+          <label className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white/90 px-4 text-sm font-semibold text-slate-800 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-100">
             <Upload size={16} />
             {importing ? "Importando..." : "Importar Excel"}
             <input
@@ -348,12 +348,12 @@ function buildCollectionSummary(items: CollectionItem[], pokemonSets: PokemonSet
 
 function MetricCard({ icon: Icon, label, value }: { icon: typeof Layers3; label: string; value: number }) {
   return (
-    <div className="rounded-lg border border-white/15 bg-white/10 p-3 shadow-sm backdrop-blur">
-      <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-md bg-white text-primary">
+    <div className="rounded-2xl border border-slate-200 bg-white/78 p-3 shadow-sm backdrop-blur dark:border-slate-700 dark:bg-slate-950/35">
+      <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-xl bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-300">
         <Icon size={16} />
       </div>
-      <p className="text-[11px] font-bold uppercase text-red-50">{label}</p>
-      <p className="text-xl font-black text-white">{value}</p>
+      <p className="text-[11px] font-black uppercase text-slate-500 dark:text-slate-400">{label}</p>
+      <p className="text-xl font-black text-slate-950 dark:text-white">{value}</p>
     </div>
   );
 }
