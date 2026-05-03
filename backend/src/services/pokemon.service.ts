@@ -290,6 +290,39 @@ export const pokemonService = {
     );
   },
 
+  async listCardsBySetId(setId: string): Promise<ReturnType<typeof normalizeCard>[]> {
+    const cacheKey = `cards-by-set:${setId}`;
+    const cached = getCached<ReturnType<typeof normalizeCard>[]>(cacheKey);
+    if (cached) return cached;
+
+    const first = await withRetry(() =>
+      api.get<{ data: PokemonCard[]; totalCount: number }>("/cards", {
+        params: {
+          page: 1,
+          pageSize: 250,
+          q: `set.id:"${escapeQuery(setId)}"`
+        }
+      })
+    );
+    const cards = [...first.data.data];
+    const totalPages = Math.ceil(first.data.totalCount / 250);
+
+    for (let page = 2; page <= totalPages; page += 1) {
+      const response = await withRetry(() =>
+        api.get<{ data: PokemonCard[] }>("/cards", {
+          params: {
+            page,
+            pageSize: 250,
+            q: `set.id:"${escapeQuery(setId)}"`
+          }
+        })
+      );
+      cards.push(...response.data.data);
+    }
+
+    return setCached(cacheKey, sortCards(await Promise.all(cards.map(normalizeCardWithPrice)), "numberAsc"));
+  },
+
   async findCardBySetAndNumber(setName: string, number: string, setTotal?: string) {
     const normalizedSet = escapeQuery(setName);
     const numberCandidates = normalizeCardNumbers(number);

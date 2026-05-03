@@ -35,6 +35,27 @@ model Collection {
   @@map("collection")
 }
 
+model WantedCard {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cardId    String   @map("card_id")
+  name      String
+  image     String
+  set       String
+  setId     String?  @map("set_id")
+  number    String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([userId, cardId])
+  @@index([userId])
+  @@index([set])
+  @@index([setId])
+  @@index([number])
+  @@map("wanted_cards")
+}
+
 model CardVariant {
   id            Int         @id @default(autoincrement())
   userCardId    Int         @map("user_card_id")
@@ -65,6 +86,7 @@ model User {
   receivedTrades Trade[]    @relation("ReceiverTrades")
   sentMessages TradeMessage[] @relation("SentTradeMessages")
   receivedMessages TradeMessage[] @relation("ReceivedTradeMessages")
+  wantedCards  WantedCard[]
 
   @@map("users")
 }

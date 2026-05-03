@@ -8,6 +8,32 @@ export type ExploreCard = {
   marketPrice: number | null;
 };
 
+export type MissingCard = ExploreCard & {
+  isWanted: boolean;
+};
+
+export type MissingCardsResponse = {
+  set: {
+    id: string;
+    name: string;
+    printedTotal?: number;
+    total?: number;
+  };
+  cards: MissingCard[];
+};
+
+export type WantedCard = {
+  id: number;
+  cardId: string;
+  name: string;
+  image: string;
+  set: string;
+  setId?: string | null;
+  number?: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type ImportResult = {
   imported: number;
   skipped: number;

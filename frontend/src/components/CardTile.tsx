@@ -1,7 +1,7 @@
-import { Download, Minus, Plus, Repeat2, Star, Trash2, X } from "lucide-react";
+import { Download, Minus, Plus, Repeat2, Search, Star, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import type { CollectionItem, ExploreCard } from "../types";
+import type { CollectionItem, ExploreCard, MissingCard } from "../types";
 import { currency } from "../lib/utils";
 import { Button } from "./ui/Button";
 import { Input } from "./ui/Input";
@@ -20,25 +20,38 @@ type CollectionProps = {
   onExport: (cardId: string) => void;
 };
 
-export function CardTile(props: ExploreProps | CollectionProps) {
+type MissingProps = {
+  mode: "missing";
+  card: MissingCard;
+  onAdd: (card: MissingCard) => void;
+  onToggleWanted: (card: MissingCard) => void;
+};
+
+export function CardTile(props: ExploreProps | CollectionProps | MissingProps) {
   const card = props.card;
   const isExplore = props.mode === "explore";
+  const isMissing = props.mode === "missing";
   const [zoomOpen, setZoomOpen] = useState(false);
 
   return (
-    <article className="group overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition duration-150 ease-out hover:scale-[1.01] hover:shadow-md dark:border-slate-800 dark:bg-slate-900">
+    <article className={`group overflow-hidden rounded-xl border shadow-sm transition duration-150 ease-out hover:scale-[1.01] hover:shadow-md ${isMissing ? "border-slate-300 bg-slate-100 opacity-90 dark:border-slate-700 dark:bg-slate-900/70" : "border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"}`}>
       <div className="relative bg-slate-50 px-4 pb-3 pt-4 dark:bg-slate-950/40">
         <button type="button" className="mx-auto block aspect-[63/88] w-full max-w-[184px]" onClick={() => setZoomOpen(true)} aria-label={`Ampliar ${card.name}`}>
           <img
             src={card.image}
             alt={card.name}
             loading="lazy"
-            className="h-full w-full rounded-lg object-contain transition duration-150 group-hover:scale-[1.015]"
+            className={`h-full w-full rounded-lg object-contain transition duration-150 group-hover:scale-[1.015] ${isMissing ? "grayscale" : ""}`}
           />
         </button>
         <div className="absolute right-3 top-3 rounded-full bg-white px-2.5 py-1 text-[11px] font-medium text-slate-600 shadow-sm dark:bg-slate-900 dark:text-slate-300">
-          {isExplore ? props.card.number ? `#${props.card.number}` : "TCG" : `x${props.card.quantity}`}
+          {props.mode === "collection" ? `x${props.card.quantity}` : props.card.number ? `#${props.card.number}` : "TCG"}
         </div>
+        {isMissing && (
+          <div className="absolute left-3 top-3 rounded-full bg-slate-900 px-2 py-1 text-[10px] font-medium uppercase text-white">
+            Nao possuo
+          </div>
+        )}
         {props.mode === "collection" && (
           <div className="absolute left-3 top-3 flex flex-wrap gap-1">
             {props.card.quantity > 1 && (
@@ -60,15 +73,27 @@ export function CardTile(props: ExploreProps | CollectionProps) {
           <p className="mt-1 truncate text-xs text-slate-500 dark:text-slate-400">{card.set}</p>
         </div>
 
-        {props.mode === "explore" ? (
+        {props.mode === "explore" || props.mode === "missing" ? (
           <div className="space-y-3">
             <div className="rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-950/50">
               <p className="text-[11px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Valor estimado</p>
               <strong className="text-lg font-semibold text-slate-950 dark:text-white">{props.card.marketPrice === null ? "N/D" : currency(props.card.marketPrice)}</strong>
             </div>
-            <Button className="w-full" variant="primary" onClick={() => props.onAdd(props.card)}>
-              Adicionar
-            </Button>
+            {props.mode === "missing" ? (
+              <div className="grid gap-2">
+                <Button className="w-full" variant={props.card.isWanted ? "primary" : "secondary"} onClick={() => props.onToggleWanted(props.card)}>
+                  <Search size={16} />
+                  {props.card.isWanted ? "Buscando" : "Estou em busca"}
+                </Button>
+                <Button className="w-full" variant="primary" onClick={() => props.onAdd(props.card)}>
+                  Incluir na colecao
+                </Button>
+              </div>
+            ) : (
+              <Button className="w-full" variant="primary" onClick={() => props.onAdd(props.card)}>
+                Adicionar
+              </Button>
+            )}
           </div>
         ) : (
           <div className="space-y-3">
@@ -144,7 +169,7 @@ export function CardTile(props: ExploreProps | CollectionProps) {
         <CardZoomModal
           card={card}
           number={isExplore ? props.card.number : props.card.number}
-          label={isExplore ? "Explorar" : props.card.forTrade ? "Disponivel para troca" : "Minha colecao"}
+          label={isMissing ? "Nao possuo" : isExplore ? "Explorar" : props.card.forTrade ? "Disponivel para troca" : "Minha colecao"}
           onClose={() => setZoomOpen(false)}
         />
       )}
@@ -152,7 +177,7 @@ export function CardTile(props: ExploreProps | CollectionProps) {
   );
 }
 
-function CardZoomModal({ card, number, label, onClose }: { card: ExploreCard | CollectionItem; number?: string | null; label: string; onClose: () => void }) {
+function CardZoomModal({ card, number, label, onClose }: { card: ExploreCard | CollectionItem | MissingCard; number?: string | null; label: string; onClose: () => void }) {
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -179,7 +204,7 @@ function CardZoomModal({ card, number, label, onClose }: { card: ExploreCard | C
             loading="eager"
             decoding="async"
             draggable={false}
-            className="h-full max-h-[88dvh] w-full select-none object-contain"
+            className={`h-full max-h-[88dvh] w-full select-none object-contain ${label === "Nao possuo" ? "grayscale" : ""}`}
           />
         </div>
         <aside className="flex flex-col gap-4 border-t border-slate-200 p-5 dark:border-slate-800 lg:border-l lg:border-t-0">

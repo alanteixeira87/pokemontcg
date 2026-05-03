@@ -5,6 +5,14 @@ import { collectionService } from "../services/collection.service.js";
 import { getAuthenticatedUserId } from "../middlewares/authMiddleware.js";
 
 const idSchema = z.coerce.number().int().positive();
+const wantedCardSchema = z.object({
+  cardId: z.string().min(1),
+  name: z.string().min(1),
+  image: z.string().url(),
+  set: z.string().min(1),
+  setId: z.string().optional(),
+  number: z.string().optional()
+});
 
 export const collectionController = {
   async list(req: Request, res: Response, next: NextFunction) {
@@ -56,6 +64,42 @@ export const collectionController = {
   async refreshPrices(req: Request, res: Response, next: NextFunction) {
     try {
       res.json(await collectionService.refreshPrices(getAuthenticatedUserId(req)));
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async missingBySet(req: Request, res: Response, next: NextFunction) {
+    try {
+      const set = z.string().min(1).parse(req.query.set);
+      res.json(await collectionService.missingBySet(getAuthenticatedUserId(req), set));
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async wanted(req: Request, res: Response, next: NextFunction) {
+    try {
+      res.json(await collectionService.wanted(getAuthenticatedUserId(req)));
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async markWanted(req: Request, res: Response, next: NextFunction) {
+    try {
+      const body = wantedCardSchema.parse(req.body);
+      res.status(201).json(await collectionService.markWanted(getAuthenticatedUserId(req), body));
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async unmarkWanted(req: Request, res: Response, next: NextFunction) {
+    try {
+      const cardId = z.string().min(1).parse(req.params.cardId);
+      await collectionService.unmarkWanted(getAuthenticatedUserId(req), cardId);
+      res.status(204).send();
     } catch (error) {
       next(error);
     }

@@ -6,6 +6,7 @@ import type {
   ExploreCard,
   ExploreSortOption,
   ImportResult,
+  MissingCardsResponse,
   PaginatedCards,
   PokemonSet,
   SortOption,
@@ -14,7 +15,8 @@ import type {
   TradeProposal,
   TradeSelectionInput,
   TradeStatus,
-  TradeUser
+  TradeUser,
+  WantedCard
 } from "../types";
 
 const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
@@ -95,6 +97,11 @@ export const apiService = {
     return response.data;
   },
 
+  async missingCards(set: string): Promise<MissingCardsResponse> {
+    const response = await api.get<MissingCardsResponse>("/collection/missing", { params: { set } });
+    return response.data;
+  },
+
   async addToCollection(card: ExploreCard): Promise<CollectionItem> {
     const response = await api.post<CollectionItem>("/collection", {
       cardId: card.id,
@@ -133,6 +140,26 @@ export const apiService = {
 
   async refreshCollectionPrices(): Promise<{ updated: number; skipped: number }> {
     const response = await api.post<{ updated: number; skipped: number }>("/collection/reprice");
+    return response.data;
+  },
+
+  async markWanted(card: ExploreCard): Promise<void> {
+    await api.post("/wanted", {
+      cardId: card.id,
+      name: card.name,
+      image: card.image,
+      set: card.set,
+      setId: card.setId,
+      number: card.number
+    });
+  },
+
+  async unmarkWanted(cardId: string): Promise<void> {
+    await api.delete(`/wanted/${encodeURIComponent(cardId)}`);
+  },
+
+  async wanted(): Promise<WantedCard[]> {
+    const response = await api.get<WantedCard[]>("/wanted");
     return response.data;
   },
 
