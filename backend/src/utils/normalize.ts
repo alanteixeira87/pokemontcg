@@ -70,6 +70,7 @@ export function normalizeCard(card: PokemonCard): ExploreCard {
     set: card.set?.name ?? "Colecao desconhecida",
     setId: card.set?.id,
     number: card.number,
+    rarity: card.rarity,
     marketPrice: getMarketPrice(card)
   };
 }

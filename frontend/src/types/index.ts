@@ -5,6 +5,7 @@ export type ExploreCard = {
   set: string;
   setId?: string;
   number?: string;
+  rarity?: string;
   marketPrice: number | null;
 };
 
@@ -45,6 +46,7 @@ export type CollectionItem = {
   image: string;
   set: string;
   number?: string | null;
+  rarity?: string | null;
   quantity: number;
   price: number;
   favorite: boolean;

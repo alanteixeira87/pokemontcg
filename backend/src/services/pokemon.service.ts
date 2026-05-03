@@ -195,6 +195,7 @@ function normalizeTcgDexCard(card: TcgDexCardDetail | TcgDexCardBrief, set: TcgD
     set: detail.set?.name ?? set.name,
     setId: detail.set?.id ?? set.id,
     number: card.localId,
+    rarity: detail.rarity,
     marketPrice: tcgDexPrice(detail)
   };
 }
@@ -448,7 +449,9 @@ async function findCardBySetAndNumberFromTcgDex(setName: string, number: string,
   for (const set of setCandidates) {
     const response = await withRetry(() => tcgDexApi.get<TcgDexSetDetail>(`/sets/${set.id}`));
     const cards = response.data.cards ?? [];
-    const card = cards.find((item) => numberCandidates.includes(normalizeLookupText(item.localId ?? "")));
+    const card = cards.find((item) =>
+      normalizeCardNumbers(item.localId ?? "").some((candidate) => numberCandidates.includes(normalizeLookupText(candidate)))
+    );
 
     if (card) {
       try {

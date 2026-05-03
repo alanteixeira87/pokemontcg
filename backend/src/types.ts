@@ -51,6 +51,7 @@ export type ExploreCard = {
   set: string;
   setId?: string;
   number?: string;
+  rarity?: string;
   marketPrice: number | null;
 };
 

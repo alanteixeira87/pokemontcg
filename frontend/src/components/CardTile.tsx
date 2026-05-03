@@ -153,6 +153,8 @@ export function CardTile(props: ExploreProps | CollectionProps) {
 }
 
 function CardZoomModal({ card, number, label, onClose }: { card: ExploreCard | CollectionItem; number?: string | null; label: string; onClose: () => void }) {
+  const rarity = "rarity" in card ? card.rarity : undefined;
+
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -195,17 +197,33 @@ function CardZoomModal({ card, number, label, onClose }: { card: ExploreCard | C
           <div className="space-y-2">
             <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{card.set}</p>
             <p className="text-4xl font-semibold text-slate-950 dark:text-white">#{number ?? "N/D"}</p>
-            <span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-sm font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-              {label}
-            </span>
+            <div className="flex flex-wrap gap-2">
+              <span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-sm font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                {label}
+              </span>
+              <span className={`inline-flex rounded-full px-3 py-1 text-sm font-semibold ${rarityTone(rarity)}`}>
+                {rarity ?? "Raridade nao informada"}
+              </span>
+            </div>
           </div>
           <p className="rounded-lg bg-slate-100 p-3 text-sm font-medium text-slate-600 dark:bg-slate-950/60 dark:text-slate-300">
-            Conferencia em tamanho grande para imagem, colecao e numeracao da carta.
+            Conferencia em tamanho grande para numero, nome, colecao e raridade da carta.
           </p>
         </aside>
       </div>
     </div>,
     document.body
   );
+}
+
+function rarityTone(rarity?: string | null): string {
+  const normalized = (rarity ?? "").toLowerCase();
+  if (normalized.includes("special") || normalized.includes("illustration")) return "bg-fuchsia-50 text-fuchsia-700 dark:bg-fuchsia-950/50 dark:text-fuchsia-200";
+  if (normalized.includes("hyper") || normalized.includes("secret")) return "bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-200";
+  if (normalized.includes("ultra") || normalized.includes("double")) return "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-200";
+  if (normalized.includes("rare")) return "bg-sky-50 text-sky-700 dark:bg-sky-950/50 dark:text-sky-200";
+  if (normalized.includes("uncommon")) return "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-200";
+  if (normalized.includes("common")) return "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200";
+  return "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200";
 }
 

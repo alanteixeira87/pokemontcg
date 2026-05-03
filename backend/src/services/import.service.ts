@@ -102,20 +102,20 @@ export const importService = {
         if (hasCard && (!row.series || !cardNumber)) {
           result.notFound.push({
             ...row,
-            reason: !row.series ? "Linha marcada como OK, mas sem serie/colecao." : "Linha marcada como OK, mas sem numero/sequencia."
+            reason: !row.series ? "Linha marcada como OK, mas sem serie/colecao." : "Linha marcada como OK, mas sem numero da carta."
           });
         }
         result.skipped += 1;
         continue;
       }
 
-      const card = await pokemonService.findCardBySetAndNumber(row.series, cardNumber, row.sequence);
+      const card = await pokemonService.findCardBySetAndNumber(row.series, cardNumber);
 
       if (!card) {
         result.notFound.push({
           ...row,
           number: cardNumber,
-          reason: `Nao encontrei carta para serie "${row.series}", sequencia "${row.sequence}" e numero "${cardNumber}".`
+          reason: `Nao encontrei a carta numero "${cardNumber}" dentro da colecao oficial "${row.series}".`
         });
         continue;
       }
