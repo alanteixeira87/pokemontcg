@@ -27,6 +27,8 @@ const storageKey = "pokemon-tcg-local-filters";
 const tokenKey = "pokemon-tcg-token";
 const userKey = "pokemon-tcg-user";
 const themeKey = "pokemon-tcg-theme";
+const viewKey = "pokemon-tcg-active-view";
+const validViews: View[] = ["dashboard", "explore", "collection", "trades"];
 
 function loadFilters(): PersistedFilters {
   const fallback: PersistedFilters = { set: "", favorite: false, forTrade: false, sort: "numberAsc" };
@@ -49,13 +51,21 @@ function loadUser(): AuthUser | null {
   }
 }
 
+function loadView(): View {
+  const view = localStorage.getItem(viewKey);
+  return validViews.includes(view as View) ? (view as View) : "explore";
+}
+
 export const useAppStore = create<AppState>((set) => ({
-  view: "explore",
+  view: loadView(),
   filters: loadFilters(),
   token: localStorage.getItem(tokenKey),
   user: loadUser(),
   theme: localStorage.getItem(themeKey) === "dark" ? "dark" : "light",
-  setView: (view) => set({ view }),
+  setView: (view) => {
+    localStorage.setItem(viewKey, view);
+    set({ view });
+  },
   setFilters: (filters) =>
     set((state) => {
       const next = { ...state.filters, ...filters };
@@ -76,6 +86,7 @@ export const useAppStore = create<AppState>((set) => ({
   logout: () => {
     localStorage.removeItem(tokenKey);
     localStorage.removeItem(userKey);
+    localStorage.removeItem(viewKey);
     set({ token: null, user: null, view: "explore" });
   }
 }));
