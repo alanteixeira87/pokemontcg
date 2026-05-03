@@ -29,6 +29,32 @@ const officialApi = axios.create({
   timeout: 10000
 });
 
+function appendParams(url: string, params?: unknown): string {
+  if (!params || typeof params !== "object") return url;
+  const search = new URLSearchParams();
+  Object.entries(params as Record<string, unknown>).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "") {
+      search.set(key, String(value));
+    }
+  });
+  const query = search.toString();
+  return query ? `${url}?${query}` : url;
+}
+
+async function officialFetchGet<T>(url: string, config?: Parameters<typeof api.get<T>>[1]): Promise<{ data: T }> {
+  const endpoint = `${officialPokemonApiUrl}${appendParams(url, config?.params)}`;
+  const response = await fetch(endpoint, {
+    headers: { Accept: "application/json" },
+    signal: AbortSignal.timeout(10000)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Pokemon official fetch failed with status ${response.status}`);
+  }
+
+  return { data: await response.json() as T };
+}
+
 function getCached<T>(key: string): T | null {
   const hit = cache.get(key);
   if (!hit || Date.now() > hit.expiresAt) {
@@ -67,19 +93,21 @@ async function pokemonGet<T>(url: string, config?: Parameters<typeof api.get<T>>
       try {
         return await publicApi.get<T>(url, config);
       } catch (publicError) {
-        if (env.pokemonApiUrl !== officialPokemonApiUrl) {
-          console.warn(JSON.stringify({ level: "warn", message: "Configured Pokemon API failed after key retry. Falling back to official API.", error: String(publicError) }));
-          return officialApi.get<T>(url, config);
-        }
-        throw publicError;
+        console.warn(JSON.stringify({ level: "warn", message: "Pokemon public retry failed. Falling back to official fetch.", error: String(publicError) }));
+        return officialFetchGet<T>(url, config);
       }
     }
 
-    if (env.pokemonApiUrl !== officialPokemonApiUrl) {
-      console.warn(JSON.stringify({ level: "warn", message: "Configured Pokemon API failed. Falling back to official API.", error: String(error) }));
-      return officialApi.get<T>(url, config);
+    try {
+      if (env.pokemonApiUrl !== officialPokemonApiUrl) {
+        console.warn(JSON.stringify({ level: "warn", message: "Configured Pokemon API failed. Falling back to official API.", error: String(error) }));
+        return await officialApi.get<T>(url, config);
+      }
+      throw error;
+    } catch (officialError) {
+      console.warn(JSON.stringify({ level: "warn", message: "Pokemon axios requests failed. Falling back to official fetch.", error: String(officialError) }));
+      return officialFetchGet<T>(url, config);
     }
-    throw error;
   }
 }
 
