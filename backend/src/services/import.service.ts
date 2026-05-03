@@ -153,10 +153,28 @@ function buildEmptyResult(): ImportResult {
   return { imported: 0, skipped: 0, notFound: [], totalRows: 0, validRows: 0, ignoredRows: 0, errors: [] };
 }
 
+function rowErrorMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : "";
+  if (message.includes("Can't reach database server") || message.includes("ECONNREFUSED")) {
+    return "Nao foi possivel salvar no banco de dados. Verifique se o banco esta ativo e tente novamente.";
+  }
+  if (message.includes("Timed out") || message.includes("timeout")) {
+    return "A busca da carta demorou demais. Tente novamente em alguns instantes.";
+  }
+  return message || "Erro inesperado ao processar linha.";
+}
+
 export const importService = {
   async importCollection(userId: number, buffer: Buffer): Promise<ImportResult> {
     const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.load(buffer as unknown as ExcelJS.Buffer);
+    try {
+      await workbook.xlsx.load(buffer as unknown as ExcelJS.Buffer);
+    } catch {
+      return {
+        ...buildEmptyResult(),
+        errors: [{ series: "", number: "", sequence: "", status: "", quantity: "", reason: "Arquivo Excel invalido ou corrompido. Salve novamente como .xlsx e tente de novo." }]
+      };
+    }
     const sheet = workbook.worksheets[0];
 
     if (!sheet) {
@@ -242,7 +260,7 @@ export const importService = {
         result.imported += importQuantity;
       } catch (error) {
         const failed = readRow(sheet, rowNumber, headerMap);
-        const rowError = { ...failed, reason: error instanceof Error ? error.message : "Erro inesperado ao processar linha." };
+        const rowError = { ...failed, reason: rowErrorMessage(error) };
         result.errors.push(rowError);
         result.ignoredRows += 1;
       }
