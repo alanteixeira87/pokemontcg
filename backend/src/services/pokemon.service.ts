@@ -2,6 +2,7 @@ import axios from "axios";
 import { env } from "../utils/env.js";
 import { normalizeCard } from "../utils/normalize.js";
 import type { PaginatedCards, PokemonCard, PokemonSet } from "../types.js";
+import { priceService } from "./price.service.js";
 
 type CacheEntry<T> = {
   expiresAt: number;
@@ -124,6 +125,26 @@ function setCodeCandidates(set: PokemonSet): string[] {
   );
 }
 
+async function normalizeCardWithPrice(card: PokemonCard): Promise<ReturnType<typeof normalizeCard>> {
+  const normalized = normalizeCard(card);
+  if (normalized.marketPrice !== null) return normalized;
+
+  const price = await priceService.getCardPrice({
+    cardId: card.id,
+    cardName: card.name,
+    collectionName: card.set?.name ?? "Colecao desconhecida",
+    setCode: card.set?.id,
+    cardNumber: card.number,
+    rarity: card.rarity,
+    variantType: "NORMAL"
+  });
+
+  return {
+    ...normalized,
+    marketPrice: price.estimatedPrice
+  };
+}
+
 const setAliases = new Map<string, string>([
   ["escarlate e violeta", "sv1"],
   ["scarlet violet", "sv1"],
@@ -201,7 +222,7 @@ export const pokemonService = {
 
     try {
       const response = await withRetry(() => api.get<{ data: PokemonCard }>(`/cards/${escapeQuery(id)}`));
-      return setCached(cacheKey, normalizeCard(response.data.data));
+      return setCached(cacheKey, await normalizeCardWithPrice(response.data.data));
     } catch {
       return setCached(cacheKey, null);
     }
@@ -220,7 +241,7 @@ export const pokemonService = {
     );
 
     return setCached(cacheKey, {
-      cards: sortCards(response.data.data.map(normalizeCard), sort),
+      cards: sortCards(await Promise.all(response.data.data.map(normalizeCardWithPrice)), sort),
       page,
       pageSize,
       totalCount: response.data.totalCount
@@ -277,7 +298,7 @@ export const pokemonService = {
         );
         const card = exact ?? response.data.data[0];
         if (card) {
-          return setCached(cacheKey, normalizeCard(card));
+          return setCached(cacheKey, await normalizeCardWithPrice(card));
         }
       }
     }
@@ -296,7 +317,7 @@ export const pokemonService = {
 
       const card = response.data.data[0];
       if (card) {
-        return setCached(cacheKey, normalizeCard(card));
+      return setCached(cacheKey, await normalizeCardWithPrice(card));
       }
     }
 
