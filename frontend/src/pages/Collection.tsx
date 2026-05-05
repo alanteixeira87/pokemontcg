@@ -1,13 +1,14 @@
-import { AlertTriangle, BarChart3, Download, Layers3, RefreshCw, Trash2, Trophy, Upload } from "lucide-react";
+import { AlertTriangle, BarChart3, Download, Heart, Layers3, Plus, RefreshCw, Trash2, Trophy, Upload } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CardTile } from "../components/CardTile";
 import { EmptyState } from "../components/EmptyState";
 import { Button } from "../components/ui/Button";
 import { Select } from "../components/ui/Select";
 import { Skeleton } from "../components/ui/Skeleton";
+import { Modal } from "../components/ui/Modal";
 import { apiService } from "../services/api";
 import { useAppStore } from "../store/useAppStore";
-import type { CollectionItem, PokemonSet } from "../types";
+import type { CollectionItem, ExploreCard, PokemonSet } from "../types";
 import type { ToastState } from "../components/ui/Toast";
 
 export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean; onToast: (toast: ToastState) => void }) {
@@ -19,6 +20,9 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
   const [importing, setImporting] = useState(false);
   const [repricing, setRepricing] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
+  const [pendingRemove, setPendingRemove] = useState<CollectionItem | null>(null);
+  const [setCards, setSetCards] = useState<ExploreCard[]>([]);
+  const [wishlistIds, setWishlistIds] = useState<Set<string>>(new Set());
   const { filters, setFilters } = useAppStore();
 
   const loadMeta = useCallback(async () => {
@@ -60,8 +64,39 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
     void loadMeta();
   }, [loadMeta]);
 
+  useEffect(() => {
+    if (tradeOnly) return;
+    void apiService
+      .wishlist()
+      .then((wishlist) => setWishlistIds(new Set(wishlist.map((item) => item.cardId))))
+      .catch(() => undefined);
+  }, [tradeOnly]);
+
+  useEffect(() => {
+    if (tradeOnly || !filters.set || pokemonSets.length === 0) {
+      setSetCards([]);
+      return;
+    }
+
+    const selectedSet = pokemonSets.find((set) => normalizeSetName(set.name) === normalizeSetName(filters.set));
+    if (!selectedSet) {
+      setSetCards([]);
+      return;
+    }
+
+    void apiService
+      .cards({ page: 1, pageSize: 500, set: selectedSet.id, sort: "numberAsc" })
+      .then((result) => setSetCards(result.cards))
+      .catch(() => onToast({ type: "error", message: "Nao foi possivel carregar cartas faltantes desta colecao." }));
+  }, [filters.set, onToast, pokemonSets, tradeOnly]);
+
   const sets = useMemo(() => availableSets, [availableSets]);
   const collectionSummary = useMemo(() => buildCollectionSummary(allItems, pokemonSets), [allItems, pokemonSets]);
+  const missingCards = useMemo(() => {
+    if (!filters.set) return [];
+    const ownedIds = new Set(allItems.filter((item) => normalizeSetName(item.set) === normalizeSetName(filters.set)).map((item) => item.cardId));
+    return setCards.filter((card) => !ownedIds.has(card.id));
+  }, [allItems, filters.set, setCards]);
   const totalUnique = allItems.length;
   const totalCopies = useMemo(() => allItems.reduce((sum, item) => sum + item.quantity, 0), [allItems]);
   const completedSets = collectionSummary.filter((set) => set.percent >= 100).length;
@@ -89,6 +124,35 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
     } catch {
       setItems(previous);
       onToast({ type: "error", message: "Nao foi possivel remover a carta." });
+    }
+  }
+
+  async function addMissing(card: ExploreCard) {
+    try {
+      await apiService.addToCollection(card, 1);
+      await load();
+      await loadMeta();
+      onToast({ type: "success", message: "Carta adicionada a colecao." });
+    } catch {
+      onToast({ type: "error", message: "Nao foi possivel adicionar esta carta." });
+    }
+  }
+
+  async function toggleMissingWishlist(card: ExploreCard) {
+    const wished = wishlistIds.has(card.id);
+    setWishlistIds((current) => {
+      const next = new Set(current);
+      if (wished) next.delete(card.id);
+      else next.add(card.id);
+      return next;
+    });
+
+    try {
+      if (wished) await apiService.removeWishlist(card.id);
+      else await apiService.addWishlist(card);
+      onToast({ type: "success", message: wished ? "Carta removida da lista de desejos." : "Carta adicionada a lista de desejos." });
+    } catch {
+      onToast({ type: "error", message: "Nao foi possivel atualizar a lista de desejos." });
     }
   }
 
@@ -304,7 +368,17 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
       ) : items.length ? (
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
           {items.map((item) => (
-            <CardTile key={item.id} mode="collection" card={item} onUpdate={update} onRemove={remove} onExport={exportCard} />
+            <CardTile key={item.id} mode="collection" card={item} onUpdate={update} onRemove={() => setPendingRemove(item)} onExport={exportCard} />
+          ))}
+          {!tradeOnly &&
+            missingCards.map((card) => (
+              <MissingCard key={`missing-${card.id}`} card={card} wished={wishlistIds.has(card.id)} onAdd={addMissing} onToggleWishlist={toggleMissingWishlist} />
+            ))}
+        </div>
+      ) : !tradeOnly && missingCards.length ? (
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+          {missingCards.map((card) => (
+            <MissingCard key={`missing-${card.id}`} card={card} wished={wishlistIds.has(card.id)} onAdd={addMissing} onToggleWishlist={toggleMissingWishlist} />
           ))}
         </div>
       ) : (
@@ -313,7 +387,59 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
           description={tradeOnly ? "Marque cartas como troca para visualiza-las aqui." : "Explore cartas e adicione os primeiros itens a sua colecao local."}
         />
       )}
+      <Modal title="Remover carta" open={Boolean(pendingRemove)} onClose={() => setPendingRemove(null)}>
+        <div className="space-y-4">
+          <p className="text-sm text-slate-600 dark:text-slate-300">Deseja realmente remover esta carta da sua colecao?</p>
+          {pendingRemove && <p className="rounded-lg bg-slate-50 p-3 text-sm font-semibold text-slate-950 dark:bg-slate-950/50 dark:text-white">{pendingRemove.name}</p>}
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setPendingRemove(null)}>
+              Cancelar
+            </Button>
+            <Button
+              variant="danger"
+              onClick={() => {
+                if (!pendingRemove) return;
+                void remove(pendingRemove.id);
+                setPendingRemove(null);
+              }}
+            >
+              Remover
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
+  );
+}
+
+function MissingCard({ card, wished, onAdd, onToggleWishlist }: { card: ExploreCard; wished: boolean; onAdd: (card: ExploreCard) => void; onToggleWishlist: (card: ExploreCard) => void }) {
+  return (
+    <article className="overflow-hidden rounded-xl border border-slate-200 bg-white opacity-75 grayscale transition hover:opacity-100 hover:grayscale-0 dark:border-slate-800 dark:bg-slate-900">
+      <div className="relative bg-slate-100 px-4 pb-3 pt-4 dark:bg-slate-950/40">
+        <img src={card.image} alt={card.name} loading="lazy" className="mx-auto aspect-[63/88] w-full max-w-[184px] rounded-lg object-contain" />
+        <span className="absolute right-3 top-3 rounded-full bg-slate-900 px-2.5 py-1 text-[11px] font-semibold text-white">Faltante</span>
+        <button
+          type="button"
+          onClick={() => onToggleWishlist(card)}
+          className={`absolute left-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-white shadow-sm transition hover:scale-105 dark:bg-slate-900 ${
+            wished ? "text-rose-500" : "text-slate-400 hover:text-rose-500"
+          }`}
+          aria-label="Lista de desejos"
+        >
+          <Heart size={17} fill={wished ? "currentColor" : "none"} />
+        </button>
+      </div>
+      <div className="space-y-3 border-t border-slate-100 p-4 dark:border-slate-800">
+        <div>
+          <h3 className="line-clamp-2 min-h-10 text-[15px] font-semibold leading-5 text-slate-950 dark:text-white">{card.name}</h3>
+          <p className="mt-1 truncate text-xs text-slate-500 dark:text-slate-400">{card.set} - #{card.number ?? "N/D"}</p>
+        </div>
+        <Button className="w-full" variant="secondary" onClick={() => onAdd(card)}>
+          <Plus size={16} />
+          Adicionar manualmente
+        </Button>
+      </div>
+    </article>
   );
 }
 

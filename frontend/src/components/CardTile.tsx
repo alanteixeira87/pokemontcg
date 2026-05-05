@@ -1,4 +1,4 @@
-import { Download, Minus, Plus, Repeat2, Star, Trash2, X } from "lucide-react";
+import { Download, Heart, Minus, Plus, Repeat2, Star, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import type { CollectionItem, ExploreCard } from "../types";
@@ -11,7 +11,12 @@ const fallbackCardImage = "https://images.pokemontcg.io/base1/4.png";
 type ExploreProps = {
   mode: "explore";
   card: ExploreCard;
-  onAdd: (card: ExploreCard) => void;
+  quantity?: number;
+  wished?: boolean;
+  disabled?: boolean;
+  onQuantityChange?: (cardId: string, quantity: number) => void;
+  onAdd: (card: ExploreCard, quantity: number) => void;
+  onToggleWishlist?: (card: ExploreCard) => void;
 };
 
 type CollectionProps = {
@@ -44,6 +49,18 @@ export function CardTile(props: ExploreProps | CollectionProps) {
         <div className="absolute right-3 top-3 rounded-full bg-white px-2.5 py-1 text-[11px] font-medium text-slate-600 shadow-sm dark:bg-slate-900 dark:text-slate-300">
           {isExplore ? props.card.number ? `#${props.card.number}` : "TCG" : `x${props.card.quantity}`}
         </div>
+        {props.mode === "explore" && (
+          <button
+            type="button"
+            onClick={() => props.onToggleWishlist?.(props.card)}
+            className={`absolute left-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-white shadow-sm transition hover:scale-105 dark:bg-slate-900 ${
+              props.wished ? "text-rose-500" : "text-slate-400 hover:text-rose-500"
+            }`}
+            aria-label={props.wished ? "Remover da lista de desejos" : "Adicionar a lista de desejos"}
+          >
+            <Heart size={17} fill={props.wished ? "currentColor" : "none"} />
+          </button>
+        )}
         {props.mode === "collection" && (
           <div className="absolute left-3 top-3 flex flex-wrap gap-1">
             {props.card.quantity > 1 && (
@@ -71,9 +88,30 @@ export function CardTile(props: ExploreProps | CollectionProps) {
               <p className="text-[11px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Valor estimado</p>
               <strong className="text-lg font-semibold text-slate-950 dark:text-white">{props.card.marketPrice === null ? "N/D" : currency(props.card.marketPrice)}</strong>
             </div>
-            <Button className="w-full" variant="primary" onClick={() => props.onAdd(props.card)}>
-              Adicionar
-            </Button>
+            <div className="flex items-center gap-2">
+              <div className="flex h-10 items-center overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
+                <button
+                  className="flex h-10 w-9 items-center justify-center text-slate-600 transition hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                  onClick={() => props.onQuantityChange?.(props.card.id, Math.max(1, (props.quantity ?? 1) - 1))}
+                  aria-label="Diminuir quantidade"
+                >
+                  <Minus size={14} />
+                </button>
+                <span className="flex h-10 min-w-10 items-center justify-center border-x border-slate-200 text-sm font-semibold text-slate-900 dark:border-slate-700 dark:text-white">
+                  {props.quantity ?? 1}
+                </span>
+                <button
+                  className="flex h-10 w-9 items-center justify-center text-slate-600 transition hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                  onClick={() => props.onQuantityChange?.(props.card.id, (props.quantity ?? 1) + 1)}
+                  aria-label="Aumentar quantidade"
+                >
+                  <Plus size={14} />
+                </button>
+              </div>
+              <Button className="flex-1" variant="primary" disabled={props.disabled} onClick={() => props.onAdd(props.card, props.quantity ?? 1)}>
+                Adicionar
+              </Button>
+            </div>
           </div>
         ) : (
           <div className="space-y-3">

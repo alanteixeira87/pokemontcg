@@ -1,5 +1,5 @@
-import { BarChart3, Boxes, HeartHandshake, Library, LogOut, Menu, Moon, Search, ShieldCheck, Sun } from "lucide-react";
-import { useEffect, type ReactNode } from "react";
+import { BarChart3, Boxes, Heart, HeartHandshake, Library, LogOut, Menu, Moon, Search, ShieldCheck, Sun, X } from "lucide-react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useAppStore } from "../store/useAppStore";
 import { Button } from "./ui/Button";
 
@@ -7,6 +7,7 @@ const nav = [
   { id: "explore", label: "Explorar", icon: Library },
   { id: "dashboard", label: "Dashboard", icon: BarChart3 },
   { id: "collection", label: "Minha colecao", icon: Boxes },
+  { id: "wishlist", label: "Lista de desejos", icon: Heart },
   { id: "trades", label: "Trocas", icon: HeartHandshake }
 ] as const;
 
@@ -14,6 +15,7 @@ export function Layout({ children }: { children: ReactNode }) {
   const { view, setView, theme, toggleTheme } = useAppStore();
   const user = useAppStore((state) => state.user);
   const logout = useAppStore((state) => state.logout);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "dark");
@@ -34,8 +36,8 @@ export function Layout({ children }: { children: ReactNode }) {
                 <h1 className="text-lg font-semibold tracking-tight text-slate-950 dark:text-white">Colecao Local</h1>
               </div>
             </div>
-            <Button className="lg:hidden" size="icon" variant="ghost" aria-label="Menu">
-              <Menu size={20} />
+            <Button className="lg:hidden" size="icon" variant="ghost" aria-label="Menu" onClick={() => setMobileMenuOpen((open) => !open)}>
+              {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
             </Button>
           </div>
           <div className="relative flex-1">
@@ -51,11 +53,11 @@ export function Layout({ children }: { children: ReactNode }) {
             <ShieldCheck size={16} />
             {user ? user.name : "Conta protegida"}
           </div>
-          <Button variant="secondary" size="icon" onClick={toggleTheme} aria-label="Alternar tema">
+          <Button className="hidden lg:inline-flex" variant="secondary" size="icon" onClick={toggleTheme} aria-label="Alternar tema">
             {theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}
           </Button>
           {user && (
-            <Button variant="ghost" onClick={logout}>
+            <Button className="hidden lg:inline-flex" variant="ghost" onClick={logout}>
               <LogOut size={16} />
               Sair
             </Button>
@@ -83,23 +85,46 @@ export function Layout({ children }: { children: ReactNode }) {
             );
           })}
         </nav>
-        <nav className="grid grid-cols-4 border-t border-slate-200 bg-white lg:hidden dark:border-slate-800 dark:bg-slate-950/95">
-          {nav.map((item) => {
-            const Icon = item.icon;
-            return (
+        {mobileMenuOpen && (
+          <div className="border-t border-slate-200 bg-white p-3 shadow-sm lg:hidden dark:border-slate-800 dark:bg-slate-950">
+            <nav className="grid gap-1">
+              {nav.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      setView(item.id);
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition ${
+                      view === item.id ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300" : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900"
+                    }`}
+                  >
+                    <Icon size={18} />
+                    {item.label}
+                  </button>
+                );
+              })}
               <button
-                key={item.id}
-                onClick={() => setView(item.id)}
-                className={`flex flex-col items-center gap-1 px-2 py-3 text-[11px] font-medium transition ${
-                  view === item.id ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300" : "text-slate-500 dark:text-slate-400"
-                }`}
+                onClick={toggleTheme}
+                className="flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium text-slate-600 transition hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900"
               >
-                <Icon size={17} />
-                {item.label}
+                {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+                Alternar tema
               </button>
-            );
-          })}
-        </nav>
+              {user && (
+                <button
+                  onClick={logout}
+                  className="flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium text-red-600 transition hover:bg-red-50 dark:text-red-300 dark:hover:bg-red-950/30"
+                >
+                  <LogOut size={18} />
+                  Sair
+                </button>
+              )}
+            </nav>
+          </div>
+        )}
       </div>
 
       <main className="mx-auto max-w-7xl p-4 md:p-6">{children}</main>

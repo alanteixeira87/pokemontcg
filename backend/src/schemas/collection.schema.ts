@@ -10,6 +10,19 @@ export const addCardSchema = z.object({
   number: z.string().trim().optional()
 });
 
+export const wishlistCardSchema = z.object({
+  cardId: z.string().trim().min(1),
+  name: z.string().trim().min(1).max(160),
+  image: z.string().trim().url(),
+  set: z.string().trim().min(1).max(160),
+  number: z.string().trim().optional(),
+  rarity: z.string().trim().optional(),
+  variantType: z.string().trim().optional(),
+  condition: z.string().trim().min(1).max(80).default("Nao informado"),
+  marketPrice: z.coerce.number().min(0).default(0),
+  priceSource: z.string().trim().min(1).max(80).default("Estimativa local")
+});
+
 export const updateCollectionSchema = z.object({
   quantity: z.coerce.number().int().min(1).optional(),
   price: z.coerce.number().min(0).optional(),

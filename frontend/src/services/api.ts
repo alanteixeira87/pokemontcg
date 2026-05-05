@@ -14,7 +14,9 @@ import type {
   TradeProposal,
   TradeSelectionInput,
   TradeStatus,
-  TradeUser
+  TradeUser,
+  WishlistAvailability,
+  WishlistItem
 } from "../types";
 
 const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
@@ -95,16 +97,47 @@ export const apiService = {
     return response.data;
   },
 
-  async addToCollection(card: ExploreCard): Promise<CollectionItem> {
+  async addToCollection(card: ExploreCard, quantity = 1): Promise<CollectionItem> {
     const response = await api.post<CollectionItem>("/collection", {
       cardId: card.id,
       name: card.name,
       image: card.image,
       set: card.set,
-      quantity: 1,
+      quantity,
       price: card.marketPrice ?? 0,
       number: card.number
     });
+    return response.data;
+  },
+
+  async wishlist(): Promise<WishlistItem[]> {
+    const response = await api.get<WishlistItem[]>("/wishlist");
+    return response.data;
+  },
+
+  async addWishlist(card: ExploreCard): Promise<WishlistItem> {
+    const response = await api.post<WishlistItem>("/wishlist", {
+      cardId: card.id,
+      name: card.name,
+      image: card.image,
+      set: card.set,
+      number: card.number,
+      rarity: card.rarity,
+      variantType: "NORMAL",
+      condition: "Nao informado",
+      marketPrice: card.marketPrice ?? 0,
+      priceSource: card.marketPrice ? "Mercado estimado" : "Estimativa local"
+    });
+    return response.data;
+  },
+
+  async removeWishlist(cardId: string): Promise<{ removed: boolean }> {
+    const response = await api.delete<{ removed: boolean }>(`/wishlist/${encodeURIComponent(cardId)}`);
+    return response.data;
+  },
+
+  async wishlistNotifications(): Promise<WishlistAvailability[]> {
+    const response = await api.get<WishlistAvailability[]>("/wishlist/notifications");
     return response.data;
   },
 

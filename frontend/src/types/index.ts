@@ -55,6 +55,41 @@ export type CollectionItem = {
   updatedAt: string;
 };
 
+export type WishlistAvailability = {
+  cardId: string;
+  name: string;
+  image: string;
+  set: string;
+  number?: string | null;
+  condition: string;
+  variantType: string;
+  requestedPrice: number;
+  quantity: number;
+  owner: {
+    id: number;
+    name: string;
+    avatarUrl?: string | null;
+  };
+};
+
+export type WishlistItem = {
+  id: number;
+  userId: number;
+  cardId: string;
+  name: string;
+  image: string;
+  set: string;
+  number?: string | null;
+  rarity?: string | null;
+  variantType?: string | null;
+  condition: string;
+  marketPrice: number;
+  priceSource: string;
+  createdAt: string;
+  updatedAt: string;
+  availability?: WishlistAvailability | null;
+};
+
 export type DashboardStats = {
   totalCards: number;
   uniqueCards: number;
