@@ -1,4 +1,5 @@
 import axios from "axios";
+import type { Prisma } from "@prisma/client";
 import { env } from "../utils/env.js";
 import { normalizeCard } from "../utils/normalize.js";
 import type { ExploreCard, PaginatedCards, PokemonCard, PokemonSet } from "../types.js";
@@ -206,6 +207,97 @@ function normalizeTcgDexCard(card: TcgDexCardDetail | TcgDexCardBrief, set: TcgD
     rarity: detail.rarity,
     marketPrice: tcgDexPrice(detail)
   };
+}
+
+async function listCardsFromPersistentCache(page: number, pageSize: number, search?: string, set?: string, sort: "numberAsc" | "numberDesc" | "name" = "numberAsc"): Promise<PaginatedCards | null> {
+  const where: Prisma.CachedCardWhereInput = {
+    setId: set || undefined,
+    OR: search
+      ? [
+          { name: { contains: search, mode: "insensitive" } },
+          { set: { contains: search, mode: "insensitive" } },
+          { number: { contains: search, mode: "insensitive" } }
+        ]
+      : undefined
+  };
+  const totalCount = await prisma.cachedCard.count({ where });
+  if (totalCount === 0) return null;
+
+  const rows = await prisma.cachedCard.findMany({
+    where,
+    orderBy: sort === "name" ? { name: "asc" } : { name: "asc" },
+    skip: (page - 1) * pageSize,
+    take: pageSize
+  });
+
+  return {
+    cards: sortCards(
+      rows.map((card) => ({
+        id: card.id,
+        name: card.name,
+        image: card.image,
+        set: card.set,
+        setId: card.setId ?? undefined,
+        number: card.number ?? undefined,
+        rarity: card.rarity ?? undefined,
+        marketPrice: card.marketPrice
+      })),
+      sort
+    ),
+    page,
+    pageSize,
+    totalCount
+  };
+}
+
+async function listPokemonCards(page: number, pageSize: number, search?: string, set?: string, sort: "numberAsc" | "numberDesc" | "name" = "numberAsc"): Promise<PaginatedCards> {
+  const q = buildCardQuery(search, set);
+  const response = await withRetry(
+    () =>
+      api.get<{ data: PokemonCard[]; totalCount?: number }>("/cards", {
+        params: {
+          page,
+          pageSize,
+          q,
+          orderBy: sort === "numberDesc" ? "-number" : sort === "name" ? "name" : "number"
+        }
+      }),
+    1
+  );
+  const cards = response.data.data.map(normalizeCard);
+  void persistCachedCards(cards);
+  return {
+    cards,
+    page,
+    pageSize,
+    totalCount: response.data.totalCount ?? cards.length
+  };
+}
+
+async function listPokemonSets(): Promise<PokemonSet[]> {
+  const response = await withRetry(() => api.get<{ data: PokemonSet[] }>("/sets"), 1);
+  const sets = response.data.data.map((set) => ({
+    id: set.id,
+    name: set.name,
+    series: set.series,
+    ptcgoCode: set.ptcgoCode,
+    printedTotal: set.printedTotal,
+    total: set.total
+  }));
+  void persistCachedSets(sets);
+  return sets;
+}
+
+async function listSetsFromPersistentCache(): Promise<PokemonSet[]> {
+  const rows = await prisma.cachedSet.findMany({ orderBy: { name: "asc" } });
+  return rows.map((set) => ({
+    id: set.id,
+    name: set.name,
+    series: set.series ?? undefined,
+    ptcgoCode: set.ptcgoCode ?? undefined,
+    printedTotal: set.printedTotal ?? undefined,
+    total: set.total ?? undefined
+  }));
 }
 
 async function persistCachedCards(cards: ExploreCard[]): Promise<void> {
@@ -625,6 +717,15 @@ export const pokemonService = {
     const cached = getCached<PaginatedCards>(cacheKey);
     if (cached) return cached;
 
+    try {
+      return setCached(cacheKey, await listPokemonCards(page, pageSize, search, set, sort));
+    } catch (error) {
+      console.warn(JSON.stringify({ level: "warn", message: "Pokemon API card listing failed", error: String(error) }));
+    }
+
+    const persisted = await listCardsFromPersistentCache(page, pageSize, search, set, sort);
+    if (persisted) return setCached(cacheKey, persisted);
+
     return setCached(cacheKey, await listCardsFromTcgDex(page, pageSize, search, set, sort));
   },
 
@@ -632,7 +733,16 @@ export const pokemonService = {
     const cached = getCached<PokemonSet[]>("sets");
     if (cached) return cached;
 
-    return setCached("sets", await listTcgDexSets());
+    try {
+      return setCached("sets", await listTcgDexSets());
+    } catch (error) {
+      console.warn(JSON.stringify({ level: "warn", message: "TCGdex set listing failed", error: String(error) }));
+    }
+
+    const persisted = await listSetsFromPersistentCache();
+    if (persisted.length) return setCached("sets", persisted);
+
+    return setCached("sets", await listPokemonSets());
   },
 
   async findCardsBySetAndNumbers(setName: string, numbers: string[]): Promise<Map<string, ExploreCard>> {

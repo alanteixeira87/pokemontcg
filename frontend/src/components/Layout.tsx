@@ -13,6 +13,8 @@ const nav = [
   { id: "admin", label: "Admin", icon: SlidersHorizontal }
 ] as const;
 
+const masterAdminEmail = "alanteixeira74@gmail.com";
+
 export function Layout({ children }: { children: ReactNode }) {
   const { view, setView, theme, toggleTheme } = useAppStore();
   const user = useAppStore((state) => state.user);
@@ -69,7 +71,7 @@ export function Layout({ children }: { children: ReactNode }) {
 
       <div className="border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
         <nav className="mx-auto hidden max-w-7xl flex-wrap items-center gap-1 px-4 py-2 md:px-6 lg:flex">
-          {nav.map((item) => {
+          {nav.filter((item) => item.id !== "admin" || user?.email.toLowerCase() === masterAdminEmail).map((item) => {
             const Icon = item.icon;
             return (
               <button
@@ -90,7 +92,7 @@ export function Layout({ children }: { children: ReactNode }) {
         {mobileMenuOpen && (
           <div className="border-t border-slate-200 bg-white p-3 shadow-sm lg:hidden dark:border-slate-800 dark:bg-slate-950">
             <nav className="grid gap-1">
-              {nav.map((item) => {
+              {nav.filter((item) => item.id !== "admin" || user?.email.toLowerCase() === masterAdminEmail).map((item) => {
                 const Icon = item.icon;
                 return (
                   <button

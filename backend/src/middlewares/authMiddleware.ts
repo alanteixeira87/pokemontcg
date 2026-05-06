@@ -37,3 +37,14 @@ export function getAuthenticatedUserId(req: Request): number {
   }
   return req.user.id;
 }
+
+export function requireMasterAdmin(req: Request, _res: Response, next: NextFunction) {
+  try {
+    if (req.user?.email.toLowerCase() !== "alanteixeira74@gmail.com") {
+      throw new HttpError(403, "Acesso master restrito ao administrador principal.");
+    }
+    next();
+  } catch (error) {
+    next(error);
+  }
+}
