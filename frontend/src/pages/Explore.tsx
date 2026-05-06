@@ -202,7 +202,7 @@ export function Explore({ onToast }: { onToast: (toast: ToastState) => void }) {
         <div className="border-b border-slate-100 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
         <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-xs font-medium uppercase tracking-[0.16em] text-indigo-600 dark:text-indigo-300">Explorar cartas</p>
+            <p className="text-xs font-medium uppercase tracking-[0.16em] text-indigo-600 dark:text-indigo-300">Jornada Pokemon</p>
             <h2 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950 dark:text-white">Marketplace de cartas</h2>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Pesquise por nome, serie ou colecao e adicione direto na sua pasta.</p>
           </div>
@@ -284,7 +284,7 @@ export function Explore({ onToast }: { onToast: (toast: ToastState) => void }) {
                   >
                     <div className="flex items-start justify-between gap-2">
                       <span className="rounded-md bg-slate-950 px-2 py-1 text-xs font-semibold text-white dark:bg-indigo-600">{setDisplayCode(set)}</span>
-                      <span className="text-xs font-semibold text-slate-500">{set.printedTotal ?? set.total ?? "?"} cartas</span>
+                      <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">{set.printedTotal ?? set.total ?? "?"} cartas</span>
                     </div>
                     <p className="mt-2 line-clamp-1 text-sm font-semibold text-slate-950 dark:text-white">{set.name}</p>
                     <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">ID oficial: {set.id}</p>
@@ -296,7 +296,7 @@ export function Explore({ onToast }: { onToast: (toast: ToastState) => void }) {
           {selectedSet && (
             <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950/40">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Colecao filtrada</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Colecao filtrada</p>
                 <p className="text-sm font-semibold text-slate-950 dark:text-white">
                   {setDisplayCode(selectedSet)} - {selectedSet.name}
                 </p>
@@ -396,7 +396,7 @@ export function Explore({ onToast }: { onToast: (toast: ToastState) => void }) {
           <ChevronLeft size={16} />
           Anterior
         </Button>
-        <span className="text-sm text-muted-foreground">
+        <span className="text-sm text-slate-500 dark:text-slate-400">
           Pagina {page} de {totalPages}
         </span>
         <Button variant="secondary" disabled={page >= totalPages} onClick={() => setPage((current) => current + 1)}>
@@ -460,8 +460,8 @@ function CardListRow({
       <img src={card.image} alt={card.name} loading="lazy" className="h-16 w-12 rounded-md object-contain" />
       <div className="min-w-0">
         <p className="truncate text-sm font-semibold text-slate-950 dark:text-white">{cardDisplayName(card.name, card.number, card.id)}</p>
-        <p className="truncate text-xs font-medium text-slate-500">{card.set} - {cardDisplayNumber(card.number, card.id)}</p>
-        <p className="text-xs text-slate-500">{card.rarity ?? "Raridade nao informada"}</p>
+        <p className="truncate text-xs font-medium text-slate-500 dark:text-slate-400">{card.set} - {cardDisplayNumber(card.number, card.id)}</p>
+        <p className="text-xs text-slate-500 dark:text-slate-400">{card.rarity ?? "Raridade nao informada"}</p>
       </div>
       <div className="flex items-center gap-2">
         <button type="button" onClick={() => onToggleWishlist(card)} className={wished ? "text-rose-500" : "text-slate-400 hover:text-rose-500"} aria-label="Lista de desejos">
@@ -469,7 +469,7 @@ function CardListRow({
         </button>
         <div className="flex items-center overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
           <button className="h-8 w-8" onClick={() => onQuantityChange(card.id, Math.max(1, quantity - 1))}>-</button>
-          <span className="min-w-8 text-center text-sm font-semibold">{quantity}</span>
+          <span className="min-w-8 text-center text-sm font-semibold text-slate-950 dark:text-white">{quantity}</span>
           <button className="h-8 w-8" onClick={() => onQuantityChange(card.id, quantity + 1)}>+</button>
         </div>
       </div>
@@ -500,7 +500,7 @@ function CompactCard({
       </div>
       <img src={card.image} alt={card.name} loading="lazy" className="mx-auto h-24 w-full rounded-md object-contain" />
       <p className="mt-2 line-clamp-2 min-h-8 text-xs font-semibold text-slate-950 dark:text-white">{cardDisplayName(card.name, card.number, card.id)}</p>
-      <p className="text-[11px] font-medium text-slate-500">{cardDisplayNumber(card.number, card.id)}</p>
+      <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">{cardDisplayNumber(card.number, card.id)}</p>
     </div>
   );
 }

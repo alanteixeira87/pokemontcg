@@ -4,9 +4,9 @@ import { useAppStore } from "../store/useAppStore";
 import { Button } from "./ui/Button";
 
 const nav = [
-  { id: "explore", label: "Explorar", icon: Library },
+  { id: "explore", label: "Jornada Pokemon", icon: Library },
   { id: "dashboard", label: "Dashboard", icon: BarChart3 },
-  { id: "collection", label: "Minha colecao", icon: Boxes },
+  { id: "collection", label: "Pokedex", icon: Boxes },
   { id: "wishlist", label: "Lista de desejos", icon: Heart },
   { id: "trades", label: "Trocas", icon: HeartHandshake },
   { id: "profile", label: "Perfil", icon: UserCircle },
@@ -128,4 +128,3 @@ export function Layout({ children }: { children: ReactNode }) {
     </div>
   );
 }
-

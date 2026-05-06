@@ -141,7 +141,7 @@ export function CardTile(props: ExploreProps | CollectionProps) {
                   </button>
                 </div>
               </div>
-              <label className="text-xs font-bold uppercase text-slate-500">
+              <label className="text-xs font-bold uppercase text-slate-500 dark:text-slate-300">
                 Preco unitario
                 <Input
                   className="mt-1"
@@ -190,7 +190,7 @@ export function CardTile(props: ExploreProps | CollectionProps) {
         <CardZoomModal
           card={card}
           number={isExplore ? props.card.number : props.card.number}
-          label={isExplore ? "Explorar" : props.card.forTrade ? "Disponivel para troca" : "Minha colecao"}
+          label={isExplore ? "Jornada Pokemon" : props.card.forTrade ? "Disponivel para troca" : "Pokedex"}
           onClose={() => setZoomOpen(false)}
         />
       )}
