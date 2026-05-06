@@ -105,7 +105,8 @@ export const apiService = {
       set: card.set,
       quantity,
       price: card.marketPrice ?? 0,
-      number: card.number
+      number: card.number,
+      rarity: card.rarity
     });
     return response.data;
   },

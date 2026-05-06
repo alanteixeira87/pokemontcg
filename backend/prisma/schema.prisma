@@ -16,6 +16,7 @@ model Collection {
   image     String
   set       String
   number    String?
+  rarity    String?
   quantity  Int      @default(1)
   price     Float    @default(0)
   favorite  Boolean  @default(false)

@@ -9,6 +9,7 @@ import { useAppStore } from "../store/useAppStore";
 import type { ExploreCard, WishlistAvailability, WishlistItem } from "../types";
 import type { ToastState } from "../components/ui/Toast";
 import { currency } from "../lib/utils";
+import { cardDisplayName, cardDisplayNumber } from "../lib/cardDisplay";
 
 export function Wishlist({ onToast }: { onToast: (toast: ToastState) => void }) {
   const [items, setItems] = useState<WishlistItem[]>([]);
@@ -84,8 +85,8 @@ export function Wishlist({ onToast }: { onToast: (toast: ToastState) => void }) 
                 <div className="flex gap-3">
                   <img src={notification.image} alt={notification.name} loading="lazy" className="h-20 w-14 rounded-md object-contain" />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-slate-950 dark:text-white">{notification.name}</p>
-                    <p className="text-xs font-medium text-slate-500">{notification.set} - #{notification.number ?? "N/D"}</p>
+                    <p className="truncate text-sm font-semibold text-slate-950 dark:text-white">{cardDisplayName(notification.name, notification.number, notification.cardId)}</p>
+                    <p className="text-xs font-medium text-slate-500">{notification.set} - {cardDisplayNumber(notification.number, notification.cardId)}</p>
                     <p className="mt-1 text-xs text-slate-500">{notification.variantType} | {notification.condition}</p>
                     <p className="mt-1 text-sm font-semibold text-emerald-700 dark:text-emerald-300">{currency(notification.requestedPrice)}</p>
                   </div>

@@ -11,6 +11,7 @@ import { useDebounce } from "../hooks/useDebounce";
 import { apiService } from "../services/api";
 import type { ExploreCard, ExploreSortOption, PokemonSet } from "../types";
 import type { ToastState } from "../components/ui/Toast";
+import { cardDisplayName, cardDisplayNumber } from "../lib/cardDisplay";
 
 export function Explore({ onToast }: { onToast: (toast: ToastState) => void }) {
   const [cards, setCards] = useState<ExploreCard[]>([]);
@@ -458,8 +459,8 @@ function CardListRow({
       <input type="checkbox" checked={selected} onChange={onSelect} className="h-4 w-4 rounded border-slate-300 text-indigo-600" aria-label={`Selecionar ${card.name}`} />
       <img src={card.image} alt={card.name} loading="lazy" className="h-16 w-12 rounded-md object-contain" />
       <div className="min-w-0">
-        <p className="truncate text-sm font-semibold text-slate-950 dark:text-white">{card.name}</p>
-        <p className="truncate text-xs font-medium text-slate-500">{card.set} - #{card.number ?? "N/D"}</p>
+        <p className="truncate text-sm font-semibold text-slate-950 dark:text-white">{cardDisplayName(card.name, card.number, card.id)}</p>
+        <p className="truncate text-xs font-medium text-slate-500">{card.set} - {cardDisplayNumber(card.number, card.id)}</p>
         <p className="text-xs text-slate-500">{card.rarity ?? "Raridade nao informada"}</p>
       </div>
       <div className="flex items-center gap-2">
@@ -498,8 +499,8 @@ function CompactCard({
         </button>
       </div>
       <img src={card.image} alt={card.name} loading="lazy" className="mx-auto h-24 w-full rounded-md object-contain" />
-      <p className="mt-2 line-clamp-2 min-h-8 text-xs font-semibold text-slate-950 dark:text-white">{card.name}</p>
-      <p className="text-[11px] font-medium text-slate-500">#{card.number ?? "N/D"}</p>
+      <p className="mt-2 line-clamp-2 min-h-8 text-xs font-semibold text-slate-950 dark:text-white">{cardDisplayName(card.name, card.number, card.id)}</p>
+      <p className="text-[11px] font-medium text-slate-500">{cardDisplayNumber(card.number, card.id)}</p>
     </div>
   );
 }

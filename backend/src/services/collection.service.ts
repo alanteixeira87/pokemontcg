@@ -13,6 +13,7 @@ type AddCardInput = {
   quantity: number;
   price: number;
   number?: string;
+  rarity?: string;
 };
 
 type PreparedCardInput = AddCardInput & {
@@ -102,7 +103,8 @@ export const collectionService = {
           name: input.name,
           image: input.image,
           set: input.set,
-          number: input.number
+          number: input.number,
+          rarity: input.rarity
         }
       });
     }
@@ -115,6 +117,7 @@ export const collectionService = {
         image: input.image,
         set: input.set,
         number: input.number,
+        rarity: input.rarity,
         quantity: input.quantity,
         price: estimatedPrice
       }
@@ -139,7 +142,8 @@ export const collectionService = {
               name: input.name,
               image: input.image,
               set: input.set,
-              number: input.number
+              number: input.number,
+              rarity: input.rarity
             },
             create: {
               userId,
@@ -148,6 +152,7 @@ export const collectionService = {
               image: input.image,
               set: input.set,
               number: input.number,
+              rarity: input.rarity,
               quantity: input.quantity,
               price: input.estimatedPrice
             }

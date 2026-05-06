@@ -7,6 +7,7 @@ type PersistedFilters = {
   set: string;
   favorite: boolean;
   forTrade: boolean;
+  missingOnly: boolean;
   sort: SortOption;
 };
 
@@ -31,7 +32,7 @@ const viewKey = "pokemon-tcg-active-view";
 const validViews: View[] = ["dashboard", "explore", "collection", "wishlist", "trades"];
 
 function loadFilters(): PersistedFilters {
-  const fallback: PersistedFilters = { set: "", favorite: false, forTrade: false, sort: "numberAsc" };
+  const fallback: PersistedFilters = { set: "", favorite: false, forTrade: false, missingOnly: false, sort: "numberAsc" };
   const raw = localStorage.getItem(storageKey);
   if (!raw) return fallback;
   try {

@@ -183,7 +183,8 @@ export const importService = {
           set: card.set,
           quantity,
           price: card.marketPrice ?? 0,
-          number: card.number
+          number: card.number,
+          rarity: card.rarity
         });
         result.imported += quantity;
       }

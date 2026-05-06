@@ -38,8 +38,10 @@ export const exportService = {
     const sheet = workbook.addWorksheet("Colecao");
 
     sheet.columns = [
-      { header: "Nome", key: "name", width: 28 },
-      { header: "Set", key: "set", width: 24 },
+      { header: "idCarta", key: "cardNumber", width: 14 },
+      { header: "nomeCarta", key: "name", width: 28 },
+      { header: "Colecao", key: "set", width: 24 },
+      { header: "Raridade", key: "rarity", width: 18 },
       { header: "Quantidade", key: "quantity", width: 14 },
       { header: "Preco", key: "price", width: 14 },
       { header: "Total", key: "total", width: 14 },
@@ -56,8 +58,10 @@ export const exportService = {
 
     rows.forEach((item) => {
       sheet.addRow({
+        cardNumber: formatExportCardNumber(item.number, item.cardId),
         name: item.name,
         set: item.set,
+        rarity: item.rarity ?? "Nao informada",
         quantity: item.quantity,
         price: item.price,
         total: item.price * item.quantity,
@@ -79,3 +83,8 @@ export const exportService = {
     return workbook;
   }
 };
+
+function formatExportCardNumber(number: string | null, cardId: string): string {
+  if (number?.trim()) return number.trim();
+  return cardId.split("-").at(-1) ?? cardId;
+}

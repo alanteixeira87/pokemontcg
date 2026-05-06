@@ -7,7 +7,8 @@ export const addCardSchema = z.object({
   set: z.string().trim().min(1).max(160),
   quantity: z.coerce.number().int().min(1).default(1),
   price: z.coerce.number().min(0).default(0),
-  number: z.string().trim().optional()
+  number: z.string().trim().optional(),
+  rarity: z.string().trim().optional()
 });
 
 export const wishlistCardSchema = z.object({

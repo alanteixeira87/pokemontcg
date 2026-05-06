@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import type { CollectionItem, ExploreCard } from "../types";
 import { currency } from "../lib/utils";
+import { cardDisplayName, cardDisplayNumber } from "../lib/cardDisplay";
 import { Button } from "./ui/Button";
 import { Input } from "./ui/Input";
 
@@ -35,7 +36,7 @@ export function CardTile(props: ExploreProps | CollectionProps) {
   return (
     <article className="group overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition duration-150 ease-out hover:scale-[1.01] hover:shadow-md dark:border-slate-800 dark:bg-slate-900">
       <div className="relative bg-slate-50 px-4 pb-3 pt-4 dark:bg-slate-950/40">
-        <button type="button" className="mx-auto block aspect-[63/88] w-full max-w-[184px]" onClick={() => setZoomOpen(true)} aria-label={`Ampliar ${card.name}`}>
+        <button type="button" className="mx-auto block aspect-[63/88] w-full max-w-[184px]" onClick={() => setZoomOpen(true)} aria-label={`Ampliar ${cardDisplayName(card.name, card.number, "cardId" in card ? card.cardId : card.id)}`}>
           <img
             src={card.image}
             alt={card.name}
@@ -47,7 +48,7 @@ export function CardTile(props: ExploreProps | CollectionProps) {
           />
         </button>
         <div className="absolute right-3 top-3 rounded-full bg-white px-2.5 py-1 text-[11px] font-medium text-slate-600 shadow-sm dark:bg-slate-900 dark:text-slate-300">
-          {isExplore ? props.card.number ? `#${props.card.number}` : "TCG" : `x${props.card.quantity}`}
+          {isExplore ? cardDisplayNumber(props.card.number, props.card.id) : `x${props.card.quantity}`}
         </div>
         {props.mode === "explore" && (
           <button
@@ -78,7 +79,9 @@ export function CardTile(props: ExploreProps | CollectionProps) {
 
       <div className="space-y-3 border-t border-slate-100 p-4 dark:border-slate-800">
         <div>
-          <h3 className="line-clamp-2 min-h-10 text-[15px] font-semibold leading-5 text-slate-950 dark:text-white">{card.name}</h3>
+          <h3 className="line-clamp-2 min-h-10 text-[15px] font-semibold leading-5 text-slate-950 dark:text-white">
+            {cardDisplayName(card.name, card.number, "cardId" in card ? card.cardId : card.id)}
+          </h3>
           <p className="mt-1 truncate text-xs text-slate-500 dark:text-slate-400">{card.set}</p>
         </div>
 
@@ -234,7 +237,7 @@ function CardZoomModal({ card, number, label, onClose }: { card: ExploreCard | C
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-xs font-semibold uppercase text-indigo-600 dark:text-indigo-300">Carta ampliada</p>
-              <h2 className="mt-1 text-2xl font-semibold leading-tight text-slate-950 dark:text-white">{card.name}</h2>
+              <h2 className="mt-1 text-2xl font-semibold leading-tight text-slate-950 dark:text-white">{cardDisplayName(card.name, number, "cardId" in card ? card.cardId : card.id)}</h2>
             </div>
             <Button variant="ghost" size="icon" onClick={onClose} aria-label="Fechar visualizacao">
               <X size={20} />
@@ -242,7 +245,7 @@ function CardZoomModal({ card, number, label, onClose }: { card: ExploreCard | C
           </div>
           <div className="space-y-2">
             <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{card.set}</p>
-            <p className="text-4xl font-semibold text-slate-950 dark:text-white">#{number ?? "N/D"}</p>
+            <p className="text-4xl font-semibold text-slate-950 dark:text-white">{cardDisplayNumber(number, "cardId" in card ? card.cardId : card.id)}</p>
             <div className="flex flex-wrap gap-2">
               <span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-sm font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
                 {label}

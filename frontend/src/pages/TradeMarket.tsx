@@ -12,6 +12,7 @@ import { apiService } from "../services/api";
 import { joinTradeChat, onTradeMessage, onTradeNotification, sendRealtimeTradeMessage } from "../services/socket";
 import { useAppStore } from "../store/useAppStore";
 import type { CardVariant, TradeCard, TradeCardSnapshot, TradeMessage, TradeProposal, TradeSelectionInput, TradeStatus, TradeUser, VariantType } from "../types";
+import { cardDisplayName, cardDisplayNumber } from "../lib/cardDisplay";
 
 type SelectedLine = TradeSelectionInput;
 type VariantDraft = Record<VariantType, { ownedQuantity: number; tradeQuantity: number }>;
@@ -279,7 +280,7 @@ export function TradeMarket({ onToast }: { onToast: (toast: ToastState) => void 
                           {user.suggestedCards.slice(0, 3).map((card) => (
                             <div key={card.id} className="flex items-center gap-2 rounded-md bg-slate-50 px-2 py-1">
                               <img src={card.image} alt={card.name} loading="lazy" className="h-8 w-6 object-contain" />
-                              <span className="min-w-0 flex-1 truncate text-xs font-medium text-slate-700">{card.name}</span>
+                              <span className="min-w-0 flex-1 truncate text-xs font-medium text-slate-700">{cardDisplayName(card.name, card.number, card.id ? String(card.id) : undefined)}</span>
                               <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${card.readyForTrade ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
                                 {card.readyForTrade ? "pronta" : "sem tipo"}
                               </span>
@@ -446,7 +447,7 @@ function TradeCardPanel(props: {
                   <span className="absolute bottom-1 right-1 rounded-full bg-white p-1 shadow"><Eye size={13} /></span>
                 </button>
                 <div className="min-w-0">
-                  <p className="line-clamp-2 text-sm font-semibold text-slate-950">{card.name}</p>
+                  <p className="line-clamp-2 text-sm font-semibold text-slate-950">{cardDisplayName(card.name, card.number, card.cardId)}</p>
                   <p className="mt-1 truncate text-xs font-semibold text-slate-500">{card.set}</p>
                   <p className="mt-1 text-xs font-medium text-indigo-600">#{card.number ?? card.cardId.split("-").at(-1) ?? "N/D"}</p>
                 </div>
@@ -496,7 +497,7 @@ function SelectionPreview({ title, rows }: { title: string; rows: Array<{ card: 
   return (
     <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-3 dark:border-slate-800 dark:bg-slate-950/40">
       <p className="mb-2 text-xs font-semibold uppercase text-slate-500">{title}</p>
-      {rows.length ? <div className="space-y-2">{rows.map(({ card, line }) => <div key={selectionKey(line)} className="flex items-center gap-2 text-sm font-semibold text-slate-700"><span className="h-2 w-2 rounded-full bg-indigo-600" /><span className="truncate">{card.name}</span><span className={`rounded-full px-2 py-1 text-[11px] ${variantTone(line.variantType)}`}>{variantLabel(line.variantType)}</span><span className="ml-auto text-xs text-slate-500">x{line.quantity}</span></div>)}</div> : <p className="text-sm text-slate-500">Nenhuma carta selecionada.</p>}
+      {rows.length ? <div className="space-y-2">{rows.map(({ card, line }) => <div key={selectionKey(line)} className="flex items-center gap-2 text-sm font-semibold text-slate-700"><span className="h-2 w-2 rounded-full bg-indigo-600" /><span className="truncate">{cardDisplayName(card.name, card.number, card.cardId)}</span><span className={`rounded-full px-2 py-1 text-[11px] ${variantTone(line.variantType)}`}>{variantLabel(line.variantType)}</span><span className="ml-auto text-xs text-slate-500">x{line.quantity}</span></div>)}</div> : <p className="text-sm text-slate-500">Nenhuma carta selecionada.</p>}
     </div>
   );
 }
@@ -530,7 +531,7 @@ function ProposalCard({ proposal, currentUserId, onUpdate, onChat, onZoom }: { p
 }
 
 function ProposalCards({ title, cards, onZoom }: { title: string; cards: TradeCardSnapshot[]; onZoom: (card: TradeCardSnapshot) => void }) {
-  return <div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-950/40"><p className="mb-2 text-xs font-semibold uppercase text-slate-500">{title}</p><div className="space-y-2">{cards.map((card) => <button type="button" key={`${card.collectionId}-${card.cardId}-${card.variantType ?? "legacy"}`} onClick={() => onZoom(card)} className="grid w-full grid-cols-[38px_1fr] items-center gap-2 rounded-lg p-1 text-left transition duration-150 hover:bg-white dark:hover:bg-slate-900"><img src={card.image} alt={card.name} loading="lazy" className="h-12 w-9 object-contain" /><div className="min-w-0"><p className="truncate text-sm font-medium text-slate-800 dark:text-slate-100">{card.name}</p><p className="text-xs text-slate-500 dark:text-slate-400">{card.set} #{card.number ?? "N/D"} · {variantLabel(card.variantType)} · x{card.quantity}</p></div></button>)}</div></div>;
+  return <div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-950/40"><p className="mb-2 text-xs font-semibold uppercase text-slate-500">{title}</p><div className="space-y-2">{cards.map((card) => <button type="button" key={`${card.collectionId}-${card.cardId}-${card.variantType ?? "legacy"}`} onClick={() => onZoom(card)} className="grid w-full grid-cols-[38px_1fr] items-center gap-2 rounded-lg p-1 text-left transition duration-150 hover:bg-white dark:hover:bg-slate-900"><img src={card.image} alt={card.name} loading="lazy" className="h-12 w-9 object-contain" /><div className="min-w-0"><p className="truncate text-sm font-medium text-slate-800 dark:text-slate-100">{cardDisplayName(card.name, card.number, card.cardId)}</p><p className="text-xs text-slate-500 dark:text-slate-400">{card.set} {cardDisplayNumber(card.number, card.cardId)} · {variantLabel(card.variantType)} · x{card.quantity}</p></div></button>)}</div></div>;
 }
 
 function CardZoom({ data, onClose }: { data: { card: TradeCard | TradeCardSnapshot; variantType?: VariantType }; onClose: () => void }) {
@@ -571,7 +572,7 @@ function CardZoom({ data, onClose }: { data: { card: TradeCard | TradeCardSnapsh
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-xs font-semibold uppercase text-indigo-600">Visualizacao ampliada</p>
-              <h2 className="mt-1 text-2xl font-semibold leading-tight text-slate-950 dark:text-white">{card.name}</h2>
+              <h2 className="mt-1 text-2xl font-semibold leading-tight text-slate-950 dark:text-white">{cardDisplayName(card.name, card.number, card.cardId)}</h2>
             </div>
             <Button size="icon" variant="ghost" onClick={onClose} aria-label="Fechar visualizacao">
               <X size={20} />
@@ -618,7 +619,7 @@ function VariantModal({ card, onClose, onSaved, onToast }: { card: TradeCard; on
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
               <p className="text-xs font-semibold uppercase text-indigo-600">Variantes da carta</p>
-              <h2 className="text-xl font-semibold text-slate-950 dark:text-white">{card.name}</h2>
+              <h2 className="text-xl font-semibold text-slate-950 dark:text-white">{cardDisplayName(card.name, card.number, card.cardId)}</h2>
               <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{card.set} #{card.number ?? "N/D"}</p>
             </div>
             <Button size="icon" variant="ghost" onClick={onClose} aria-label="Fechar variantes">

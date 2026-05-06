@@ -10,6 +10,7 @@ import { apiService } from "../services/api";
 import { useAppStore } from "../store/useAppStore";
 import type { CollectionItem, ExploreCard, PokemonSet } from "../types";
 import type { ToastState } from "../components/ui/Toast";
+import { cardDisplayName, cardDisplayNumber, realCollectionTotal } from "../lib/cardDisplay";
 
 export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean; onToast: (toast: ToastState) => void }) {
   const [items, setItems] = useState<CollectionItem[]>([]);
@@ -122,8 +123,13 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
   const missingCards = useMemo(() => {
     if (!filters.set) return [];
     const ownedIds = new Set(allItems.filter((item) => normalizeSetName(item.set) === normalizeSetName(filters.set)).map((item) => item.cardId));
-    return setCards.filter((card) => !ownedIds.has(card.id));
-  }, [allItems, filters.set, setCards]);
+    return setCards
+      .filter((card) => !ownedIds.has(card.id))
+      .filter((card) => (filters.favorite ? wishlistIds.has(card.id) : true))
+      .filter(() => (filters.forTrade ? false : true));
+  }, [allItems, filters.favorite, filters.forTrade, filters.set, setCards, wishlistIds]);
+  const visibleItems = filters.missingOnly ? [] : items;
+  const visibleMissingCards = filters.set ? missingCards : [];
   const totalUnique = allItems.length;
   const totalCopies = useMemo(() => allItems.reduce((sum, item) => sum + item.quantity, 0), [allItems]);
   const completedSets = collectionSummary.filter((set) => set.percent >= 100).length;
@@ -223,7 +229,7 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
       setAllItems([]);
       setAvailableSets([]);
       setConfirmClear(false);
-      setFilters({ set: "", favorite: false, forTrade: false });
+      setFilters({ set: "", favorite: false, forTrade: false, missingOnly: false });
       onToast({ type: "success", message: `${result.deleted} cartas removidas da sua colecao.` });
     } catch {
       onToast({ type: "error", message: "Nao foi possivel limpar a colecao." });
@@ -270,7 +276,7 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
             </div>
             <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300">{items.length} cartas no filtro</span>
           </div>
-          <div className="grid gap-3 md:grid-cols-4">
+          <div className="grid gap-3 md:grid-cols-5">
           <Select value={filters.set} onChange={(event) => setFilters({ set: event.target.value })}>
             <option value="">Todos os sets</option>
             {sets.map((set) => (
@@ -286,6 +292,10 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
           <Select value={filters.forTrade ? "true" : "false"} onChange={(event) => setFilters({ forTrade: event.target.value === "true" })}>
             <option value="false">Todos os status</option>
             <option value="true">Apenas troca</option>
+          </Select>
+          <Select value={filters.missingOnly ? "true" : "false"} onChange={(event) => setFilters({ missingOnly: event.target.value === "true" })}>
+            <option value="false">Possuidas e faltantes</option>
+            <option value="true">Apenas cartas faltantes</option>
           </Select>
           <Select value={filters.sort} onChange={(event) => setFilters({ sort: event.target.value as typeof filters.sort })}>
             <option value="numberAsc">Numero menor-maior</option>
@@ -392,21 +402,15 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
             <Skeleton key={index} className="h-96" />
           ))}
         </div>
-      ) : items.length ? (
+      ) : visibleItems.length || visibleMissingCards.length ? (
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-          {items.map((item) => (
+          {visibleItems.map((item) => (
             <CardTile key={item.id} mode="collection" card={item} onUpdate={update} onRemove={() => setPendingRemove(item)} onExport={exportCard} />
           ))}
           {!tradeOnly &&
-            missingCards.map((card) => (
+            visibleMissingCards.map((card) => (
               <MissingCard key={`missing-${card.id}`} card={card} wished={wishlistIds.has(card.id)} onAdd={addMissing} onToggleWishlist={toggleMissingWishlist} />
             ))}
-        </div>
-      ) : !tradeOnly && missingCards.length ? (
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-          {missingCards.map((card) => (
-            <MissingCard key={`missing-${card.id}`} card={card} wished={wishlistIds.has(card.id)} onAdd={addMissing} onToggleWishlist={toggleMissingWishlist} />
-          ))}
         </div>
       ) : (
         <EmptyState
@@ -469,8 +473,8 @@ function MissingCard({ card, wished, onAdd, onToggleWishlist }: { card: ExploreC
       </div>
       <div className="space-y-3 border-t border-slate-100 p-4 dark:border-slate-800">
         <div>
-          <h3 className="line-clamp-2 min-h-10 text-[15px] font-semibold leading-5 text-slate-950 dark:text-white">{card.name}</h3>
-          <p className="mt-1 truncate text-xs text-slate-500 dark:text-slate-400">{card.set} - #{card.number ?? "N/D"}</p>
+          <h3 className="line-clamp-2 min-h-10 text-[15px] font-semibold leading-5 text-slate-950 dark:text-white">{cardDisplayName(card.name, card.number, card.id)}</h3>
+          <p className="mt-1 truncate text-xs text-slate-500 dark:text-slate-400">{card.set} - {cardDisplayNumber(card.number, card.id)}</p>
         </div>
         <Button className="w-full" variant="secondary" onClick={() => onAdd(card)}>
           <Plus size={16} />
@@ -513,7 +517,9 @@ function buildCollectionSummary(items: CollectionItem[], pokemonSets: PokemonSet
   return Array.from(grouped.entries())
     .map(([setName, setItems]) => {
       const apiSet = pokemonSets.find((set) => normalizeSetName(set.name) === normalizeSetName(setName));
-      const total = apiSet?.printedTotal ?? apiSet?.total ?? null;
+      const officialTotal = apiSet?.total ?? apiSet?.printedTotal ?? null;
+      const totalValue = realCollectionTotal(setItems.map((item) => item.number), officialTotal);
+      const total = totalValue > 0 ? totalValue : null;
       const owned = new Set(setItems.map((item) => item.cardId)).size;
       const percent = total ? Math.min(100, Math.round((owned / total) * 100)) : 100;
       const code = apiSet?.ptcgoCode ?? apiSet?.id ?? setName.slice(0, 3).toUpperCase();
