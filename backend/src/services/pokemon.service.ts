@@ -231,7 +231,7 @@ async function listCardsFromPersistentCache(page: number, pageSize: number, sear
   });
 
   return {
-    cards: sortCards(
+    cards: await Promise.all(sortCards(
       rows.map((card) => ({
         id: card.id,
         name: card.name,
@@ -243,7 +243,7 @@ async function listCardsFromPersistentCache(page: number, pageSize: number, sear
         marketPrice: card.marketPrice
       })),
       sort
-    ),
+    ).map(ensureExploreCardPrice)),
     page,
     pageSize,
     totalCount
@@ -264,7 +264,7 @@ async function listPokemonCards(page: number, pageSize: number, search?: string,
       }),
     1
   );
-  const cards = response.data.data.map(normalizeCard);
+  const cards = await Promise.all(response.data.data.map((card) => ensureExploreCardPrice(normalizeCard(card))));
   void persistCachedCards(cards);
   return {
     cards,
@@ -404,9 +404,9 @@ async function listTcgDexCards(): Promise<TcgDexCardBrief[]> {
 async function enrichTcgDexCard(card: TcgDexCardBrief, set: TcgDexSet): Promise<ExploreCard> {
   try {
     const detail = await withRetry(() => tcgDexApi.get<TcgDexCardDetail>(`/cards/${card.id}`), 1);
-    return normalizeTcgDexCard(detail.data, set);
+    return ensureExploreCardPrice(normalizeTcgDexCard(detail.data, set));
   } catch {
-    return normalizeTcgDexCard(card, set);
+    return ensureExploreCardPrice(normalizeTcgDexCard(card, set));
   }
 }
 
@@ -592,6 +592,25 @@ async function listCardsFromTcgDex(page: number, pageSize: number, search?: stri
     page,
     pageSize,
     totalCount: filtered.length
+  };
+}
+
+async function ensureExploreCardPrice(card: ExploreCard): Promise<ExploreCard> {
+  if (card.marketPrice !== null && card.marketPrice > 0) return card;
+
+  const price = await priceService.getCardPrice({
+    cardId: card.id,
+    cardName: card.name,
+    collectionName: card.set,
+    setCode: card.setId,
+    cardNumber: card.number,
+    rarity: card.rarity,
+    variantType: "NORMAL"
+  });
+
+  return {
+    ...card,
+    marketPrice: price.estimatedPrice
   };
 }
 
