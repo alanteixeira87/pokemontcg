@@ -1,4 +1,4 @@
-import { BarChart3, Boxes, Heart, HeartHandshake, Library, LogOut, Menu, Moon, Search, ShieldCheck, Sun, X } from "lucide-react";
+import { BarChart3, Boxes, Heart, HeartHandshake, Library, LogOut, Menu, Moon, Search, ShieldCheck, SlidersHorizontal, Sun, UserCircle, X } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { useAppStore } from "../store/useAppStore";
 import { Button } from "./ui/Button";
@@ -8,7 +8,9 @@ const nav = [
   { id: "dashboard", label: "Dashboard", icon: BarChart3 },
   { id: "collection", label: "Minha colecao", icon: Boxes },
   { id: "wishlist", label: "Lista de desejos", icon: Heart },
-  { id: "trades", label: "Trocas", icon: HeartHandshake }
+  { id: "trades", label: "Trocas", icon: HeartHandshake },
+  { id: "profile", label: "Perfil", icon: UserCircle },
+  { id: "admin", label: "Admin", icon: SlidersHorizontal }
 ] as const;
 
 export function Layout({ children }: { children: ReactNode }) {
@@ -66,7 +68,7 @@ export function Layout({ children }: { children: ReactNode }) {
       </header>
 
       <div className="border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
-        <nav className="mx-auto hidden max-w-7xl items-center gap-1 px-4 py-2 md:px-6 lg:flex">
+        <nav className="mx-auto hidden max-w-7xl flex-wrap items-center gap-1 px-4 py-2 md:px-6 lg:flex">
           {nav.map((item) => {
             const Icon = item.icon;
             return (

@@ -105,6 +105,8 @@ export type AuthUser = {
   id: number;
   name: string;
   email: string;
+  avatarUrl?: string | null;
+  interests?: string | null;
 };
 
 export type AuthResponse = {
@@ -215,4 +217,35 @@ export type TradeSelectionInput = {
   collectionId: number;
   variantType: VariantType;
   quantity: number;
+};
+
+export type UserProfile = AuthUser & {
+  createdAt: string;
+  _count: {
+    collection: number;
+    sentTrades: number;
+    receivedTrades: number;
+    wishlist: number;
+  };
+};
+
+export type AdminOverview = {
+  users: number;
+  collectionCards: number;
+  wishlistItems: number;
+  trades: number;
+  cachedCards: number;
+  cachedSets: number;
+  priceRows: number;
+  latestPrices: Array<{
+    id: number;
+    cardName: string;
+    collectionName: string;
+    estimatedPrice: number;
+    source: string;
+    confidence: string;
+    status: string;
+    createdAt: string;
+  }>;
+  recentErrors: string[];
 };

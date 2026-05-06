@@ -10,11 +10,16 @@ import type { ExploreCard, WishlistAvailability, WishlistItem } from "../types";
 import type { ToastState } from "../components/ui/Toast";
 import { currency } from "../lib/utils";
 import { cardDisplayName, cardDisplayNumber } from "../lib/cardDisplay";
+import { Input } from "../components/ui/Input";
+import { Select } from "../components/ui/Select";
 
 export function Wishlist({ onToast }: { onToast: (toast: ToastState) => void }) {
   const [items, setItems] = useState<WishlistItem[]>([]);
   const [notifications, setNotifications] = useState<WishlistAvailability[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [setFilter, setSetFilter] = useState("");
+  const [availabilityFilter, setAvailabilityFilter] = useState("all");
   const setView = useAppStore((state) => state.setView);
 
   const load = useCallback(async () => {
@@ -35,6 +40,16 @@ export function Wishlist({ onToast }: { onToast: (toast: ToastState) => void }) 
   }, [load]);
 
   const wishedIds = useMemo(() => new Set(items.map((item) => item.cardId)), [items]);
+  const sets = useMemo(() => Array.from(new Set(items.map((item) => item.set))).sort(), [items]);
+  const filteredItems = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return items.filter((item) => {
+      const matchesSearch = query ? `${item.name} ${item.number ?? ""} ${item.set}`.toLowerCase().includes(query) : true;
+      const matchesSet = setFilter ? item.set === setFilter : true;
+      const matchesAvailability = availabilityFilter === "available" ? Boolean(item.availability) : true;
+      return matchesSearch && matchesSet && matchesAvailability;
+    });
+  }, [availabilityFilter, items, search, setFilter]);
 
   async function remove(card: ExploreCard) {
     const previous = items;
@@ -71,6 +86,18 @@ export function Wishlist({ onToast }: { onToast: (toast: ToastState) => void }) 
             <Metric icon={Bell} label="Disponiveis" value={notifications.length} />
           </div>
         </div>
+      </section>
+
+      <section className="grid gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-[1fr_220px_220px] dark:border-slate-800 dark:bg-slate-900">
+        <Input placeholder="Buscar carta, numero ou colecao" value={search} onChange={(event) => setSearch(event.target.value)} />
+        <Select value={setFilter} onChange={(event) => setSetFilter(event.target.value)}>
+          <option value="">Todas as colecoes</option>
+          {sets.map((set) => <option key={set} value={set}>{set}</option>)}
+        </Select>
+        <Select value={availabilityFilter} onChange={(event) => setAvailabilityFilter(event.target.value)}>
+          <option value="all">Todas</option>
+          <option value="available">Disponiveis na plataforma</option>
+        </Select>
       </section>
 
       {notifications.length > 0 && (
@@ -113,9 +140,9 @@ export function Wishlist({ onToast }: { onToast: (toast: ToastState) => void }) 
             <Skeleton key={index} className="h-80" />
           ))}
         </div>
-      ) : items.length ? (
+      ) : filteredItems.length ? (
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-          {items.map((item) => {
+          {filteredItems.map((item) => {
             const card = wishlistToExploreCard(item);
             return (
               <div key={item.id} className="space-y-2">
@@ -125,7 +152,14 @@ export function Wishlist({ onToast }: { onToast: (toast: ToastState) => void }) 
                   <p>Variacao: {item.variantType ?? "NORMAL"}</p>
                   <p>Fonte: {item.priceSource}</p>
                   <p>Estado: {item.condition}</p>
-                  <p>Disponibilidade: {item.availability ? `Disponivel com ${item.availability.owner.name}` : "Ainda indisponivel"}</p>
+                  <div className="mt-2 flex items-center justify-between gap-2">
+                    <p>Disponibilidade: {item.availability ? `Disponivel com ${item.availability.owner.name}` : "Ainda indisponivel"}</p>
+                    {item.availability && (
+                      <Button size="sm" variant="primary" onClick={() => setView("trades")}>
+                        Negociar
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
             );

@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import type { AuthUser, SortOption } from "../types";
 
-type View = "dashboard" | "explore" | "collection" | "wishlist" | "trades";
+type View = "dashboard" | "explore" | "collection" | "wishlist" | "trades" | "profile" | "admin";
 
 type PersistedFilters = {
   set: string;
@@ -29,7 +29,7 @@ const tokenKey = "pokemon-tcg-token";
 const userKey = "pokemon-tcg-user";
 const themeKey = "pokemon-tcg-theme";
 const viewKey = "pokemon-tcg-active-view";
-const validViews: View[] = ["dashboard", "explore", "collection", "wishlist", "trades"];
+const validViews: View[] = ["dashboard", "explore", "collection", "wishlist", "trades", "profile", "admin"];
 
 function loadFilters(): PersistedFilters {
   const fallback: PersistedFilters = { set: "", favorite: false, forTrade: false, missingOnly: false, sort: "numberAsc" };

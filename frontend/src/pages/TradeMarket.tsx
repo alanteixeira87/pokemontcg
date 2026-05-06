@@ -13,6 +13,7 @@ import { joinTradeChat, onTradeMessage, onTradeNotification, sendRealtimeTradeMe
 import { useAppStore } from "../store/useAppStore";
 import type { CardVariant, TradeCard, TradeCardSnapshot, TradeMessage, TradeProposal, TradeSelectionInput, TradeStatus, TradeUser, VariantType } from "../types";
 import { cardDisplayName, cardDisplayNumber } from "../lib/cardDisplay";
+import { currency } from "../lib/utils";
 
 type SelectedLine = TradeSelectionInput;
 type VariantDraft = Record<VariantType, { ownedQuantity: number; tradeQuantity: number }>;
@@ -175,6 +176,8 @@ export function TradeMarket({ onToast }: { onToast: (toast: ToastState) => void 
   );
   const selectedRequestedCards = useMemo(() => expandSelected(targetCards, requested), [requested, targetCards]);
   const selectedOfferedCards = useMemo(() => expandSelected(myCards, offered), [myCards, offered]);
+  const requestedValue = useMemo(() => selectedRequestedCards.reduce((sum, item) => sum + (item.card.price ?? 0) * item.line.quantity, 0), [selectedRequestedCards]);
+  const offeredValue = useMemo(() => selectedOfferedCards.reduce((sum, item) => sum + (item.card.price ?? 0) * item.line.quantity, 0), [selectedOfferedCards]);
 
   function upsertSelection(kind: "requested" | "offered", line: SelectedLine) {
     const setter = kind === "requested" ? setRequested : setOffered;
@@ -349,6 +352,9 @@ export function TradeMarket({ onToast }: { onToast: (toast: ToastState) => void 
               <div>
                 <p className="text-xs font-semibold uppercase text-indigo-600">Proposta atual</p>
                 <h3 className="text-lg font-semibold text-slate-950 dark:text-white">{requested.length} tipos solicitados por {offered.length} tipos oferecidos</h3>
+                <p className="mt-1 text-sm font-medium text-slate-500 dark:text-slate-400">
+                  Receber: {currency(requestedValue)} | Oferecer: {currency(offeredValue)} | Diferenca: {currency(offeredValue - requestedValue)}
+                </p>
               </div>
               <Button variant="primary" disabled={!selectedUser || requested.length === 0 || offered.length === 0 || sending} onClick={sendProposal}>
                 <Send size={16} />

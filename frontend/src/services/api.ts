@@ -1,6 +1,7 @@
 import axios from "axios";
 import type {
   AuthResponse,
+  AdminOverview,
   CollectionItem,
   DashboardStats,
   ExploreCard,
@@ -16,7 +17,8 @@ import type {
   TradeStatus,
   TradeUser,
   WishlistAvailability,
-  WishlistItem
+  WishlistItem,
+  UserProfile
 } from "../types";
 
 const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
@@ -72,6 +74,21 @@ export const apiService = {
 
   async me(): Promise<{ user: AuthResponse["user"] }> {
     const response = await api.get<{ user: AuthResponse["user"] }>("/auth/me");
+    return response.data;
+  },
+
+  async profile(): Promise<UserProfile> {
+    const response = await api.get<UserProfile>("/profile");
+    return response.data;
+  },
+
+  async updateProfile(input: { name?: string; avatarUrl?: string; interests?: string }): Promise<{ user: AuthResponse["user"] }> {
+    const response = await api.patch<{ user: AuthResponse["user"] }>("/profile", input);
+    return response.data;
+  },
+
+  async adminOverview(): Promise<AdminOverview> {
+    const response = await api.get<AdminOverview>("/admin/overview");
     return response.data;
   },
 

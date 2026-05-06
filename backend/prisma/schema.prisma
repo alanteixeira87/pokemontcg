@@ -95,6 +95,67 @@ model WishlistItem {
   @@map("wishlist_items")
 }
 
+model CachedCard {
+  id          String   @id
+  name        String
+  image       String
+  set         String
+  setId       String?  @map("set_id")
+  number      String?
+  rarity      String?
+  marketPrice Float?   @map("market_price")
+  raw         Json?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([name])
+  @@index([setId])
+  @@index([set])
+  @@index([number])
+  @@map("cached_cards")
+}
+
+model CachedSet {
+  id           String   @id
+  name         String
+  series       String?
+  ptcgoCode    String?  @map("ptcgo_code")
+  printedTotal Int?     @map("printed_total")
+  total        Int?
+  raw          Json?
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@index([name])
+  @@index([ptcgoCode])
+  @@map("cached_sets")
+}
+
+model PriceHistory {
+  id             Int      @id @default(autoincrement())
+  cardId         String?  @map("card_id")
+  cardName       String   @map("card_name")
+  collectionName String   @map("collection_name")
+  setCode        String?  @map("set_code")
+  cardNumber     String?  @map("card_number")
+  variantType    String   @map("variant_type")
+  cardClass      String   @map("card_class")
+  minPrice       Float    @map("min_price")
+  avgPrice       Float    @map("avg_price")
+  maxPrice       Float    @map("max_price")
+  estimatedPrice Float    @map("estimated_price")
+  source         String
+  confidence     String
+  status         String
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@index([cardId])
+  @@index([cardName])
+  @@index([collectionName])
+  @@index([createdAt])
+  @@map("price_history")
+}
+
 model Trade {
   id             Int         @id @default(autoincrement())
   requesterId    Int         @map("requester_id")

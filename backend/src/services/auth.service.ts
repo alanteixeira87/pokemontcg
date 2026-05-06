@@ -14,11 +14,13 @@ function signToken(user: AuthUser): string {
   return jwt.sign(user, env.jwtSecret, { expiresIn: "7d" });
 }
 
-function toAuthUser(user: { id: number; name: string; email: string }): AuthUser {
+function toAuthUser(user: { id: number; name: string; email: string; avatarUrl?: string | null; interests?: string | null }): AuthUser {
   return {
     id: user.id,
     name: user.name,
-    email: user.email
+    email: user.email,
+    avatarUrl: user.avatarUrl ?? null,
+    interests: user.interests ?? null
   };
 }
 

@@ -8,6 +8,8 @@ import { useAppStore } from "./store/useAppStore";
 import { AuthPage } from "./pages/AuthPage";
 import { TradeMarket } from "./pages/TradeMarket";
 import { Wishlist } from "./pages/Wishlist";
+import { Profile } from "./pages/Profile";
+import { Admin } from "./pages/Admin";
 
 export function App() {
   const view = useAppStore((state) => state.view);
@@ -46,6 +48,8 @@ export function App() {
       {view === "collection" && <Collection onToast={showToast} />}
       {view === "wishlist" && <Wishlist onToast={showToast} />}
       {view === "trades" && <TradeMarket onToast={showToast} />}
+      {view === "profile" && <Profile onToast={showToast} />}
+      {view === "admin" && <Admin />}
       <Toast toast={toast} onClose={() => setToast(null)} />
     </Layout>
   );

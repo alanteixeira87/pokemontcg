@@ -3,6 +3,7 @@ import { env } from "../utils/env.js";
 import { normalizeCard } from "../utils/normalize.js";
 import type { ExploreCard, PaginatedCards, PokemonCard, PokemonSet } from "../types.js";
 import { priceService } from "./price.service.js";
+import { prisma } from "../database/prisma.js";
 
 type CacheEntry<T> = {
   expiresAt: number;
@@ -207,6 +208,70 @@ function normalizeTcgDexCard(card: TcgDexCardDetail | TcgDexCardBrief, set: TcgD
   };
 }
 
+async function persistCachedCards(cards: ExploreCard[]): Promise<void> {
+  if (!cards.length) return;
+  try {
+    await prisma.$transaction(
+      cards.map((card) =>
+        prisma.cachedCard.upsert({
+          where: { id: card.id },
+          update: {
+            name: card.name,
+            image: card.image,
+            set: card.set,
+            setId: card.setId,
+            number: card.number,
+            rarity: card.rarity,
+            marketPrice: card.marketPrice
+          },
+          create: {
+            id: card.id,
+            name: card.name,
+            image: card.image,
+            set: card.set,
+            setId: card.setId,
+            number: card.number,
+            rarity: card.rarity,
+            marketPrice: card.marketPrice
+          }
+        })
+      )
+    );
+  } catch (error) {
+    console.warn(JSON.stringify({ level: "warn", message: "Persistent card cache write failed", error: String(error) }));
+  }
+}
+
+async function persistCachedSets(sets: PokemonSet[]): Promise<void> {
+  if (!sets.length) return;
+  try {
+    await prisma.$transaction(
+      sets.map((set) =>
+        prisma.cachedSet.upsert({
+          where: { id: set.id },
+          update: {
+            name: set.name,
+            series: set.series,
+            ptcgoCode: set.ptcgoCode,
+            printedTotal: set.printedTotal,
+            total: set.total
+          },
+          create: {
+            id: set.id,
+            name: set.name,
+            series: set.series,
+            ptcgoCode: set.ptcgoCode,
+            printedTotal: set.printedTotal,
+            total: set.total
+          }
+        })
+      )
+    );
+  } catch (error) {
+    console.warn(JSON.stringify({ level: "warn", message: "Persistent set cache write failed", error: String(error) }));
+  }
+}
+
 function tcgDexSetIdFromCardId(id: string): string {
   return id.includes("-") ? id.slice(0, id.lastIndexOf("-")) : id;
 }
@@ -381,16 +446,15 @@ async function listTcgDexSets(): Promise<PokemonSet[]> {
   if (cached) return cached;
 
   const response = await withRetry(() => tcgDexApi.get<TcgDexSet[]>("/sets"));
-  return setCached(
-    "tcgdex:sets",
-    response.data.map((set) => ({
-      id: set.id,
-      name: set.name,
-      ptcgoCode: preferredSetCode(set.id),
-      printedTotal: set.cardCount?.official,
-      total: set.cardCount?.total
-    }))
-  );
+  const sets = response.data.map((set) => ({
+    id: set.id,
+    name: set.name,
+    ptcgoCode: preferredSetCode(set.id),
+    printedTotal: set.cardCount?.official,
+    total: set.cardCount?.total
+  }));
+  void persistCachedSets(sets);
+  return setCached("tcgdex:sets", sets);
 }
 
 function preferredSetCode(setId: string): string {
@@ -429,6 +493,7 @@ async function listCardsFromTcgDex(page: number, pageSize: number, search?: stri
   const enriched = await Promise.all(
     pageCards.map((card) => enrichTcgDexCard({ id: card.id, localId: card.number, name: card.name, image: card.image?.replace(/\/high\.png$/, "") }, setById.get(card.setId ?? "") ?? { id: card.setId ?? "", name: card.set }))
   );
+  void persistCachedCards(enriched);
 
   return {
     cards: enriched,

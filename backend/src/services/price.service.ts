@@ -1,5 +1,6 @@
 import axios from "axios";
 import { env } from "../utils/env.js";
+import { prisma } from "../database/prisma.js";
 
 export type PriceVariantType =
   | "NORMAL"
@@ -428,6 +429,31 @@ function manualPrice(input: PriceLookupInput): CardPrice | null {
   });
 }
 
+async function persistPrice(input: PriceLookupInput, price: CardPrice): Promise<void> {
+  try {
+    await prisma.priceHistory.create({
+      data: {
+        cardId: input.cardId,
+        cardName: price.cardName,
+        collectionName: price.collectionName,
+        setCode: price.setCode,
+        cardNumber: price.cardNumber,
+        variantType: price.variantType,
+        cardClass: price.cardClass,
+        minPrice: price.minPrice,
+        avgPrice: price.avgPrice,
+        maxPrice: price.maxPrice,
+        estimatedPrice: price.estimatedPrice,
+        source: price.source,
+        confidence: price.confidence,
+        status: price.status
+      }
+    });
+  } catch (error) {
+    console.warn(JSON.stringify({ level: "warn", message: "Price history write failed", error: String(error) }));
+  }
+}
+
 export const priceService = {
   async getCardPrice(input: PriceLookupInput): Promise<CardPrice> {
     const cacheKey = buildCacheKey(input);
@@ -437,18 +463,21 @@ export const priceService = {
     const marketplace = priceFromListings(input, simulatedMarketplaceListings(input));
     if (marketplace) {
       cache.set(cacheKey, { value: marketplace, expiresAt: Date.now() + ttlMs });
+      void persistPrice(input, marketplace);
       return marketplace;
     }
 
     const nationalReference = brazilReference(input);
     if (nationalReference) {
       cache.set(cacheKey, { value: nationalReference, expiresAt: Date.now() + ttlMs });
+      void persistPrice(input, nationalReference);
       return nationalReference;
     }
 
     const history = internalHistory(input);
     if (history) {
       cache.set(cacheKey, { value: history, expiresAt: Date.now() + ttlMs });
+      void persistPrice(input, history);
       return history;
     }
 
@@ -456,6 +485,7 @@ export const priceService = {
       const international = await internationalPrice(input);
       if (international) {
         cache.set(cacheKey, { value: international, expiresAt: Date.now() + ttlMs });
+        void persistPrice(input, international);
         return international;
       }
     } catch (error) {
@@ -466,6 +496,7 @@ export const priceService = {
     const manual = manualPrice(input);
     const result = estimate.estimatedPrice > 0 ? estimate : manual ?? estimate;
     cache.set(cacheKey, { value: result, expiresAt: Date.now() + 30 * 60 * 1000 });
+    void persistPrice(input, result);
     return result;
   },
 
