@@ -9,3 +9,4 @@ profileRoutes.use(requireAuth);
 profileRoutes.get("/profile", profileController.get);
 profileRoutes.patch("/profile", profileController.update);
 profileRoutes.get("/admin/overview", requireMasterAdmin, adminController.overview);
+profileRoutes.get("/admin/users", requireMasterAdmin, adminController.users);

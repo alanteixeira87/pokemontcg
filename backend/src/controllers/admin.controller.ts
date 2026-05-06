@@ -8,5 +8,13 @@ export const adminController = {
     } catch (error) {
       next(error);
     }
+  },
+
+  async users(_req: Request, res: Response, next: NextFunction) {
+    try {
+      res.json(await adminService.users());
+    } catch (error) {
+      next(error);
+    }
   }
 };

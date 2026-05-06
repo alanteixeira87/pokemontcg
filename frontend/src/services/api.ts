@@ -2,6 +2,7 @@ import axios from "axios";
 import type {
   AuthResponse,
   AdminOverview,
+  AdminUser,
   CollectionItem,
   DashboardStats,
   ExploreCard,
@@ -89,6 +90,11 @@ export const apiService = {
 
   async adminOverview(): Promise<AdminOverview> {
     const response = await api.get<AdminOverview>("/admin/overview");
+    return response.data;
+  },
+
+  async adminUsers(): Promise<AdminUser[]> {
+    const response = await api.get<AdminUser[]>("/admin/users");
     return response.data;
   },
 

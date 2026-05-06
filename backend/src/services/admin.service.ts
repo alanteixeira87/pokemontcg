@@ -39,5 +39,29 @@ export const adminService = {
       latestPrices,
       recentErrors
     };
+  },
+
+  async users() {
+    return prisma.user.findMany({
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        avatarUrl: true,
+        interests: true,
+        createdAt: true,
+        updatedAt: true,
+        _count: {
+          select: {
+            collection: true,
+            wishlist: true,
+            sentTrades: true,
+            receivedTrades: true
+          }
+        }
+      },
+      take: 200
+    });
   }
 };

@@ -15,7 +15,10 @@ export function App() {
   const view = useAppStore((state) => state.view);
   const token = useAppStore((state) => state.token);
   const theme = useAppStore((state) => state.theme);
+  const user = useAppStore((state) => state.user);
+  const setView = useAppStore((state) => state.setView);
   const [toast, setToast] = useState<ToastState>(null);
+  const masterAdminEmail = "alanteixeira74@gmail.com";
 
   const showToast = useCallback((next: ToastState) => {
     setToast(next);
@@ -31,6 +34,12 @@ export function App() {
     document.documentElement.classList.toggle("dark", theme === "dark");
     document.body.classList.toggle("dark", theme === "dark");
   }, [theme]);
+
+  useEffect(() => {
+    if (view === "admin" && user?.email.toLowerCase() !== masterAdminEmail) {
+      setView("dashboard");
+    }
+  }, [setView, user?.email, view]);
 
   if (!token) {
     return (
@@ -49,7 +58,7 @@ export function App() {
       {view === "wishlist" && <Wishlist onToast={showToast} />}
       {view === "trades" && <TradeMarket onToast={showToast} />}
       {view === "profile" && <Profile onToast={showToast} />}
-      {view === "admin" && <Admin />}
+      {view === "admin" && user?.email.toLowerCase() === masterAdminEmail && <Admin />}
       <Toast toast={toast} onClose={() => setToast(null)} />
     </Layout>
   );

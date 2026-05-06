@@ -57,7 +57,11 @@ app.use(
   })
 );
 app.use(express.json({ limit: "1mb" }));
-app.use(morgan("combined"));
+morgan.token("safe-url", (req) => {
+  const url = req.url ?? "/";
+  return url.split("?")[0] || "/";
+});
+app.use(morgan(':remote-addr - :remote-user [:date[clf]] ":method :safe-url HTTP/:http-version" :status :res[content-length] ":referrer" ":user-agent"'));
 
 app.get("/health", (_req, res) => {
   res.json({ status: "ok" });

@@ -249,3 +249,19 @@ export type AdminOverview = {
   }>;
   recentErrors: string[];
 };
+
+export type AdminUser = {
+  id: number;
+  name: string;
+  email: string;
+  avatarUrl?: string | null;
+  interests?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  _count: {
+    collection: number;
+    wishlist: number;
+    sentTrades: number;
+    receivedTrades: number;
+  };
+};
