@@ -718,15 +718,24 @@ export const pokemonService = {
     if (cached) return cached;
 
     try {
-      return setCached(cacheKey, await listPokemonCards(page, pageSize, search, set, sort));
+      return setCached(cacheKey, await listCardsFromTcgDex(page, pageSize, search, set, sort));
     } catch (error) {
-      console.warn(JSON.stringify({ level: "warn", message: "Pokemon API card listing failed", error: String(error) }));
+      console.warn(JSON.stringify({ level: "warn", message: "TCGdex card listing failed", error: String(error) }));
     }
 
     const persisted = await listCardsFromPersistentCache(page, pageSize, search, set, sort);
     if (persisted) return setCached(cacheKey, persisted);
 
-    return setCached(cacheKey, await listCardsFromTcgDex(page, pageSize, search, set, sort));
+    // Fallback to Pokemon API if available (paid)
+    if (env.pokemonApiKey) {
+      try {
+        return setCached(cacheKey, await listPokemonCards(page, pageSize, search, set, sort));
+      } catch (error) {
+        console.warn(JSON.stringify({ level: "warn", message: "Pokemon API card listing failed as fallback", error: String(error) }));
+      }
+    }
+
+    throw new Error("All card listing sources failed");
   },
 
   async listSets(): Promise<PokemonSet[]> {
