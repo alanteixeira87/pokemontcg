@@ -1,10 +1,10 @@
-import { Eye, EyeOff, Lock, Mail, ShieldCheck, Sparkles, User } from "lucide-react";
+import { Eye, EyeOff, Lock, Mail, User } from "lucide-react";
 import { useState } from "react";
-import { apiService } from "../services/api";
-import { useAppStore } from "../store/useAppStore";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 import type { ToastState } from "../components/ui/Toast";
+import { apiService } from "../services/api";
+import { useAppStore } from "../store/useAppStore";
 
 type Mode = "login" | "register";
 
@@ -62,15 +62,11 @@ export function AuthPage({ onToast }: { onToast: (toast: ToastState) => void }) 
           className="rounded-[20px] border border-white/14 bg-slate-950/46 p-5 shadow-[0_24px_80px_rgba(0,0,0,0.46)] backdrop-blur-xl sm:p-7"
         >
           <div className="mb-6 text-center">
-            <div className="mx-auto mb-4 flex h-11 w-11 items-center justify-center rounded-2xl border border-cyan-300/20 bg-cyan-300/10 text-cyan-200 shadow-[0_0_30px_rgba(56,189,248,0.16)]">
-              <ShieldCheck size={21} />
-            </div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-200/80">VLRTCG Access</p>
             <h1 className="mt-2 text-2xl font-semibold tracking-tight text-white">
               {mode === "login" ? "Bem-vindo de volta!" : "Crie sua conta VLRTCG"}
             </h1>
             <p className="mt-2 text-sm leading-6 text-slate-300">
-              {mode === "login" ? "Faça login para continuar sua jornada no VLRTCG." : "Organize sua colecao e conecte-se para trocas."}
+              {mode === "login" ? "Faca login para continuar sua jornada no VLRTCG." : "Organize sua colecao e conecte-se para trocas."}
             </p>
           </div>
 
@@ -165,7 +161,6 @@ export function AuthPage({ onToast }: { onToast: (toast: ToastState) => void }) 
             variant="primary"
             disabled={loading}
           >
-            <Sparkles size={17} />
             {loading ? "Aguarde..." : mode === "login" ? "Entrar" : "Criar conta"}
           </Button>
 
@@ -181,6 +176,3 @@ export function AuthPage({ onToast }: { onToast: (toast: ToastState) => void }) 
     </main>
   );
 }
-
-
-

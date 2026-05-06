@@ -1,4 +1,4 @@
-import { BarChart3, Boxes, Heart, HeartHandshake, Library, LogOut, Menu, Moon, Search, ShieldCheck, SlidersHorizontal, Sun, UserCircle, X } from "lucide-react";
+import { BarChart3, Boxes, Heart, HeartHandshake, Library, LogOut, Menu, Moon, Search, SlidersHorizontal, Sun, UserCircle, X } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { useAppStore } from "../store/useAppStore";
 import { Button } from "./ui/Button";
@@ -35,9 +35,6 @@ export function Layout({ children }: { children: ReactNode }) {
               <div className="flex h-14 w-20 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
                 <img src="/vlrtcg-logo-transparent.png" alt="VLRTCG" className="h-full w-full object-contain p-2" draggable={false} />
               </div>
-              <div>
-                <h1 className="text-2xl font-semibold tracking-tight text-slate-950 dark:text-white">VLRTCG</h1>
-              </div>
             </div>
             <Button className="lg:hidden" size="icon" variant="ghost" aria-label="Menu" onClick={() => setMobileMenuOpen((open) => !open)}>
               {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
@@ -52,10 +49,7 @@ export function Layout({ children }: { children: ReactNode }) {
               className="h-10 w-full cursor-pointer rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-3 text-sm text-slate-500 outline-none transition hover:bg-white focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
             />
           </div>
-          <div className="hidden items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 lg:flex dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200">
-            <ShieldCheck size={16} />
-            {user ? user.name : "Conta protegida"}
-          </div>
+          {user && <div className="hidden text-sm font-medium text-slate-600 lg:block dark:text-slate-300">{user.name}</div>}
           <Button className="hidden lg:inline-flex" variant="secondary" size="icon" onClick={toggleTheme} aria-label="Alternar tema">
             {theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}
           </Button>
@@ -134,5 +128,4 @@ export function Layout({ children }: { children: ReactNode }) {
     </div>
   );
 }
-
 
