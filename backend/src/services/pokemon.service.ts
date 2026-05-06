@@ -53,12 +53,45 @@ type TcgDexCardDetail = TcgDexCardBrief & {
   };
   pricing?: {
     cardmarket?: {
+      updated?: string;
+      unit?: string;
       avg?: number;
-      trend?: number;
       low?: number;
+      trend?: number;
       avg1?: number;
       avg7?: number;
       avg30?: number;
+      "avg-holo"?: number;
+      "low-holo"?: number;
+      "trend-holo"?: number;
+      "avg1-holo"?: number;
+      "avg7-holo"?: number;
+      "avg30-holo"?: number;
+    };
+    tcgplayer?: {
+      updated?: string;
+      unit?: string;
+      normal?: {
+        lowPrice?: number;
+        midPrice?: number;
+        highPrice?: number;
+        marketPrice?: number;
+        directLowPrice?: number;
+      };
+      holo?: {
+        lowPrice?: number;
+        midPrice?: number;
+        highPrice?: number;
+        marketPrice?: number;
+        directLowPrice?: number;
+      };
+      reverse?: {
+        lowPrice?: number;
+        midPrice?: number;
+        highPrice?: number;
+        marketPrice?: number;
+        directLowPrice?: number;
+      };
     };
   };
 };
@@ -189,10 +222,38 @@ function tcgDexImage(image?: string): string {
 }
 
 function tcgDexPrice(card: TcgDexCardDetail): number | null {
-  const prices = card.pricing?.cardmarket;
-  const value = prices?.avg ?? prices?.trend ?? prices?.avg7 ?? prices?.avg30 ?? prices?.avg1 ?? prices?.low;
-  if (!value || !Number.isFinite(value) || value <= 0) return null;
-  return Math.round(value * env.eurBrlRate * 100) / 100;
+  try {
+    // Prefer Cardmarket (EUR) pricing - usually more stable
+    const cardmarket = card.pricing?.cardmarket;
+    if (cardmarket) {
+      // Try to get the best average price (prioritize 30-day average for stability)
+      const eur = cardmarket.avg30 ?? cardmarket.avg7 ?? cardmarket.avg ?? cardmarket.trend ?? cardmarket["avg-holo"] ?? cardmarket.low;
+      if (eur && Number.isFinite(eur) && eur > 0) {
+        return Math.round(eur * env.eurBrlRate * 100) / 100;
+      }
+    }
+
+    // Fallback to TCGplayer (USD) pricing
+    const tcgplayer = card.pricing?.tcgplayer;
+    if (tcgplayer) {
+      // Try normal variant first, then reverse, then holo
+      const usd = 
+        tcgplayer.normal?.marketPrice ??
+        tcgplayer.normal?.midPrice ??
+        tcgplayer.reverse?.marketPrice ??
+        tcgplayer.reverse?.midPrice ??
+        tcgplayer.holo?.marketPrice ??
+        tcgplayer.holo?.midPrice;
+      if (usd && Number.isFinite(usd) && usd > 0) {
+        return Math.round(usd * env.usdBrlRate * 100) / 100;
+      }
+    }
+
+    return null;
+  } catch (error) {
+    console.warn(JSON.stringify({ level: "warn", message: "Error extracting TCGdex price", cardId: card.id, error: String(error) }));
+    return null;
+  }
 }
 
 function normalizeTcgDexCard(card: TcgDexCardDetail | TcgDexCardBrief, set: TcgDexSet): ExploreCard {
