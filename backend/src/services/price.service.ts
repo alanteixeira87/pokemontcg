@@ -500,12 +500,10 @@ export const priceService = {
     return result;
   },
 
-  async estimate(input: { cardId?: string; name: string; set: string; setCode?: string; number?: string; fallback?: number | null; variantType?: string; rarity?: string; cardClass?: string }): Promise<number> {
+  async estimate(input: { name: string; set: string; number?: string; fallback?: number | null; variantType?: string; rarity?: string; cardClass?: string }): Promise<number> {
     const price = await this.getCardPrice({
-      cardId: input.cardId,
       cardName: input.name,
       collectionName: input.set,
-      setCode: input.setCode,
       cardNumber: input.number,
       variantType: input.variantType ?? "NORMAL",
       rarity: input.rarity,

@@ -64,10 +64,8 @@ async function prepareCardInputs(inputs: AddCardInput[]): Promise<PreparedCardIn
       estimatedPrice: await priceService.estimate({
         name: input.name,
         set: input.set,
-        cardId: input.cardId,
         number: input.number,
-        fallback: input.price,
-        rarity: input.rarity
+        fallback: input.price
       })
     }))
   );
@@ -206,10 +204,8 @@ export const collectionService = {
       const estimatedPrice = await priceService.estimate({
         name: item.name,
         set: item.set,
-        cardId: item.cardId,
         number: item.number ?? undefined,
-        fallback: marketPrice ?? item.price,
-        rarity: item.rarity ?? undefined
+        fallback: marketPrice ?? item.price
       });
 
       if (estimatedPrice > 0 && Math.abs(estimatedPrice - item.price) >= 0.01) {
