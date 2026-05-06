@@ -49,7 +49,7 @@ export function AuthPage({ onToast }: { onToast: (toast: ToastState) => void }) 
       <section className="relative z-10 w-full max-w-[460px] animate-[fadeIn_500ms_ease-out]">
         <div className="mb-7 text-center">
           <img
-            src="/vlrtcg-logo.png"
+            src="/vlrtcg-logo-transparent.png"
             alt="VLRTCG"
             className="mx-auto h-auto w-[min(78vw,330px)] select-none object-contain drop-shadow-[0_18px_50px_rgba(56,189,248,0.28)]"
             draggable={false}

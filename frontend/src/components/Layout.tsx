@@ -28,8 +28,8 @@ export function Layout({ children }: { children: ReactNode }) {
         <div className="mx-auto flex min-h-16 max-w-7xl flex-col gap-3 px-4 py-3 md:px-6 lg:flex-row lg:items-center lg:py-0">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-11 w-16 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-950 shadow-sm dark:border-slate-800">
-                <img src="/vlrtcg-logo.png" alt="VLRTCG" className="h-full w-full object-contain p-1" draggable={false} />
+              <div className="flex h-11 w-16 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-transparent shadow-sm dark:border-slate-800">
+                <img src="/vlrtcg-logo-transparent.png" alt="VLRTCG" className="h-full w-full object-contain p-1" draggable={false} />
               </div>
               <div>
                 <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Pokemon TCG</p>
