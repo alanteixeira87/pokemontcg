@@ -147,6 +147,12 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
   }, [selectedSummary, showSelectedCollectionOnly]);
 
   useEffect(() => {
+    if (!filters.set) {
+      setShowSelectedCollectionOnly(false);
+    }
+  }, [filters.set]);
+
+  useEffect(() => {
     if (restoreScrollRef.current === null) return;
     const nextScroll = restoreScrollRef.current;
     restoreScrollRef.current = null;
@@ -157,6 +163,11 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
 
   function preserveScrollPosition() {
     restoreScrollRef.current = window.scrollY;
+  }
+
+  function applySetFilter(setName: string) {
+    setFilters({ set: setName });
+    setShowSelectedCollectionOnly(Boolean(setName));
   }
 
   async function update(id: number, data: Partial<Pick<CollectionItem, "quantity" | "price" | "favorite" | "forTrade">>) {
@@ -306,7 +317,7 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
             <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300">{items.length} cartas no filtro</span>
           </div>
           <div className="grid gap-3 md:grid-cols-5">
-          <Select value={filters.set} onChange={(event) => setFilters({ set: event.target.value })}>
+          <Select value={filters.set} onChange={(event) => applySetFilter(event.target.value)}>
             <option value="">Todos os sets</option>
             {sets.map((set) => (
               <option key={set} value={set}>
@@ -363,7 +374,7 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
               <button
                 key={set.name}
                 type="button"
-                onClick={() => setFilters({ set: set.name })}
+                onClick={() => applySetFilter(set.name)}
                 className="group rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm transition duration-150 hover:scale-[1.01] hover:border-indigo-200 hover:shadow-md dark:border-slate-800 dark:bg-slate-900"
               >
                 <div className="flex items-start justify-between gap-3">
