@@ -161,7 +161,7 @@ export function AuthPage({ onToast }: { onToast: (toast: ToastState) => void }) 
           </div>
 
           <Button
-            className="mt-6 h-12 w-full border-0 bg-gradient-to-r from-cyan-400 via-indigo-500 to-violet-500 text-sm font-semibold text-white shadow-[0_14px_34px_rgba(99,102,241,0.32)] hover:brightness-110"
+            className="mt-6 h-12 w-full border border-blue-500 bg-blue-600 text-sm font-semibold text-white shadow-[0_14px_34px_rgba(37,99,235,0.28)] hover:border-blue-400 hover:bg-blue-500"
             variant="primary"
             disabled={loading}
           >
