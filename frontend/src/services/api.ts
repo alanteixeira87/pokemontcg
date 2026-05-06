@@ -148,7 +148,7 @@ export const apiService = {
       number: card.number,
       rarity: card.rarity,
       variantType: "NORMAL",
-      condition: "Nao informado",
+      condition: "Não informado",
       marketPrice: card.marketPrice ?? 0,
       priceSource: card.marketPrice ? "Mercado estimado" : "Estimativa local"
     });

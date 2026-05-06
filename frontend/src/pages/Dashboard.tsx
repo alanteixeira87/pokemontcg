@@ -40,7 +40,7 @@ export function Dashboard() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-xs font-medium uppercase tracking-[0.16em] text-indigo-600 dark:text-indigo-300">Dashboard</p>
-            <h2 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950 dark:text-white">Visao geral da colecao</h2>
+            <h2 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950 dark:text-white">Visão geral da coleção</h2>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Valores e contagens calculados a partir da base local.</p>
           </div>
           <Button variant="primary" onClick={() => window.open(apiService.exportUrl("full"), "_blank")}>
@@ -61,8 +61,8 @@ export function Dashboard() {
       <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-slate-950 dark:text-white">Cartas unicas</h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400">Cada carta e armazenada uma unica vez; novas adicoes somam quantidade.</p>
+            <h3 className="text-lg font-semibold text-slate-950 dark:text-white">Cartas únicas</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Cada carta é armazenada uma única vez; novas adições somam quantidade.</p>
           </div>
           <p className="text-4xl font-semibold text-indigo-600 dark:text-indigo-300">{stats?.uniqueCards ?? 0}</p>
         </div>

@@ -29,7 +29,7 @@ export function AuthPage({ onToast }: { onToast: (toast: ToastState) => void }) 
       setAuth(result.token, result.user);
       onToast({ type: "success", message: mode === "register" ? "Conta criada com sucesso." : "Login realizado." });
     } catch {
-      onToast({ type: "error", message: "Nao foi possivel autenticar. Confira seus dados." });
+      onToast({ type: "error", message: "Não foi possível autenticar. Confira seus dados." });
     } finally {
       setLoading(false);
     }
@@ -66,7 +66,7 @@ export function AuthPage({ onToast }: { onToast: (toast: ToastState) => void }) 
               {mode === "login" ? "Bem-vindo de volta!" : "Crie sua conta VLRTCG"}
             </h1>
             <p className="mt-2 text-sm leading-6 text-slate-300">
-              {mode === "login" ? "Faca login para continuar sua jornada no VLRTCG." : "Organize sua colecao e conecte-se para trocas."}
+              {mode === "login" ? "Faça login para continuar sua jornada no VLRTCG." : "Organize sua coleção e conecte-se para trocas."}
             </p>
           </div>
 
@@ -91,7 +91,7 @@ export function AuthPage({ onToast }: { onToast: (toast: ToastState) => void }) 
               </label>
             )}
             <label className="block text-sm font-medium text-slate-200" htmlFor="email">
-              E-mail ou usuario
+              E-mail ou usuário
               <div className="relative mt-2">
                 <Mail className="pointer-events-none absolute left-4 top-4 text-cyan-200/70" size={17} />
                 <Input
@@ -150,7 +150,7 @@ export function AuthPage({ onToast }: { onToast: (toast: ToastState) => void }) 
             <button
               type="button"
               className="font-medium text-cyan-200 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/50"
-              onClick={() => onToast({ type: "error", message: "Recuperacao de senha ainda nao esta disponivel." })}
+              onClick={() => onToast({ type: "error", message: "A recuperação de senha ainda não está disponível." })}
             >
               Esqueceu sua senha?
             </button>
@@ -169,7 +169,7 @@ export function AuthPage({ onToast }: { onToast: (toast: ToastState) => void }) 
             className="mt-5 w-full text-center text-sm font-medium text-slate-300 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/50"
             onClick={() => setMode(mode === "login" ? "register" : "login")}
           >
-            {mode === "login" ? "Ainda nao possui conta? Criar conta" : "Ja possui conta? Fazer login"}
+            {mode === "login" ? "Ainda não possui conta? Criar conta" : "Já possui conta? Fazer login"}
           </button>
         </form>
       </section>

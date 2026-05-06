@@ -190,7 +190,7 @@ export function CardTile(props: ExploreProps | CollectionProps) {
         <CardZoomModal
           card={card}
           number={isExplore ? props.card.number : props.card.number}
-          label={isExplore ? "Jornada Pokemon" : props.card.forTrade ? "Disponivel para troca" : "Pokedex"}
+          label={isExplore ? "Jornada Pokémon" : props.card.forTrade ? "Disponível para troca" : "Pokédex"}
           onClose={() => setZoomOpen(false)}
         />
       )}
@@ -251,12 +251,12 @@ function CardZoomModal({ card, number, label, onClose }: { card: ExploreCard | C
                 {label}
               </span>
               <span className={`inline-flex rounded-full px-3 py-1 text-sm font-semibold ${rarityTone(rarity)}`}>
-                {rarity ?? "Raridade nao informada"}
+                {rarity ?? "Raridade não informada"}
               </span>
             </div>
           </div>
           <p className="rounded-lg bg-slate-100 p-3 text-sm font-medium text-slate-600 dark:bg-slate-950/60 dark:text-slate-300">
-            Conferencia em tamanho grande para numero, nome, colecao e raridade da carta.
+            Conferência em tamanho grande para número, nome, coleção e raridade da carta.
           </p>
         </aside>
       </div>

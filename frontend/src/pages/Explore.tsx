@@ -69,7 +69,7 @@ export function Explore({ onToast }: { onToast: (toast: ToastState) => void }) {
       .catch(() => {
         if (active) {
           setSets([]);
-          onToast({ type: "error", message: "Nao foi possivel carregar colecoes." });
+          onToast({ type: "error", message: "Não foi possível carregar as coleções." });
         }
       });
 
@@ -106,7 +106,7 @@ export function Explore({ onToast }: { onToast: (toast: ToastState) => void }) {
         if (active) {
           setCards([]);
           setTotal(0);
-          onToast({ type: "error", message: "Falha ao buscar cartas Pokemon." });
+          onToast({ type: "error", message: "Falha ao buscar cartas Pokémon." });
         }
       })
       .finally(() => {
@@ -141,9 +141,9 @@ export function Explore({ onToast }: { onToast: (toast: ToastState) => void }) {
   async function add(card: ExploreCard, quantity = quantities[card.id] ?? 1) {
     try {
       await apiService.addToCollection(card, quantity);
-      onToast({ type: "success", message: `${quantity} copia(s) adicionada(s) a colecao.` });
+      onToast({ type: "success", message: `${quantity} cópia(s) adicionada(s) à coleção.` });
     } catch {
-      onToast({ type: "error", message: "Nao foi possivel adicionar esta carta." });
+      onToast({ type: "error", message: "Não foi possível adicionar esta carta." });
     }
   }
 
@@ -171,7 +171,7 @@ export function Explore({ onToast }: { onToast: (toast: ToastState) => void }) {
         else next.delete(card.id);
         return next;
       });
-      onToast({ type: "error", message: "Nao foi possivel atualizar a lista de desejos." });
+      onToast({ type: "error", message: "Não foi possível atualizar a lista de desejos." });
     }
   }
 
@@ -188,11 +188,11 @@ export function Explore({ onToast }: { onToast: (toast: ToastState) => void }) {
     const selectedCards = cards.filter((card) => selectedIds.has(card.id));
     try {
       await Promise.all(selectedCards.map((card) => apiService.addToCollection(card, quantities[card.id] ?? 1)));
-      onToast({ type: "success", message: `${selectedCards.length} carta(s) adicionada(s) a colecao.` });
+      onToast({ type: "success", message: `${selectedCards.length} carta(s) adicionada(s) à coleção.` });
       setSelectedIds(new Set());
       setConfirmBatch(false);
     } catch {
-      onToast({ type: "error", message: "Nao foi possivel adicionar as cartas selecionadas." });
+      onToast({ type: "error", message: "Não foi possível adicionar as cartas selecionadas." });
     }
   }
 
@@ -202,9 +202,9 @@ export function Explore({ onToast }: { onToast: (toast: ToastState) => void }) {
         <div className="border-b border-slate-100 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
         <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-xs font-medium uppercase tracking-[0.16em] text-indigo-600 dark:text-indigo-300">Jornada Pokemon</p>
+            <p className="text-xs font-medium uppercase tracking-[0.16em] text-indigo-600 dark:text-indigo-300">Jornada Pokémon</p>
             <h2 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950 dark:text-white">Marketplace de cartas</h2>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Pesquise por nome, serie ou colecao e adicione direto na sua pasta.</p>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Pesquise por nome, série ou coleção e adicione direto na sua pasta.</p>
           </div>
           <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300">{total.toLocaleString("pt-BR")} cartas</span>
         </div>
@@ -215,7 +215,7 @@ export function Explore({ onToast }: { onToast: (toast: ToastState) => void }) {
               <Search className="pointer-events-none absolute left-3 top-3 text-muted-foreground" size={16} />
               <Input
                 className="pl-9"
-                placeholder="Buscar carta ou colecao, ex: Charizard, ASC, Surging Sparks"
+                placeholder="Buscar carta ou coleção, ex: Charizard, ASC, Surging Sparks"
                 value={search}
                 onChange={(event) => {
                   setSearch(event.target.value);
@@ -231,7 +231,7 @@ export function Explore({ onToast }: { onToast: (toast: ToastState) => void }) {
                 setPage(1);
               }}
             >
-              <option value="">Todas as series</option>
+              <option value="">Todas as séries</option>
               {seriesOptions.map((option) => (
                 <option key={option} value={option}>
                   {option}
@@ -245,7 +245,7 @@ export function Explore({ onToast }: { onToast: (toast: ToastState) => void }) {
                 setPage(1);
               }}
             >
-              <option value="">Todas as colecoes</option>
+              <option value="">Todas as coleções</option>
               {filteredSets.map((set) => (
                 <option key={set.id} value={set.id}>
                   {setDisplayCode(set)} - {set.name}
@@ -302,7 +302,7 @@ export function Explore({ onToast }: { onToast: (toast: ToastState) => void }) {
                 </p>
               </div>
               <Button variant="secondary" size="sm" onClick={() => setSetId("")}>
-                Remover colecao
+                Remover coleção
               </Button>
             </div>
           )}
@@ -407,7 +407,7 @@ export function Explore({ onToast }: { onToast: (toast: ToastState) => void }) {
 
       <Modal title="Adicionar cartas selecionadas" open={confirmBatch} onClose={() => setConfirmBatch(false)}>
         <div className="space-y-4">
-          <p className="text-sm text-slate-600 dark:text-slate-300">Deseja adicionar {selectedIds.size} cartas a sua colecao?</p>
+          <p className="text-sm text-slate-600 dark:text-slate-300">Deseja adicionar {selectedIds.size} cartas à sua coleção?</p>
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setConfirmBatch(false)}>
               Cancelar
@@ -461,7 +461,7 @@ function CardListRow({
       <div className="min-w-0">
         <p className="truncate text-sm font-semibold text-slate-950 dark:text-white">{cardDisplayName(card.name, card.number, card.id)}</p>
         <p className="truncate text-xs font-medium text-slate-500 dark:text-slate-400">{card.set} - {cardDisplayNumber(card.number, card.id)}</p>
-        <p className="text-xs text-slate-500 dark:text-slate-400">{card.rarity ?? "Raridade nao informada"}</p>
+        <p className="text-xs text-slate-500 dark:text-slate-400">{card.rarity ?? "Raridade não informada"}</p>
       </div>
       <div className="flex items-center gap-2">
         <button type="button" onClick={() => onToggleWishlist(card)} className={wished ? "text-rose-500" : "text-slate-400 hover:text-rose-500"} aria-label="Lista de desejos">

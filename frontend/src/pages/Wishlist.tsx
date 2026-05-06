@@ -29,7 +29,7 @@ export function Wishlist({ onToast }: { onToast: (toast: ToastState) => void }) 
       setItems(wishlistData);
       setNotifications(notificationData);
     } catch {
-      onToast({ type: "error", message: "Nao foi possivel carregar sua lista de desejos." });
+      onToast({ type: "error", message: "Não foi possível carregar sua lista de desejos." });
     } finally {
       setLoading(false);
     }
@@ -59,16 +59,16 @@ export function Wishlist({ onToast }: { onToast: (toast: ToastState) => void }) 
       onToast({ type: "success", message: "Carta removida da lista de desejos." });
     } catch {
       setItems(previous);
-      onToast({ type: "error", message: "Nao foi possivel remover a carta." });
+      onToast({ type: "error", message: "Não foi possível remover a carta." });
     }
   }
 
   async function addToCollection(card: ExploreCard, quantity: number) {
     try {
       await apiService.addToCollection(card, quantity);
-      onToast({ type: "success", message: "Carta adicionada a colecao." });
+      onToast({ type: "success", message: "Carta adicionada à coleção." });
     } catch {
-      onToast({ type: "error", message: "Nao foi possivel adicionar esta carta." });
+      onToast({ type: "error", message: "Não foi possível adicionar esta carta." });
     }
   }
 
@@ -79,7 +79,7 @@ export function Wishlist({ onToast }: { onToast: (toast: ToastState) => void }) 
           <div>
             <p className="text-xs font-medium uppercase tracking-[0.16em] text-rose-600 dark:text-rose-300">Minha lista de desejos</p>
             <h2 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950 dark:text-white">Cartas que estou buscando</h2>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Favoritar aqui nao adiciona a carta na colecao. Ela fica monitorada para disponibilidade.</p>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Favoritar aqui não adiciona a carta à coleção. Ela fica monitorada para disponibilidade.</p>
           </div>
           <div className="grid grid-cols-2 gap-2 sm:min-w-[280px]">
             <Metric icon={Heart} label="Desejadas" value={items.length} />
@@ -89,9 +89,9 @@ export function Wishlist({ onToast }: { onToast: (toast: ToastState) => void }) 
       </section>
 
       <section className="grid gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-[1fr_220px_220px] dark:border-slate-800 dark:bg-slate-900">
-        <Input placeholder="Buscar carta, numero ou colecao" value={search} onChange={(event) => setSearch(event.target.value)} />
+        <Input placeholder="Buscar carta, número ou coleção" value={search} onChange={(event) => setSearch(event.target.value)} />
         <Select value={setFilter} onChange={(event) => setSetFilter(event.target.value)}>
-          <option value="">Todas as colecoes</option>
+          <option value="">Todas as coleções</option>
           {sets.map((set) => <option key={set} value={set}>{set}</option>)}
         </Select>
         <Select value={availabilityFilter} onChange={(event) => setAvailabilityFilter(event.target.value)}>
@@ -104,7 +104,7 @@ export function Wishlist({ onToast }: { onToast: (toast: ToastState) => void }) 
         <section className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-900/60 dark:bg-emerald-950/20">
           <div className="mb-3 flex items-center gap-2 text-emerald-700 dark:text-emerald-200">
             <Bell size={18} />
-            <h3 className="text-sm font-semibold">Cartas da sua lista disponiveis na plataforma</h3>
+            <h3 className="text-sm font-semibold">Cartas da sua lista disponíveis na plataforma</h3>
           </div>
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {notifications.map((notification) => (
@@ -148,12 +148,12 @@ export function Wishlist({ onToast }: { onToast: (toast: ToastState) => void }) 
               <div key={item.id} className="space-y-2">
                 <CardTile mode="explore" card={card} wished={wishedIds.has(card.id)} onToggleWishlist={remove} onAdd={addToCollection} />
                 <div className="rounded-xl border border-slate-200 bg-white p-3 text-xs font-medium text-slate-500 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
-                  <p>Raridade: {item.rarity ?? "Nao informada"}</p>
+                  <p>Raridade: {item.rarity ?? "Não informada"}</p>
                   <p>Variacao: {item.variantType ?? "NORMAL"}</p>
                   <p>Fonte: {item.priceSource}</p>
                   <p>Estado: {item.condition}</p>
                   <div className="mt-2 flex items-center justify-between gap-2">
-                    <p>Disponibilidade: {item.availability ? `Disponivel com ${item.availability.owner.name}` : "Ainda indisponivel"}</p>
+                    <p>Disponibilidade: {item.availability ? `Disponível com ${item.availability.owner.name}` : "Ainda indisponível"}</p>
                     {item.availability && (
                       <Button size="sm" variant="primary" onClick={() => setView("trades")}>
                         Negociar
@@ -166,7 +166,7 @@ export function Wishlist({ onToast }: { onToast: (toast: ToastState) => void }) 
           })}
         </div>
       ) : (
-        <EmptyState title="Lista de desejos vazia" description="Use o coracao nas cartas do Explorar para monitorar cartas que voce ainda quer encontrar." />
+        <EmptyState title="Lista de desejos vazia" description="Use o coração nas cartas da Jornada Pokémon para monitorar cartas que você ainda quer encontrar." />
       )}
     </div>
   );

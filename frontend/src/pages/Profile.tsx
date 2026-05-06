@@ -36,7 +36,7 @@ export function Profile({ onToast }: { onToast: (toast: ToastState) => void }) {
       setProfile(updated);
       onToast({ type: "success", message: "Perfil atualizado." });
     } catch {
-      onToast({ type: "error", message: "Nao foi possivel atualizar o perfil." });
+      onToast({ type: "error", message: "Não foi possível atualizar o perfil." });
     } finally {
       setSaving(false);
     }
@@ -52,7 +52,7 @@ export function Profile({ onToast }: { onToast: (toast: ToastState) => void }) {
             {profile.avatarUrl ? <img src={profile.avatarUrl} alt={profile.name} className="h-full w-full object-cover" /> : <UserCircle size={42} className="text-slate-400" />}
           </div>
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-indigo-600 dark:text-indigo-300">Perfil de usuario</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-indigo-600 dark:text-indigo-300">Perfil de usuário</p>
             <h2 className="mt-1 text-2xl font-semibold text-slate-950 dark:text-white">{profile.name}</h2>
             <p className="text-sm text-slate-500 dark:text-slate-400">{profile.email}</p>
           </div>

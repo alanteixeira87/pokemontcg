@@ -97,7 +97,7 @@ export function TradeMarket({ onToast }: { onToast: (toast: ToastState) => void 
       setUsers(data);
       setSelectedUser((current) => (current && data.some((user) => user.id === current.id) ? current : data[0] ?? null));
     } catch {
-      onToast({ type: "error", message: "Nao foi possivel buscar usuarios para troca." });
+      onToast({ type: "error", message: "Não foi possível buscar usuários para troca." });
     } finally {
       setLoadingUsers(false);
     }
@@ -107,7 +107,7 @@ export function TradeMarket({ onToast }: { onToast: (toast: ToastState) => void 
     try {
       setProposals(await apiService.tradeProposals());
     } catch {
-      onToast({ type: "error", message: "Nao foi possivel carregar propostas." });
+      onToast({ type: "error", message: "Não foi possível carregar as propostas." });
     }
   }, [onToast]);
 
@@ -125,7 +125,7 @@ export function TradeMarket({ onToast }: { onToast: (toast: ToastState) => void 
       setTargetCards(target.cards);
       setTargetSets(target.sets);
     } catch {
-      onToast({ type: "error", message: "Nao foi possivel carregar cartas para troca." });
+      onToast({ type: "error", message: "Não foi possível carregar as cartas para troca." });
     } finally {
       setLoadingCards(false);
     }
@@ -167,7 +167,7 @@ export function TradeMarket({ onToast }: { onToast: (toast: ToastState) => void 
   useEffect(() => {
     if (!chatTrade) return;
     joinTradeChat(chatTrade.id);
-    void apiService.tradeMessages(chatTrade.id).then(setMessages).catch(() => onToast({ type: "error", message: "Nao foi possivel carregar o chat." }));
+    void apiService.tradeMessages(chatTrade.id).then(setMessages).catch(() => onToast({ type: "error", message: "Não foi possível carregar o chat." }));
   }, [chatTrade, onToast]);
 
   const incomingPending = useMemo(
@@ -206,8 +206,8 @@ export function TradeMarket({ onToast }: { onToast: (toast: ToastState) => void 
       await loadProposals();
       onToast({ type: "success", message: "Proposta de troca enviada." });
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Nao foi possivel enviar a proposta.";
-      onToast({ type: "error", message: message.includes("400") ? "Selecione tipo e quantidade validos antes de enviar." : "Nao foi possivel enviar a proposta." });
+      const message = error instanceof Error ? error.message : "Não foi possível enviar a proposta.";
+      onToast({ type: "error", message: message.includes("400") ? "Selecione tipo e quantidade válidos antes de enviar." : "Não foi possível enviar a proposta." });
     } finally {
       setSending(false);
     }
@@ -219,7 +219,7 @@ export function TradeMarket({ onToast }: { onToast: (toast: ToastState) => void 
       await loadProposals();
       onToast({ type: "success", message: "Proposta atualizada." });
     } catch {
-      onToast({ type: "error", message: "Nao foi possivel atualizar a proposta. Confira o estoque das variantes." });
+      onToast({ type: "error", message: "Não foi possível atualizar a proposta. Confira o estoque das variantes." });
     }
   }
 
@@ -250,7 +250,7 @@ export function TradeMarket({ onToast }: { onToast: (toast: ToastState) => void 
         <div className="grid gap-3 p-4 lg:grid-cols-[1fr_240px_auto]">
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-3 text-muted-foreground" size={16} />
-            <Input className="pl-9" placeholder="Buscar usuario, carta ou colecao" value={search} onChange={(event) => setSearch(event.target.value)} />
+            <Input className="pl-9" placeholder="Buscar usuário, carta ou coleção" value={search} onChange={(event) => setSearch(event.target.value)} />
           </div>
           <Input placeholder="Interesse: raridade, set, tipo..." value={interest} onChange={(event) => setInterest(event.target.value)} />
           <Button variant="secondary" disabled={!search && !interest} onClick={() => { setSearch(""); setInterest(""); }}>
@@ -276,7 +276,7 @@ export function TradeMarket({ onToast }: { onToast: (toast: ToastState) => void 
                         {(user.pendingVariantCardsCount ?? 0) > 0 ? ` · ${user.pendingVariantCardsCount} aguardando tipo` : ""}
                       </p>
                       <div className="mt-3 flex flex-wrap gap-1">
-                        {user.mainCollections.length ? user.mainCollections.map((set) => <Badge key={set}>{set}</Badge>) : <span className="text-xs text-slate-500">Sem colecoes principais</span>}
+                        {user.mainCollections.length ? user.mainCollections.map((set) => <Badge key={set}>{set}</Badge>) : <span className="text-xs text-slate-500">Sem coleções principais</span>}
                       </div>
                       {user.suggestedCards?.length ? (
                         <div className="mt-3 space-y-1">
@@ -296,7 +296,7 @@ export function TradeMarket({ onToast }: { onToast: (toast: ToastState) => void 
                 </button>
               ))}
             </div>
-          ) : <EmptyState title="Nenhum usuario encontrado" description="Tente buscar por outro nome, colecao ou interesse." />}
+          ) : <EmptyState title="Nenhum usuário encontrado" description="Tente buscar por outro nome, coleção ou interesse." />}
         </section>
 
         <section className="space-y-5">
@@ -304,12 +304,12 @@ export function TradeMarket({ onToast }: { onToast: (toast: ToastState) => void 
             <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
               <div>
                 <p className="text-xs font-semibold uppercase text-indigo-600">Cartas para troca</p>
-                <h3 className="text-xl font-semibold text-slate-950 dark:text-white">{selectedUser ? selectedUser.name : "Selecione um usuario"}</h3>
+                <h3 className="text-xl font-semibold text-slate-950 dark:text-white">{selectedUser ? selectedUser.name : "Selecione um usuário"}</h3>
               </div>
               <div className="grid gap-2 sm:grid-cols-3 lg:min-w-[620px]">
                 <Input placeholder="Buscar carta selecionavel" value={cardSearch} onChange={(event) => setCardSearch(event.target.value)} />
                 <Select value={targetSet} onChange={(event) => setTargetSet(event.target.value)}>
-                  <option value="">Sets do usuario</option>
+                  <option value="">Sets do usuário</option>
                   {targetSets.map((set) => <option key={set} value={set}>{set}</option>)}
                 </Select>
                 <Select value={mySet} onChange={(event) => setMySet(event.target.value)}>
@@ -325,8 +325,8 @@ export function TradeMarket({ onToast }: { onToast: (toast: ToastState) => void 
                 cards={targetCards}
                 selected={requested}
                 loading={loadingCards}
-                emptyTitle="Nenhuma carta disponivel"
-                emptyDescription="Esse usuario ainda nao definiu tipos para troca nesse filtro."
+                emptyTitle="Nenhuma carta disponível"
+                emptyDescription="Esse usuário ainda não definiu tipos para troca nesse filtro."
                 onToggle={(line) => upsertSelection("requested", line)}
                 onQuantity={(line, quantity) => changeQuantity("requested", line, quantity)}
                 onZoom={(card, variantType) => setZoomCard({ card, variantType })}
@@ -337,7 +337,7 @@ export function TradeMarket({ onToast }: { onToast: (toast: ToastState) => void 
                 selected={offered}
                 loading={loadingCards}
                 emptyTitle="Sem cartas para oferecer"
-                emptyDescription="Configure tipos e quantidade para troca nas suas cartas."
+                emptyDescription="Configure tipos e quantidades para troca nas suas cartas."
                 mine
                 onConfigure={setVariantCard}
                 onToggle={(line) => upsertSelection("offered", line)}
@@ -386,7 +386,7 @@ export function TradeMarket({ onToast }: { onToast: (toast: ToastState) => void 
               <ProposalCard key={proposal.id} proposal={proposal} currentUserId={currentUser?.id ?? 0} onUpdate={updateStatus} onChat={setChatTrade} onZoom={(card) => setZoomCard({ card, variantType: card.variantType })} />
             ))}
           </div>
-        ) : <EmptyState title="Nenhuma proposta ainda" description="Quando alguem enviar ou voce criar uma proposta, ela aparece aqui." />}
+        ) : <EmptyState title="Nenhuma proposta ainda" description="Quando alguém enviar ou você criar uma proposta, ela aparece aqui." />}
       </section>
 
       {zoomCard && <CardZoom data={zoomCard} onClose={() => setZoomCard(null)} />}
@@ -519,7 +519,7 @@ function ProposalCard({ proposal, currentUserId, onUpdate, onChat, onZoom }: { p
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${statusClass[proposal.status]}`}>{statusLabel[proposal.status]}</span>
-          <h4 className="mt-2 text-base font-semibold text-slate-950">{incoming ? `${proposal.requester.name} quer trocar com voce` : `Proposta para ${proposal.receiver.name}`}</h4>
+          <h4 className="mt-2 text-base font-semibold text-slate-950">{incoming ? `${proposal.requester.name} quer trocar com você` : `Proposta para ${proposal.receiver.name}`}</h4>
           <p className="text-xs font-semibold text-slate-500">{new Date(proposal.createdAt).toLocaleString("pt-BR")}</p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -590,7 +590,7 @@ function CardZoom({ data, onClose }: { data: { card: TradeCard | TradeCardSnapsh
             <span className={`inline-flex rounded-full px-3 py-1 text-sm font-semibold ${variantTone(currentVariant)}`}>{variantLabel(currentVariant)}</span>
           </div>
           <p className="rounded-lg bg-slate-100 p-3 text-sm font-medium text-slate-600 dark:bg-slate-950/60 dark:text-slate-300">
-            Confira a arte em alta, numeracao, colecao e tipo antes de selecionar ou aceitar a troca.
+            Confira a arte em alta, numeração, coleção e tipo antes de selecionar ou aceitar a troca.
           </p>
         </aside>
       </div>
@@ -612,7 +612,7 @@ function VariantModal({ card, onClose, onSaved, onToast }: { card: TradeCard; on
       onToast({ type: "success", message: "Variantes atualizadas." });
       onSaved();
     } catch {
-      onToast({ type: "error", message: "Quantidade para troca nao pode superar a quantidade possuida." });
+      onToast({ type: "error", message: "A quantidade para troca não pode superar a quantidade possuída." });
     }
   }
   return (

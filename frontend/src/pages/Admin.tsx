@@ -34,14 +34,14 @@ export function Admin() {
       <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-indigo-600 dark:text-indigo-300">Admin</p>
         <h2 className="mt-1 text-2xl font-semibold text-slate-950 dark:text-white">Saude do sistema</h2>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Resumo operacional de usuarios, cache e precificacao.</p>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Resumo operacional de usuários, cache e precificação.</p>
       </section>
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <AdminMetric icon={Users} label="Usuarios" value={overview.users} onClick={() => void openUsers()} active={showUsers} />
-        <AdminMetric icon={Tags} label="Cartas na colecao" value={overview.collectionCards} />
+        <AdminMetric icon={Tags} label="Cartas na coleção" value={overview.collectionCards} />
         <AdminMetric icon={Database} label="Cache cartas/sets" value={`${overview.cachedCards}/${overview.cachedSets}`} />
-        <AdminMetric icon={Activity} label="Historico de precos" value={overview.priceRows} />
+        <AdminMetric icon={Activity} label="Histórico de preços" value={overview.priceRows} />
       </section>
 
       {showUsers && (
@@ -52,7 +52,7 @@ export function Admin() {
               <p className="text-sm text-slate-500 dark:text-slate-400">Lista administrativa sem senha, hash ou tokens.</p>
             </div>
             <Button variant="secondary" onClick={() => void openUsers()}>
-              {showUsers ? "Ocultar" : "Ver usuarios"}
+              {showUsers ? "Ocultar" : "Ver usuários"}
             </Button>
           </div>
           {loadingUsers ? (
@@ -76,14 +76,14 @@ export function Admin() {
                   </div>
                 </div>
               ))}
-              {!users.length && <p className="p-4 text-sm text-slate-500">Nenhum usuario encontrado.</p>}
+              {!users.length && <p className="p-4 text-sm text-slate-500">Nenhum usuário encontrado.</p>}
             </div>
           )}
         </section>
       )}
 
       <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-        <h3 className="text-lg font-semibold text-slate-950 dark:text-white">Ultimos precos registrados</h3>
+        <h3 className="text-lg font-semibold text-slate-950 dark:text-white">Últimos preços registrados</h3>
         <div className="mt-4 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-800">
           {overview.latestPrices.length ? overview.latestPrices.map((price) => (
             <div key={price.id} className="grid gap-2 border-b border-slate-100 p-3 text-sm last:border-b-0 md:grid-cols-[1fr_160px_120px_120px] dark:border-slate-800">
@@ -95,7 +95,7 @@ export function Admin() {
               <span className="text-slate-500">{price.source}</span>
               <span className="text-slate-500">{price.confidence}</span>
             </div>
-          )) : <p className="p-4 text-sm text-slate-500">Nenhum preco registrado ainda.</p>}
+          )) : <p className="p-4 text-sm text-slate-500">Nenhum preço registrado ainda.</p>}
         </div>
       </section>
     </div>
