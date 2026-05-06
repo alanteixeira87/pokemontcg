@@ -54,7 +54,7 @@ export function AuthPage({ onToast }: { onToast: (toast: ToastState) => void }) 
             className="mx-auto h-auto w-[min(78vw,330px)] select-none object-contain drop-shadow-[0_18px_50px_rgba(56,189,248,0.28)]"
             draggable={false}
           />
-          <p className="mt-3 text-xs font-semibold uppercase tracking-[0.28em] text-cyan-100/85">Trade • Collect • Connect</p>
+          <p className="mt-3 text-xs font-semibold uppercase tracking-[0.28em] text-cyan-100/85">Trade | Collect | Connect</p>
         </div>
 
         <form
@@ -85,7 +85,7 @@ export function AuthPage({ onToast }: { onToast: (toast: ToastState) => void }) 
                     name="name"
                     autoComplete="name"
                     placeholder="Seu nome"
-                    className="h-12 rounded-xl border-white/12 bg-white/8 pl-11 text-white placeholder:text-slate-400 focus:border-cyan-300/70 focus:ring-cyan-300/20"
+                    className="h-12 rounded-xl border-white/16 bg-slate-950/65 pl-11 font-medium text-slate-50 caret-cyan-300 shadow-inner shadow-white/5 placeholder:text-slate-500 focus:border-cyan-300/80 focus:bg-slate-950/75 focus:ring-cyan-300/20 [color-scheme:dark]"
                     value={name}
                     onChange={(event) => setName(event.target.value)}
                     required
@@ -102,7 +102,7 @@ export function AuthPage({ onToast }: { onToast: (toast: ToastState) => void }) 
                   id="email"
                   name="email"
                   autoComplete="email"
-                  className="h-12 rounded-xl border-white/12 bg-white/8 pl-11 text-white placeholder:text-slate-400 focus:border-cyan-300/70 focus:ring-cyan-300/20"
+                  className="h-12 rounded-xl border-white/16 bg-slate-950/65 pl-11 font-medium text-slate-50 caret-cyan-300 shadow-inner shadow-white/5 placeholder:text-slate-500 focus:border-cyan-300/80 focus:bg-slate-950/75 focus:ring-cyan-300/20 [color-scheme:dark]"
                   type="email"
                   placeholder="voce@email.com"
                   value={email}
@@ -119,7 +119,7 @@ export function AuthPage({ onToast }: { onToast: (toast: ToastState) => void }) 
                   id="password"
                   name="password"
                   autoComplete={mode === "login" ? "current-password" : "new-password"}
-                  className="h-12 rounded-xl border-white/12 bg-white/8 pl-11 pr-11 text-white placeholder:text-slate-400 focus:border-cyan-300/70 focus:ring-cyan-300/20"
+                  className="h-12 rounded-xl border-white/16 bg-slate-950/65 pl-11 pr-11 font-medium text-slate-50 caret-cyan-300 shadow-inner shadow-white/5 placeholder:text-slate-500 focus:border-cyan-300/80 focus:bg-slate-950/75 focus:ring-cyan-300/20 [color-scheme:dark]"
                   type={showPassword ? "text" : "password"}
                   placeholder="Sua senha"
                   value={password}
