@@ -59,26 +59,62 @@ export function Explore({ onToast }: { onToast: (toast: ToastState) => void }) {
   const hasFilters = Boolean(search || setId || series || sort !== "numberAsc");
 
   useEffect(() => {
-    void apiService.sets().then(setSets).catch(() => onToast({ type: "error", message: "Nao foi possivel carregar colecoes." }));
+    let active = true;
+    void apiService
+      .sets()
+      .then((data) => {
+        if (active) setSets(data);
+      })
+      .catch(() => {
+        if (active) {
+          setSets([]);
+          onToast({ type: "error", message: "Nao foi possivel carregar colecoes." });
+        }
+      });
+
+    return () => {
+      active = false;
+    };
   }, [onToast]);
 
   useEffect(() => {
+    let active = true;
     void apiService
       .wishlist()
-      .then((items) => setWishlistIds(new Set(items.map((item) => item.cardId))))
+      .then((items) => {
+        if (active) setWishlistIds(new Set(items.map((item) => item.cardId)));
+      })
       .catch(() => undefined);
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {
+    let active = true;
     setLoading(true);
     void apiService
       .cards({ page, pageSize, search: debouncedSearch || undefined, set: setId || undefined, sort })
       .then((result) => {
+        if (!active) return;
         setCards(result.cards);
         setTotal(result.totalCount);
       })
-      .catch(() => onToast({ type: "error", message: "Falha ao buscar cartas Pokemon." }))
-      .finally(() => setLoading(false));
+      .catch(() => {
+        if (active) {
+          setCards([]);
+          setTotal(0);
+          onToast({ type: "error", message: "Falha ao buscar cartas Pokemon." });
+        }
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
   }, [debouncedSearch, onToast, page, setId, sort]);
 
   const totalPages = useMemo(() => Math.max(1, Math.ceil(total / pageSize)), [total]);

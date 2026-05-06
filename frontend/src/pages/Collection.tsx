@@ -27,13 +27,23 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
 
   const loadMeta = useCallback(async () => {
     if (tradeOnly) return;
-    try {
-      const [collectionData, setsData] = await Promise.all([apiService.collection({ sort: "name" }), apiService.sets()]);
+    const [collectionResult, setsResult] = await Promise.allSettled([apiService.collection({ sort: "name" }), apiService.sets()]);
+
+    if (collectionResult.status === "fulfilled") {
+      const collectionData = collectionResult.value;
       setAllItems(collectionData);
       setAvailableSets(Array.from(new Set(collectionData.map((item) => item.set))).sort());
-      setPokemonSets(setsData);
-    } catch {
+    } else {
+      setAllItems([]);
+      setAvailableSets([]);
       onToast({ type: "error", message: "Nao foi possivel carregar progresso das colecoes." });
+    }
+
+    if (setsResult.status === "fulfilled") {
+      setPokemonSets(setsResult.value);
+    } else {
+      setPokemonSets([]);
+      onToast({ type: "error", message: "Nao foi possivel carregar a lista oficial de colecoes." });
     }
   }, [onToast, tradeOnly]);
 
@@ -65,14 +75,22 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
   }, [loadMeta]);
 
   useEffect(() => {
+    let active = true;
     if (tradeOnly) return;
     void apiService
       .wishlist()
-      .then((wishlist) => setWishlistIds(new Set(wishlist.map((item) => item.cardId))))
+      .then((wishlist) => {
+        if (active) setWishlistIds(new Set(wishlist.map((item) => item.cardId)));
+      })
       .catch(() => undefined);
+
+    return () => {
+      active = false;
+    };
   }, [tradeOnly]);
 
   useEffect(() => {
+    let active = true;
     if (tradeOnly || !filters.set || pokemonSets.length === 0) {
       setSetCards([]);
       return;
@@ -84,10 +102,19 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
       return;
     }
 
-    void apiService
-      .cards({ page: 1, pageSize: 500, set: selectedSet.id, sort: "numberAsc" })
-      .then((result) => setSetCards(result.cards))
-      .catch(() => onToast({ type: "error", message: "Nao foi possivel carregar cartas faltantes desta colecao." }));
+    void loadSetCards(selectedSet.id).then((cards) => {
+      if (active) setSetCards(cards);
+    })
+      .catch(() => {
+        if (active) {
+          setSetCards([]);
+          onToast({ type: "error", message: "Nao foi possivel carregar cartas faltantes desta colecao." });
+        }
+      });
+
+    return () => {
+      active = false;
+    };
   }, [filters.set, onToast, pokemonSets, tradeOnly]);
 
   const sets = useMemo(() => availableSets, [availableSets]);
@@ -410,6 +437,17 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
       </Modal>
     </div>
   );
+}
+
+async function loadSetCards(setId: string): Promise<ExploreCard[]> {
+  const pageSize = 50;
+  const firstPage = await apiService.cards({ page: 1, pageSize, set: setId, sort: "numberAsc" });
+  const totalPages = Math.max(1, Math.ceil(firstPage.totalCount / pageSize));
+  if (totalPages === 1) return firstPage.cards;
+
+  const remainingPages = Array.from({ length: totalPages - 1 }, (_, index) => index + 2);
+  const results = await Promise.all(remainingPages.map((page) => apiService.cards({ page, pageSize, set: setId, sort: "numberAsc" })));
+  return [...firstPage.cards, ...results.flatMap((result) => result.cards)];
 }
 
 function MissingCard({ card, wished, onAdd, onToggleWishlist }: { card: ExploreCard; wished: boolean; onAdd: (card: ExploreCard) => void; onToggleWishlist: (card: ExploreCard) => void }) {
