@@ -465,33 +465,74 @@ function TradeCardPanel(props: {
               </div>
               <div className="mt-3 space-y-2">
                 {availableVariants(card).length ? availableVariants(card).map((variant) => {
-                  const line = { collectionId: card.id, variantType: variant.variantType, quantity: 1 };
-                  const selected = props.selected.find((item) => selectionKey(item) === selectionKey(line));
-                  return (
-                    <div key={variant.variantType} className={`rounded-md border p-2 ${selected ? "border-indigo-600 bg-indigo-50" : "border-slate-200 bg-slate-50"}`}>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <button type="button" onClick={() => props.onToggle(line)} className={`flex h-6 w-6 items-center justify-center rounded-full border ${selected ? "border-indigo-600 bg-indigo-600 text-white" : "border-slate-300 bg-white"}`}>
-                          {selected && <Check size={14} />}
-                        </button>
-                        <button type="button" onClick={() => props.onZoom(card, variant.variantType)} className={`rounded-full px-2 py-1 text-xs font-semibold ${variantTone(variant.variantType)}`}>
-                          {variantLabel(variant.variantType)}
-                        </button>
-                        <span className="text-xs font-medium text-slate-500">troca {variant.tradeQuantity} / possui {variant.ownedQuantity}</span>
-                        {selected && (
-                          <Select className="ml-auto h-8 w-20" value={String(selected.quantity)} onChange={(event) => props.onQuantity(selected, Number(event.target.value))}>
-                            {Array.from({ length: variant.tradeQuantity }).map((_, index) => <option key={index + 1} value={index + 1}>{index + 1}</option>)}
-                          </Select>
-                        )}
-                      </div>
-                    </div>
-                  );
-                }) : (
-                  <div className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs font-semibold text-amber-800">
-                    Selecione o tipo da carta antes de disponibilizar para troca.
-                  </div>
-                )}
-              </div>
-            </div>
+                   const line = { collectionId: card.id, variantType: variant.variantType, quantity: 1 };
+                   const selected = props.selected.find((item) => selectionKey(item) === selectionKey(line));
+                   return (
+                     <div
+                       key={variant.variantType}
+                       role="button"
+                       tabIndex={0}
+                       onClick={() => props.onToggle(line)}
+                       onKeyDown={(event) => {
+                         if (event.key === "Enter" || event.key === " ") {
+                           event.preventDefault();
+                           props.onToggle(line);
+                         }
+                       }}
+                       className={`cursor-pointer rounded-md border p-2 transition ${selected ? "border-indigo-600 bg-indigo-50" : "border-slate-200 bg-slate-50 hover:border-indigo-200 hover:bg-white"}`}
+                     >
+                       <div className="flex flex-wrap items-center gap-2">
+                         <button
+                           type="button"
+                           onClick={(event) => {
+                             event.stopPropagation();
+                             props.onToggle(line);
+                           }}
+                           className={`flex h-6 w-6 items-center justify-center rounded-full border ${selected ? "border-indigo-600 bg-indigo-600 text-white" : "border-slate-300 bg-white"}`}
+                         >
+                           {selected && <Check size={14} />}
+                         </button>
+                         <button
+                           type="button"
+                           onClick={(event) => {
+                             event.stopPropagation();
+                             props.onZoom(card, variant.variantType);
+                           }}
+                           className={`rounded-full px-2 py-1 text-xs font-semibold ${variantTone(variant.variantType)}`}
+                         >
+                           {variantLabel(variant.variantType)}
+                         </button>
+                         <span className="text-xs font-medium text-slate-500">troca {variant.tradeQuantity} / possui {variant.ownedQuantity}</span>
+                         {selected && (
+                           <Select
+                             className="ml-auto h-8 w-20"
+                             value={String(selected.quantity)}
+                             onClick={(event) => event.stopPropagation()}
+                             onChange={(event) => props.onQuantity(selected, Number(event.target.value))}
+                           >
+                             {Array.from({ length: variant.tradeQuantity }).map((_, index) => <option key={index + 1} value={index + 1}>{index + 1}</option>)}
+                           </Select>
+                         )}
+                       </div>
+                     </div>
+                   );
+                 }) : (
+                   props.mine ? (
+                     <button
+                       type="button"
+                       onClick={() => props.onConfigure?.(card)}
+                       className="w-full rounded-md border border-amber-200 bg-amber-50 p-2 text-left text-xs font-semibold text-amber-800 transition hover:border-amber-300 hover:bg-amber-100"
+                     >
+                       Selecione o tipo da carta antes de disponibilizar para troca. Clique aqui para configurar.
+                     </button>
+                   ) : (
+                     <div className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs font-semibold text-amber-800">
+                       Selecione o tipo da carta antes de disponibilizar para troca.
+                     </div>
+                   )
+                 )}
+               </div>
+             </div>
           ))}
         </div>
       ) : <EmptyState title={props.emptyTitle} description={props.emptyDescription} />}
