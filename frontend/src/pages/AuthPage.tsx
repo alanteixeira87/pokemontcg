@@ -100,7 +100,7 @@ export function AuthPage({ onToast }: { onToast: (toast: ToastState) => void }) 
                   autoComplete="email"
                   className="h-12 rounded-xl border-white/16 bg-slate-950/65 pl-11 font-medium text-slate-50 caret-cyan-300 shadow-inner shadow-white/5 placeholder:text-slate-500 focus:border-cyan-300/80 focus:bg-slate-950/75 focus:ring-cyan-300/20 [color-scheme:dark]"
                   type="email"
-                  placeholder="voce@email.com"
+                  placeholder="você@email.com"
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
                   required

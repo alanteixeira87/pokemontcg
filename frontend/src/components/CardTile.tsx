@@ -155,7 +155,7 @@ export function CardTile(props: ExploreProps | CollectionProps) {
             </div>
 
             <div className="rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-950/50">
-              <p className="text-[11px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Total no fichario</p>
+              <p className="text-[11px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Total no fichário</p>
               <strong className="text-lg font-semibold text-slate-950 dark:text-white">{currency(props.card.price * props.card.quantity)}</strong>
             </div>
 
@@ -218,7 +218,7 @@ function CardZoomModal({ card, number, label, onClose }: { card: ExploreCard | C
 
   return createPortal(
     <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/80 p-2 sm:p-5" role="dialog" aria-modal="true">
-      <button className="absolute inset-0 cursor-default" type="button" aria-label="Fechar visualizacao" onClick={onClose} />
+      <button className="absolute inset-0 cursor-default" type="button" aria-label="Fechar visualização" onClick={onClose} />
       <div className="relative grid h-[94dvh] w-full max-w-7xl overflow-hidden rounded-xl bg-white shadow-lg dark:bg-slate-900 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="flex min-h-0 items-center justify-center bg-slate-950 p-3 sm:p-6">
           <img
@@ -239,7 +239,7 @@ function CardZoomModal({ card, number, label, onClose }: { card: ExploreCard | C
               <p className="text-xs font-semibold uppercase text-indigo-600 dark:text-indigo-300">Carta ampliada</p>
               <h2 className="mt-1 text-2xl font-semibold leading-tight text-slate-950 dark:text-white">{cardDisplayName(card.name, number, "cardId" in card ? card.cardId : card.id)}</h2>
             </div>
-            <Button variant="ghost" size="icon" onClick={onClose} aria-label="Fechar visualizacao">
+            <Button variant="ghost" size="icon" onClick={onClose} aria-label="Fechar visualização">
               <X size={20} />
             </Button>
           </div>

@@ -1,4 +1,4 @@
-﻿import { AlertTriangle, BarChart3, ChevronDown, ChevronUp, Download, Heart, Layers3, Plus, RefreshCw, SlidersHorizontal, Trash2, Trophy, Upload } from "lucide-react";
+import { AlertTriangle, BarChart3, ChevronDown, ChevronUp, Download, Heart, Layers3, Plus, RefreshCw, SlidersHorizontal, Trash2, Trophy, Upload } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CardTile } from "../components/CardTile";
 import { EmptyState } from "../components/EmptyState";
@@ -41,14 +41,14 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
       setAllItems(collectionResult.value);
     } else {
       setAllItems([]);
-      onToast({ type: "error", message: "NÃ£o foi possÃ­vel carregar o progresso das coleÃ§Ãµes." });
+      onToast({ type: "error", message: "Não foi possível carregar o progresso das coleções." });
     }
 
     if (setsResult.status === "fulfilled") {
       setPokemonSets(setsResult.value);
     } else {
       setPokemonSets([]);
-      onToast({ type: "error", message: "NÃ£o foi possÃ­vel carregar a lista oficial de coleÃ§Ãµes." });
+      onToast({ type: "error", message: "Não foi possível carregar a lista oficial de coleções." });
     }
   }, [onToast, tradeOnly]);
 
@@ -65,7 +65,7 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
           });
       setItems(data);
     } catch {
-      onToast({ type: "error", message: "NÃ£o foi possÃ­vel carregar sua coleÃ§Ã£o." });
+      onToast({ type: "error", message: "Não foi possível carregar sua coleção." });
     } finally {
       setLoading(false);
     }
@@ -192,7 +192,7 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
         if (!active) return;
         setAllMissingCards([]);
         setLoadingMissingCards(false);
-        onToast({ type: "error", message: "Nao foi possivel carregar as cartas faltantes de todas as colecoes." });
+        onToast({ type: "error", message: "Não foi possível carregar as cartas faltantes de todas as coleções." });
       });
 
     return () => {
@@ -336,10 +336,10 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
     try {
       await apiService.removeCollection(id);
       setAllItems((current) => current.filter((item) => item.id !== id));
-      onToast({ type: "success", message: "Carta removida da coleÃ§Ã£o." });
+      onToast({ type: "success", message: "Carta removida da coleção." });
     } catch {
       setItems(previous);
-      onToast({ type: "error", message: "NÃ£o foi possÃ­vel remover a carta." });
+      onToast({ type: "error", message: "Não foi possível remover a carta." });
     }
   }
 
@@ -352,9 +352,9 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
       if (!filters.missingOnly && matchesCollectionFilters(created, filters.set, filters.favorite, filters.forTrade)) {
         setItems((current) => upsertCollectionItem(current, created, filters.sort));
       }
-      onToast({ type: "success", message: "Carta adicionada Ã  coleÃ§Ã£o." });
+      onToast({ type: "success", message: "Carta adicionada à coleção." });
     } catch {
-      onToast({ type: "error", message: "NÃ£o foi possÃ­vel adicionar esta carta." });
+      onToast({ type: "error", message: "Não foi possível adicionar esta carta." });
     }
   }
 
@@ -381,7 +381,7 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
       else await apiService.addWishlist(card);
       onToast({ type: "success", message: wished ? "Carta removida da lista de desejos." : "Carta adicionada a lista de desejos." });
     } catch {
-      onToast({ type: "error", message: "NÃ£o foi possÃ­vel atualizar a lista de desejos." });
+      onToast({ type: "error", message: "Não foi possível atualizar a lista de desejos." });
     }
   }
 
@@ -398,14 +398,14 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
       await loadMeta();
       const firstIssue = result.notFound[0];
       const notFoundMessage = result.notFound.length
-         ? ` ${result.notFound.length} nÃ£o encontradas. ${firstIssue?.reason ?? ""}`
+         ? ` ${result.notFound.length} não encontradas. ${firstIssue?.reason ?? ""}`
         : "";
       onToast({
         type: result.imported > 0 ? "success" : "error",
         message: `${result.imported} cartas importadas. ${result.skipped} linhas ignoradas.${notFoundMessage}`
       });
     } catch {
-      onToast({ type: "error", message: "NÃ£o foi possÃ­vel importar a planilha. Confira as colunas e tente novamente." });
+      onToast({ type: "error", message: "Não foi possível importar a planilha. Confira as colunas e tente novamente." });
     } finally {
       setImporting(false);
     }
@@ -414,7 +414,7 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
   async function clearCollection() {
     if (!confirmClear) {
       setConfirmClear(true);
-      onToast({ type: "error", message: "Clique novamente em limpar coleÃ§Ã£o para confirmar." });
+      onToast({ type: "error", message: "Clique novamente em limpar coleção para confirmar." });
       window.setTimeout(() => setConfirmClear(false), 5000);
       return;
     }
@@ -426,9 +426,9 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
       setConfirmClear(false);
       setShowSelectedCollectionOnly(false);
       setFilters({ set: "", favorite: false, forTrade: false, missingOnly: false });
-      onToast({ type: "success", message: `${result.deleted} cartas removidas da sua coleÃ§Ã£o.` });
+      onToast({ type: "success", message: `${result.deleted} cartas removidas da sua coleção.` });
     } catch {
-      onToast({ type: "error", message: "NÃ£o foi possÃ­vel limpar a coleÃ§Ã£o." });
+      onToast({ type: "error", message: "Não foi possível limpar a coleção." });
     }
   }
 
@@ -438,9 +438,9 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
       const result = await apiService.refreshCollectionPrices();
       await load();
       await loadMeta();
-      onToast({ type: "success", message: `${result.updated} preÃ§os atualizados. ${result.skipped} mantidos.` });
+      onToast({ type: "success", message: `${result.updated} preços atualizados. ${result.skipped} mantidos.` });
     } catch {
-      onToast({ type: "error", message: "NÃ£o foi possÃ­vel atualizar os preÃ§os agora." });
+      onToast({ type: "error", message: "Não foi possível atualizar os preços agora." });
     } finally {
       setRepricing(false);
     }
@@ -453,9 +453,9 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
           <div className="border-b border-slate-100 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
               <div>
-                <p className="text-xs font-medium uppercase tracking-[0.16em] text-indigo-600 dark:text-indigo-300">PokÃ©dex PokÃ©mon TCG</p>
-                <h2 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950 dark:text-white">PokÃ©dex</h2>
-                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Acompanhe o progresso por coleÃ§Ã£o, quantidade, favoritos e cartas para troca.</p>
+                <p className="text-xs font-medium uppercase tracking-[0.16em] text-indigo-600 dark:text-indigo-300">Pokédex Pokémon TCG</p>
+                <h2 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950 dark:text-white">Pokédex</h2>
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Acompanhe o progresso por coleção, quantidade, favoritos e cartas para troca.</p>
               </div>
               <div className="grid grid-cols-3 gap-2 sm:min-w-[420px]">
                 <MetricCard icon={Layers3} label="Unicas" value={totalUnique} />
@@ -467,8 +467,8 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
           <div className="p-4">
           <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h3 className="text-lg font-semibold text-slate-950 dark:text-white">Filtros e organizacao</h3>
-              <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Controle quantidade, preÃ§o, favoritos e cartas para troca.</p>
+              <h3 className="text-lg font-semibold text-slate-950 dark:text-white">Filtros e organização</h3>
+              <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Controle quantidade, preço, favoritos e cartas para troca.</p>
             </div>
             <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300">{items.length} cartas no filtro</span>
           </div>
@@ -490,7 +490,7 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
             <option value="true">Apenas troca</option>
           </Select>
           <Select value={draftFilters.missingOnly ? "true" : "false"} onChange={(event) => updateDraftFilters({ missingOnly: event.target.value === "true" })}>
-            <option value="false">PossuÃ­das e faltantes</option>
+            <option value="false">Possuídas e faltantes</option>
             <option value="true">Apenas cartas faltantes</option>
           </Select>
           <Select value={draftFilters.sort} onChange={(event) => updateDraftFilters({ sort: event.target.value as SortOption })}>
@@ -520,11 +520,11 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
         <section className="space-y-3">
           <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h3 className="text-xl font-semibold text-slate-950 dark:text-white">Progresso por coleÃ§Ã£o</h3>
-              <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Cada card mostra quantas cartas Ãºnicas vocÃª jÃ¡ tem naquele set.</p>
+              <h3 className="text-xl font-semibold text-slate-950 dark:text-white">Progresso por coleção</h3>
+              <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Cada card mostra quantas cartas únicas você já tem naquele set.</p>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">{collectionSummary.length} coleÃ§Ãµes iniciadas</span>
+              <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">{collectionSummary.length} coleções iniciadas</span>
               <Button
                 variant="secondary"
                 size="sm"
@@ -532,7 +532,7 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
                 onClick={() => setShowSelectedCollectionOnly((current) => !current)}
               >
                 {showSelectedCollectionOnly ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
-                {showSelectedCollectionOnly ? "Mostrar todas" : "Recolher coleÃ§Ãµes"}
+                {showSelectedCollectionOnly ? "Mostrar todas" : "Recolher coleções"}
               </Button>
             </div>
           </div>
@@ -550,7 +550,7 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
                       {set.code}
                     </span>
                     <h4 className="mt-3 truncate text-base font-semibold text-slate-950 dark:text-white">{set.name}</h4>
-                    <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">{set.series || "SÃ©rie PokÃ©mon TCG"}</p>
+                    <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">{set.series || "Série Pokémon TCG"}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-2xl font-semibold text-indigo-600 dark:text-indigo-300">{set.percent}%</p>
@@ -593,13 +593,13 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
         {!tradeOnly && (
           <Button variant="secondary" disabled={repricing || allItems.length === 0} onClick={refreshPrices}>
             <RefreshCw size={16} className={repricing ? "animate-spin" : ""} />
-            {repricing ? "Atualizando..." : "Atualizar preÃ§os"}
+            {repricing ? "Atualizando..." : "Atualizar preços"}
           </Button>
         )}
         {!tradeOnly && (
           <Button variant={confirmClear ? "danger" : "secondary"} disabled={allItems.length === 0} onClick={clearCollection}>
             {confirmClear ? <AlertTriangle size={16} /> : <Trash2 size={16} />}
-            {confirmClear ? "Confirmar limpeza" : "Limpar coleÃ§Ã£o"}
+            {confirmClear ? "Confirmar limpeza" : "Limpar coleção"}
           </Button>
         )}
         <Button variant="secondary" onClick={() => window.open(apiService.exportUrl("full"), "_blank")}>
@@ -673,13 +673,13 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
         </div>
       ) : (
         <EmptyState
-          title={tradeOnly ? "Nenhuma carta para troca" : "ColeÃ§Ã£o vazia"}
-          description={tradeOnly ? "Marque cartas como troca para visualizÃ¡-las aqui." : "Explore cartas e adicione os primeiros itens Ã  sua coleÃ§Ã£o local."}
+          title={tradeOnly ? "Nenhuma carta para troca" : "Coleção vazia"}
+          description={tradeOnly ? "Marque cartas como troca para visualizá-las aqui." : "Explore cartas e adicione os primeiros itens à sua coleção local."}
         />
       )}
       <Modal title="Remover carta" open={Boolean(pendingRemove)} onClose={() => setPendingRemove(null)}>
         <div className="space-y-4">
-          <p className="text-sm text-slate-600 dark:text-slate-300">Deseja realmente remover esta carta da sua coleÃ§Ã£o?</p>
+          <p className="text-sm text-slate-600 dark:text-slate-300">Deseja realmente remover esta carta da sua coleção?</p>
           {pendingRemove && <p className="rounded-lg bg-slate-50 p-3 text-sm font-semibold text-slate-950 dark:bg-slate-950/50 dark:text-white">{pendingRemove.name}</p>}
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setPendingRemove(null)}>
@@ -814,7 +814,7 @@ function buildCollectionSummary(items: CollectionItem[], pokemonSets: PokemonSet
         total,
         totalLabel: total ? String(total) : `${owned}+`,
         percent,
-        missingLabel: total ? `${Math.max(total - owned, 0)} faltantes` : "Total nÃ£o informado"
+        missingLabel: total ? `${Math.max(total - owned, 0)} faltantes` : "Total não informado"
       };
     })
     .sort((a, b) => b.percent - a.percent || b.owned - a.owned || a.name.localeCompare(b.name));

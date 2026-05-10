@@ -603,7 +603,7 @@ function CardZoom({ data, onClose }: { data: { card: TradeCard | TradeCardSnapsh
 
   return createPortal(
     <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/80 p-2 sm:p-5" role="dialog" aria-modal="true">
-      <button className="absolute inset-0 cursor-default" type="button" aria-label="Fechar visualizacao" onClick={onClose} />
+      <button className="absolute inset-0 cursor-default" type="button" aria-label="Fechar visualização" onClick={onClose} />
       <div className="relative grid h-[94dvh] w-full max-w-7xl overflow-hidden rounded-xl bg-white shadow-lg dark:bg-slate-900 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="flex min-h-0 items-center justify-center bg-slate-950 p-3 sm:p-6">
           <img
@@ -621,7 +621,7 @@ function CardZoom({ data, onClose }: { data: { card: TradeCard | TradeCardSnapsh
               <p className="text-xs font-semibold uppercase text-indigo-600">Visualizacao ampliada</p>
               <h2 className="mt-1 text-2xl font-semibold leading-tight text-slate-950 dark:text-white">{cardDisplayName(card.name, card.number, card.cardId)}</h2>
             </div>
-            <Button size="icon" variant="ghost" onClick={onClose} aria-label="Fechar visualizacao">
+            <Button size="icon" variant="ghost" onClick={onClose} aria-label="Fechar visualização">
               <X size={20} />
             </Button>
           </div>
