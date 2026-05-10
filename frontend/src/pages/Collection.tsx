@@ -23,6 +23,7 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
   const [confirmClear, setConfirmClear] = useState(false);
   const [pendingRemove, setPendingRemove] = useState<CollectionItem | null>(null);
   const [setCards, setSetCards] = useState<ExploreCard[]>([]);
+  const [allMissingCards, setAllMissingCards] = useState<ExploreCard[]>([]);
   const [wishlistIds, setWishlistIds] = useState<Set<string>>(new Set());
   const [activeMissingIds, setActiveMissingIds] = useState<Set<string>>(new Set());
   const [showSelectedCollectionOnly, setShowSelectedCollectionOnly] = useState(false);
@@ -118,6 +119,55 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
     };
   }, [filters.set, onToast, pokemonSets, tradeOnly]);
 
+  useEffect(() => {
+    let active = true;
+    if (tradeOnly || filters.set || !filters.missingOnly || pokemonSets.length === 0) {
+      setAllMissingCards([]);
+      return;
+    }
+
+    const ownedBySet = new Map<string, Set<string>>();
+    allItems.forEach((item) => {
+      const setKey = normalizeSetName(item.set);
+      const owned = ownedBySet.get(setKey) ?? new Set<string>();
+      owned.add(item.cardId);
+      ownedBySet.set(setKey, owned);
+    });
+
+    const load = async () => {
+      const missing: ExploreCard[] = [];
+      const targetSets = Array.from(ownedBySet.keys())
+        .map((setKey) => pokemonSets.find((set) => normalizeSetName(set.name) === setKey))
+        .filter((set): set is PokemonSet => Boolean(set));
+
+      const cardsBySet = await Promise.all(targetSets.map((set) => loadSetCards(set.id)));
+      targetSets.forEach((set, index) => {
+        const setKey = normalizeSetName(set.name);
+        const owned = ownedBySet.get(setKey) ?? new Set<string>();
+        cardsBySet[index].forEach((card) => {
+          if (!owned.has(card.id)) missing.push(card);
+        });
+      });
+
+      return missing;
+    };
+
+    void load()
+      .then((cards) => {
+        if (!active) return;
+        setAllMissingCards(cards);
+      })
+      .catch(() => {
+        if (!active) return;
+        setAllMissingCards([]);
+        onToast({ type: "error", message: "Nao foi possivel carregar as cartas faltantes de todas as colecoes." });
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [allItems, filters.missingOnly, filters.set, onToast, pokemonSets, tradeOnly]);
+
   const sets = useMemo(() => Array.from(new Set(allItems.map((item) => item.set))).sort(), [allItems]);
   const collectionSummary = useMemo(() => buildCollectionSummary(allItems, pokemonSets), [allItems, pokemonSets]);
   const selectedSummary = useMemo(
@@ -160,7 +210,13 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
     }, []);
   }, [filters.set, missingById, ownedByCardId, setCards]);
   const visibleItems = filters.missingOnly ? [] : filters.set ? [] : items;
-  const visibleMissingCards = filters.set ? missingCards : [];
+  const visibleMissingCards = filters.set
+    ? missingCards
+    : filters.missingOnly
+      ? allMissingCards
+          .filter((card) => (filters.favorite ? wishlistIds.has(card.id) : true))
+          .sort((a, b) => normalizeSetName(a.set).localeCompare(normalizeSetName(b.set)) || cardNumberValue(a.number) - cardNumberValue(b.number) || a.name.localeCompare(b.name))
+      : [];
   const hasSetOrderedCards = Boolean(filters.set) && setOrderedEntries.length > 0 && !tradeOnly;
   const totalUnique = allItems.length;
   const totalCopies = useMemo(() => allItems.reduce((sum, item) => sum + item.quantity, 0), [allItems]);

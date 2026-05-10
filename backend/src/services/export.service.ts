@@ -105,8 +105,7 @@ async function buildMissingWorkbook(userId: number, selectedSet?: string): Promi
     { header: "Numero", key: "number", width: 14 },
     { header: "nomeCarta", key: "name", width: 32 },
     { header: "Colecao", key: "set", width: 28 },
-    { header: "Raridade", key: "rarity", width: 18 },
-    { header: "PrecoSugerido", key: "marketPrice", width: 18 }
+    { header: "Raridade", key: "rarity", width: 18 }
   ];
 
   sheet.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
@@ -156,12 +155,10 @@ async function buildMissingWorkbook(userId: number, selectedSet?: string): Promi
         number: card.number ?? formatExportCardNumber(null, card.id),
         name: card.name,
         set: card.set,
-        rarity: card.rarity ?? "Nao informada",
-        marketPrice: card.marketPrice ?? 0
+        rarity: card.rarity ?? "Nao informada"
       });
     });
 
-  sheet.getColumn("marketPrice").numFmt = '"R$" #,##0.00';
   sheet.columns.forEach((column) => {
     let max = String(column.header ?? "").length;
     column.eachCell?.({ includeEmpty: true }, (cell) => {
