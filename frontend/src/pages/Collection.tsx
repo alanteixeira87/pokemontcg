@@ -140,17 +140,18 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
         .map((setKey) => pokemonSets.find((set) => normalizeSetName(set.name) === setKey))
         .filter((set): set is PokemonSet => Boolean(set));
 
-      const cardsBySet = await Promise.allSettled(targetSets.map((set) => loadSetCards(set.id)));
-      cardsBySet.forEach((result, index) => {
-        if (result.status !== "fulfilled") return;
-        const set = targetSets[index];
-        if (!set) return;
+      for (const set of targetSets) {
         const setKey = normalizeSetName(set.name);
         const owned = ownedBySet.get(setKey) ?? new Set<string>();
-        result.value.forEach((card) => {
-          if (!owned.has(card.id)) missing.push(card);
-        });
-      });
+        try {
+          const setCardsResult = await loadSetCards(set.id);
+          setCardsResult.forEach((card) => {
+            if (!owned.has(card.id)) missing.push(card);
+          });
+        } catch {
+          // Continue loading remaining sets even if one collection fails.
+        }
+      }
 
       return missing;
     };
@@ -220,7 +221,7 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
           .filter((card) => (filters.favorite ? wishlistIds.has(card.id) : true))
           .sort((a, b) => normalizeSetName(a.set).localeCompare(normalizeSetName(b.set)) || cardNumberValue(a.number) - cardNumberValue(b.number) || a.name.localeCompare(b.name))
       : [];
-  const hasSetOrderedCards = Boolean(filters.set) && setOrderedEntries.length > 0 && !tradeOnly;
+  const hasSetOrderedCards = Boolean(filters.set) && setOrderedEntries.length > 0 && !tradeOnly && !filters.missingOnly;
   const totalUnique = allItems.length;
   const totalCopies = useMemo(() => allItems.reduce((sum, item) => sum + item.quantity, 0), [allItems]);
   const completedSets = collectionSummary.filter((set) => set.percent >= 100).length;
@@ -641,9 +642,12 @@ async function loadSetCards(setId: string): Promise<ExploreCard[]> {
   const totalPages = Math.max(1, Math.ceil(firstPage.totalCount / pageSize));
   if (totalPages === 1) return firstPage.cards;
 
-  const remainingPages = Array.from({ length: totalPages - 1 }, (_, index) => index + 2);
-  const results = await Promise.all(remainingPages.map((page) => apiService.cards({ page, pageSize, set: setId, sort: "numberAsc" })));
-  return [...firstPage.cards, ...results.flatMap((result) => result.cards)];
+  const cards = [...firstPage.cards];
+  for (let page = 2; page <= totalPages; page += 1) {
+    const result = await apiService.cards({ page, pageSize, set: setId, sort: "numberAsc" });
+    cards.push(...result.cards);
+  }
+  return cards;
 }
 
 function MissingCard({
