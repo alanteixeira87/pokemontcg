@@ -140,11 +140,14 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
         .map((setKey) => pokemonSets.find((set) => normalizeSetName(set.name) === setKey))
         .filter((set): set is PokemonSet => Boolean(set));
 
-      const cardsBySet = await Promise.all(targetSets.map((set) => loadSetCards(set.id)));
-      targetSets.forEach((set, index) => {
+      const cardsBySet = await Promise.allSettled(targetSets.map((set) => loadSetCards(set.id)));
+      cardsBySet.forEach((result, index) => {
+        if (result.status !== "fulfilled") return;
+        const set = targetSets[index];
+        if (!set) return;
         const setKey = normalizeSetName(set.name);
         const owned = ownedBySet.get(setKey) ?? new Set<string>();
-        cardsBySet[index].forEach((card) => {
+        result.value.forEach((card) => {
           if (!owned.has(card.id)) missing.push(card);
         });
       });
