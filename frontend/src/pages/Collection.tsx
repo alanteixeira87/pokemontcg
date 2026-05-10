@@ -1,4 +1,4 @@
-import { AlertTriangle, BarChart3, ChevronDown, ChevronUp, Download, Heart, Layers3, Plus, RefreshCw, Trash2, Trophy, Upload } from "lucide-react";
+﻿import { AlertTriangle, BarChart3, ChevronDown, ChevronUp, Download, Heart, Layers3, Plus, RefreshCw, Trash2, Trophy, Upload } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CardTile } from "../components/CardTile";
 import { EmptyState } from "../components/EmptyState";
@@ -8,7 +8,7 @@ import { Skeleton } from "../components/ui/Skeleton";
 import { Modal } from "../components/ui/Modal";
 import { apiService } from "../services/api";
 import { useAppStore } from "../store/useAppStore";
-import type { CollectionItem, ExploreCard, PokemonSet } from "../types";
+import type { CollectionItem, ExploreCard, PokemonSet, SortOption } from "../types";
 import type { ToastState } from "../components/ui/Toast";
 import { cardDisplayName, cardDisplayNumber, realCollectionTotal } from "../lib/cardDisplay";
 import { currency } from "../lib/utils";
@@ -27,8 +27,11 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
   const [wishlistIds, setWishlistIds] = useState<Set<string>>(new Set());
   const [activeMissingIds, setActiveMissingIds] = useState<Set<string>>(new Set());
   const [showSelectedCollectionOnly, setShowSelectedCollectionOnly] = useState(false);
+  const [loadingMissingCards, setLoadingMissingCards] = useState(false);
   const { filters, setFilters } = useAppStore();
+  const [draftFilters, setDraftFilters] = useState(filters);
   const restoreScrollRef = useRef<number | null>(null);
+  const setCardsCacheRef = useRef<Map<string, ExploreCard[]>>(new Map());
 
   const loadMeta = useCallback(async () => {
     if (tradeOnly) return;
@@ -38,14 +41,14 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
       setAllItems(collectionResult.value);
     } else {
       setAllItems([]);
-      onToast({ type: "error", message: "Não foi possível carregar o progresso das coleções." });
+      onToast({ type: "error", message: "NÃ£o foi possÃ­vel carregar o progresso das coleÃ§Ãµes." });
     }
 
     if (setsResult.status === "fulfilled") {
       setPokemonSets(setsResult.value);
     } else {
       setPokemonSets([]);
-      onToast({ type: "error", message: "Não foi possível carregar a lista oficial de coleções." });
+      onToast({ type: "error", message: "NÃ£o foi possÃ­vel carregar a lista oficial de coleÃ§Ãµes." });
     }
   }, [onToast, tradeOnly]);
 
@@ -62,11 +65,19 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
           });
       setItems(data);
     } catch {
-      onToast({ type: "error", message: "Não foi possível carregar sua coleção." });
+      onToast({ type: "error", message: "NÃ£o foi possÃ­vel carregar sua coleÃ§Ã£o." });
     } finally {
       setLoading(false);
     }
   }, [filters.favorite, filters.forTrade, filters.set, filters.sort, onToast, tradeOnly]);
+
+  const loadSetCardsCached = useCallback(async (setId: string): Promise<ExploreCard[]> => {
+    const cached = setCardsCacheRef.current.get(setId);
+    if (cached) return cached;
+    const cards = await loadSetCards(setId);
+    setCardsCacheRef.current.set(setId, cards);
+    return cards;
+  }, []);
 
   useEffect(() => {
     void load();
@@ -75,6 +86,10 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
   useEffect(() => {
     void loadMeta();
   }, [loadMeta]);
+
+  useEffect(() => {
+    setDraftFilters(filters);
+  }, [filters]);
 
   useEffect(() => {
     let active = true;
@@ -95,34 +110,41 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
     let active = true;
     if (tradeOnly || !filters.set || pokemonSets.length === 0) {
       setSetCards([]);
+      setLoadingMissingCards(false);
       return;
     }
 
     const selectedSet = pokemonSets.find((set) => normalizeSetName(set.name) === normalizeSetName(filters.set));
     if (!selectedSet) {
       setSetCards([]);
+      setLoadingMissingCards(false);
       return;
     }
 
-    void loadSetCards(selectedSet.id).then((cards) => {
-      if (active) setSetCards(cards);
-    })
+    setLoadingMissingCards(true);
+    void loadSetCardsCached(selectedSet.id)
+      .then((cards) => {
+        if (!active) return;
+        setSetCards(cards);
+        setLoadingMissingCards(false);
+      })
       .catch(() => {
-        if (active) {
-          setSetCards([]);
-          onToast({ type: "error", message: "Não foi possível carregar as cartas faltantes desta coleção." });
-        }
+        if (!active) return;
+        setSetCards([]);
+        setLoadingMissingCards(false);
+        onToast({ type: "error", message: "Não foi possível carregar as cartas faltantes desta coleção." });
       });
 
     return () => {
       active = false;
     };
-  }, [filters.set, onToast, pokemonSets, tradeOnly]);
+  }, [filters.set, loadSetCardsCached, onToast, pokemonSets, tradeOnly]);
 
   useEffect(() => {
     let active = true;
     if (tradeOnly || filters.set || !filters.missingOnly || pokemonSets.length === 0) {
       setAllMissingCards([]);
+      setLoadingMissingCards(false);
       return;
     }
 
@@ -140,37 +162,43 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
         .map((setKey) => pokemonSets.find((set) => normalizeSetName(set.name) === setKey))
         .filter((set): set is PokemonSet => Boolean(set));
 
-      for (const set of targetSets) {
-        const setKey = normalizeSetName(set.name);
-        const owned = ownedBySet.get(setKey) ?? new Set<string>();
-        try {
-          const setCardsResult = await loadSetCards(set.id);
-          setCardsResult.forEach((card) => {
+      const concurrency = 3;
+      for (let index = 0; index < targetSets.length; index += concurrency) {
+        const chunk = targetSets.slice(index, index + concurrency);
+        const chunkResults = await Promise.allSettled(chunk.map((set) => loadSetCardsCached(set.id)));
+        chunkResults.forEach((result, chunkIndex) => {
+          if (result.status !== "fulfilled") return;
+          const set = chunk[chunkIndex];
+          if (!set) return;
+          const setKey = normalizeSetName(set.name);
+          const owned = ownedBySet.get(setKey) ?? new Set<string>();
+          result.value.forEach((card) => {
             if (!owned.has(card.id)) missing.push(card);
           });
-        } catch {
-          // Continue loading remaining sets even if one collection fails.
-        }
+        });
       }
 
       return missing;
     };
 
+    setLoadingMissingCards(true);
     void load()
       .then((cards) => {
         if (!active) return;
         setAllMissingCards(cards);
+        setLoadingMissingCards(false);
       })
       .catch(() => {
         if (!active) return;
         setAllMissingCards([]);
+        setLoadingMissingCards(false);
         onToast({ type: "error", message: "Nao foi possivel carregar as cartas faltantes de todas as colecoes." });
       });
 
     return () => {
       active = false;
     };
-  }, [allItems, filters.missingOnly, filters.set, onToast, pokemonSets, tradeOnly]);
+  }, [allItems, filters.missingOnly, filters.set, loadSetCardsCached, onToast, pokemonSets, tradeOnly]);
 
   const sets = useMemo(() => Array.from(new Set(allItems.map((item) => item.set))).sort(), [allItems]);
   const collectionSummary = useMemo(() => buildCollectionSummary(allItems, pokemonSets), [allItems, pokemonSets]);
@@ -222,9 +250,19 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
           .sort((a, b) => normalizeSetName(a.set).localeCompare(normalizeSetName(b.set)) || cardNumberValue(a.number) - cardNumberValue(b.number) || a.name.localeCompare(b.name))
       : [];
   const hasSetOrderedCards = Boolean(filters.set) && setOrderedEntries.length > 0 && !tradeOnly && !filters.missingOnly;
+  const hasPendingFilterChanges = useMemo(
+    () =>
+      draftFilters.set !== filters.set ||
+      draftFilters.favorite !== filters.favorite ||
+      draftFilters.forTrade !== filters.forTrade ||
+      draftFilters.missingOnly !== filters.missingOnly ||
+      draftFilters.sort !== filters.sort,
+    [draftFilters.favorite, draftFilters.forTrade, draftFilters.missingOnly, draftFilters.set, draftFilters.sort, filters.favorite, filters.forTrade, filters.missingOnly, filters.set, filters.sort]
+  );
   const totalUnique = allItems.length;
   const totalCopies = useMemo(() => allItems.reduce((sum, item) => sum + item.quantity, 0), [allItems]);
   const completedSets = collectionSummary.filter((set) => set.percent >= 100).length;
+  const isGridLoading = loading || (filters.missingOnly && loadingMissingCards);
 
   useEffect(() => {
     if (showSelectedCollectionOnly && !selectedSummary) {
@@ -256,7 +294,17 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
     restoreScrollRef.current = window.scrollY;
   }
 
+  function updateDraftFilters(next: Partial<{ set: string; favorite: boolean; forTrade: boolean; missingOnly: boolean; sort: SortOption }>) {
+    setDraftFilters((current) => ({ ...current, ...next }));
+  }
+
+  function applySelectedFilters() {
+    setFilters(draftFilters);
+    setShowSelectedCollectionOnly(Boolean(draftFilters.set));
+  }
+
   function applySetFilter(setName: string) {
+    setDraftFilters((current) => ({ ...current, set: setName }));
     setFilters({ set: setName });
     setShowSelectedCollectionOnly(Boolean(setName));
   }
@@ -281,10 +329,10 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
     try {
       await apiService.removeCollection(id);
       setAllItems((current) => current.filter((item) => item.id !== id));
-      onToast({ type: "success", message: "Carta removida da coleção." });
+      onToast({ type: "success", message: "Carta removida da coleÃ§Ã£o." });
     } catch {
       setItems(previous);
-      onToast({ type: "error", message: "Não foi possível remover a carta." });
+      onToast({ type: "error", message: "NÃ£o foi possÃ­vel remover a carta." });
     }
   }
 
@@ -297,9 +345,9 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
       if (!filters.missingOnly && matchesCollectionFilters(created, filters.set, filters.favorite, filters.forTrade)) {
         setItems((current) => upsertCollectionItem(current, created, filters.sort));
       }
-      onToast({ type: "success", message: "Carta adicionada à coleção." });
+      onToast({ type: "success", message: "Carta adicionada Ã  coleÃ§Ã£o." });
     } catch {
-      onToast({ type: "error", message: "Não foi possível adicionar esta carta." });
+      onToast({ type: "error", message: "NÃ£o foi possÃ­vel adicionar esta carta." });
     }
   }
 
@@ -326,7 +374,7 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
       else await apiService.addWishlist(card);
       onToast({ type: "success", message: wished ? "Carta removida da lista de desejos." : "Carta adicionada a lista de desejos." });
     } catch {
-      onToast({ type: "error", message: "Não foi possível atualizar a lista de desejos." });
+      onToast({ type: "error", message: "NÃ£o foi possÃ­vel atualizar a lista de desejos." });
     }
   }
 
@@ -343,14 +391,14 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
       await loadMeta();
       const firstIssue = result.notFound[0];
       const notFoundMessage = result.notFound.length
-         ? ` ${result.notFound.length} não encontradas. ${firstIssue?.reason ?? ""}`
+         ? ` ${result.notFound.length} nÃ£o encontradas. ${firstIssue?.reason ?? ""}`
         : "";
       onToast({
         type: result.imported > 0 ? "success" : "error",
         message: `${result.imported} cartas importadas. ${result.skipped} linhas ignoradas.${notFoundMessage}`
       });
     } catch {
-      onToast({ type: "error", message: "Não foi possível importar a planilha. Confira as colunas e tente novamente." });
+      onToast({ type: "error", message: "NÃ£o foi possÃ­vel importar a planilha. Confira as colunas e tente novamente." });
     } finally {
       setImporting(false);
     }
@@ -359,7 +407,7 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
   async function clearCollection() {
     if (!confirmClear) {
       setConfirmClear(true);
-      onToast({ type: "error", message: "Clique novamente em limpar coleção para confirmar." });
+      onToast({ type: "error", message: "Clique novamente em limpar coleÃ§Ã£o para confirmar." });
       window.setTimeout(() => setConfirmClear(false), 5000);
       return;
     }
@@ -371,9 +419,9 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
       setConfirmClear(false);
       setShowSelectedCollectionOnly(false);
       setFilters({ set: "", favorite: false, forTrade: false, missingOnly: false });
-      onToast({ type: "success", message: `${result.deleted} cartas removidas da sua coleção.` });
+      onToast({ type: "success", message: `${result.deleted} cartas removidas da sua coleÃ§Ã£o.` });
     } catch {
-      onToast({ type: "error", message: "Não foi possível limpar a coleção." });
+      onToast({ type: "error", message: "NÃ£o foi possÃ­vel limpar a coleÃ§Ã£o." });
     }
   }
 
@@ -383,9 +431,9 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
       const result = await apiService.refreshCollectionPrices();
       await load();
       await loadMeta();
-      onToast({ type: "success", message: `${result.updated} preços atualizados. ${result.skipped} mantidos.` });
+      onToast({ type: "success", message: `${result.updated} preÃ§os atualizados. ${result.skipped} mantidos.` });
     } catch {
-      onToast({ type: "error", message: "Não foi possível atualizar os preços agora." });
+      onToast({ type: "error", message: "NÃ£o foi possÃ­vel atualizar os preÃ§os agora." });
     } finally {
       setRepricing(false);
     }
@@ -398,9 +446,9 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
           <div className="border-b border-slate-100 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
               <div>
-                <p className="text-xs font-medium uppercase tracking-[0.16em] text-indigo-600 dark:text-indigo-300">Pokédex Pokémon TCG</p>
-                <h2 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950 dark:text-white">Pokédex</h2>
-                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Acompanhe o progresso por coleção, quantidade, favoritos e cartas para troca.</p>
+                <p className="text-xs font-medium uppercase tracking-[0.16em] text-indigo-600 dark:text-indigo-300">PokÃ©dex PokÃ©mon TCG</p>
+                <h2 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950 dark:text-white">PokÃ©dex</h2>
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Acompanhe o progresso por coleÃ§Ã£o, quantidade, favoritos e cartas para troca.</p>
               </div>
               <div className="grid grid-cols-3 gap-2 sm:min-w-[420px]">
                 <MetricCard icon={Layers3} label="Unicas" value={totalUnique} />
@@ -413,12 +461,12 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
           <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <h3 className="text-lg font-semibold text-slate-950 dark:text-white">Filtros e organizacao</h3>
-              <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Controle quantidade, preço, favoritos e cartas para troca.</p>
+              <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Controle quantidade, preÃ§o, favoritos e cartas para troca.</p>
             </div>
             <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300">{items.length} cartas no filtro</span>
           </div>
-          <div className="grid gap-3 md:grid-cols-5">
-          <Select value={filters.set} onChange={(event) => applySetFilter(event.target.value)}>
+          <div className="grid gap-3 md:grid-cols-6">
+          <Select value={draftFilters.set} onChange={(event) => updateDraftFilters({ set: event.target.value })}>
             <option value="">Todos os sets</option>
             {sets.map((set) => (
               <option key={set} value={set}>
@@ -426,26 +474,30 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
               </option>
             ))}
           </Select>
-          <Select value={filters.favorite ? "true" : "false"} onChange={(event) => setFilters({ favorite: event.target.value === "true" })}>
+          <Select value={draftFilters.favorite ? "true" : "false"} onChange={(event) => updateDraftFilters({ favorite: event.target.value === "true" })}>
             <option value="false">Todos os itens</option>
             <option value="true">Apenas favoritas</option>
           </Select>
-          <Select value={filters.forTrade ? "true" : "false"} onChange={(event) => setFilters({ forTrade: event.target.value === "true" })}>
+          <Select value={draftFilters.forTrade ? "true" : "false"} onChange={(event) => updateDraftFilters({ forTrade: event.target.value === "true" })}>
             <option value="false">Todos os status</option>
             <option value="true">Apenas troca</option>
           </Select>
-          <Select value={filters.missingOnly ? "true" : "false"} onChange={(event) => setFilters({ missingOnly: event.target.value === "true" })}>
-            <option value="false">Possuídas e faltantes</option>
+          <Select value={draftFilters.missingOnly ? "true" : "false"} onChange={(event) => updateDraftFilters({ missingOnly: event.target.value === "true" })}>
+            <option value="false">PossuÃ­das e faltantes</option>
             <option value="true">Apenas cartas faltantes</option>
           </Select>
-          <Select value={filters.sort} onChange={(event) => setFilters({ sort: event.target.value as typeof filters.sort })}>
+          <Select value={draftFilters.sort} onChange={(event) => updateDraftFilters({ sort: event.target.value as SortOption })}>
             <option value="numberAsc">Numero menor-maior</option>
             <option value="numberDesc">Numero maior-menor</option>
             <option value="name">Nome A-Z</option>
             <option value="price">Preco</option>
             <option value="quantity">Quantidade</option>
           </Select>
+          <Button variant={hasPendingFilterChanges ? "primary" : "secondary"} disabled={!hasPendingFilterChanges} onClick={applySelectedFilters}>
+            Aplicar filtros
+          </Button>
           </div>
+          {loadingMissingCards && <p className="mt-2 text-xs font-medium text-slate-500 dark:text-slate-400">Carregando cartas faltantes...</p>}
           </div>
         </section>
       )}
@@ -454,11 +506,11 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
         <section className="space-y-3">
           <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h3 className="text-xl font-semibold text-slate-950 dark:text-white">Progresso por coleção</h3>
-              <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Cada card mostra quantas cartas únicas você já tem naquele set.</p>
+              <h3 className="text-xl font-semibold text-slate-950 dark:text-white">Progresso por coleÃ§Ã£o</h3>
+              <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Cada card mostra quantas cartas Ãºnicas vocÃª jÃ¡ tem naquele set.</p>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">{collectionSummary.length} coleções iniciadas</span>
+              <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">{collectionSummary.length} coleÃ§Ãµes iniciadas</span>
               <Button
                 variant="secondary"
                 size="sm"
@@ -466,7 +518,7 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
                 onClick={() => setShowSelectedCollectionOnly((current) => !current)}
               >
                 {showSelectedCollectionOnly ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
-                {showSelectedCollectionOnly ? "Mostrar todas" : "Recolher coleções"}
+                {showSelectedCollectionOnly ? "Mostrar todas" : "Recolher coleÃ§Ãµes"}
               </Button>
             </div>
           </div>
@@ -484,7 +536,7 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
                       {set.code}
                     </span>
                     <h4 className="mt-3 truncate text-base font-semibold text-slate-950 dark:text-white">{set.name}</h4>
-                    <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">{set.series || "Série Pokémon TCG"}</p>
+                    <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">{set.series || "SÃ©rie PokÃ©mon TCG"}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-2xl font-semibold text-indigo-600 dark:text-indigo-300">{set.percent}%</p>
@@ -527,13 +579,13 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
         {!tradeOnly && (
           <Button variant="secondary" disabled={repricing || allItems.length === 0} onClick={refreshPrices}>
             <RefreshCw size={16} className={repricing ? "animate-spin" : ""} />
-            {repricing ? "Atualizando..." : "Atualizar preços"}
+            {repricing ? "Atualizando..." : "Atualizar preÃ§os"}
           </Button>
         )}
         {!tradeOnly && (
           <Button variant={confirmClear ? "danger" : "secondary"} disabled={allItems.length === 0} onClick={clearCollection}>
             {confirmClear ? <AlertTriangle size={16} /> : <Trash2 size={16} />}
-            {confirmClear ? "Confirmar limpeza" : "Limpar coleção"}
+            {confirmClear ? "Confirmar limpeza" : "Limpar coleÃ§Ã£o"}
           </Button>
         )}
         <Button variant="secondary" onClick={() => window.open(apiService.exportUrl("full"), "_blank")}>
@@ -554,7 +606,7 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
         )}
       </div>
 
-      {loading ? (
+      {isGridLoading ? (
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
           {Array.from({ length: 10 }).map((_, index) => (
             <Skeleton key={index} className="h-96" />
@@ -607,13 +659,13 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
         </div>
       ) : (
         <EmptyState
-          title={tradeOnly ? "Nenhuma carta para troca" : "Coleção vazia"}
-          description={tradeOnly ? "Marque cartas como troca para visualizá-las aqui." : "Explore cartas e adicione os primeiros itens à sua coleção local."}
+          title={tradeOnly ? "Nenhuma carta para troca" : "ColeÃ§Ã£o vazia"}
+          description={tradeOnly ? "Marque cartas como troca para visualizÃ¡-las aqui." : "Explore cartas e adicione os primeiros itens Ã  sua coleÃ§Ã£o local."}
         />
       )}
       <Modal title="Remover carta" open={Boolean(pendingRemove)} onClose={() => setPendingRemove(null)}>
         <div className="space-y-4">
-          <p className="text-sm text-slate-600 dark:text-slate-300">Deseja realmente remover esta carta da sua coleção?</p>
+          <p className="text-sm text-slate-600 dark:text-slate-300">Deseja realmente remover esta carta da sua coleÃ§Ã£o?</p>
           {pendingRemove && <p className="rounded-lg bg-slate-50 p-3 text-sm font-semibold text-slate-950 dark:bg-slate-950/50 dark:text-white">{pendingRemove.name}</p>}
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setPendingRemove(null)}>
@@ -637,17 +689,15 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
 }
 
 async function loadSetCards(setId: string): Promise<ExploreCard[]> {
-  const pageSize = 50;
+  const pageSize = 500;
   const firstPage = await apiService.cards({ page: 1, pageSize, set: setId, sort: "numberAsc" });
   const totalPages = Math.max(1, Math.ceil(firstPage.totalCount / pageSize));
   if (totalPages === 1) return firstPage.cards;
 
-  const cards = [...firstPage.cards];
-  for (let page = 2; page <= totalPages; page += 1) {
-    const result = await apiService.cards({ page, pageSize, set: setId, sort: "numberAsc" });
-    cards.push(...result.cards);
-  }
-  return cards;
+  const remainingPages = Array.from({ length: totalPages - 1 }, (_, index) => index + 2);
+  const results = await Promise.allSettled(remainingPages.map((page) => apiService.cards({ page, pageSize, set: setId, sort: "numberAsc" })));
+  const loadedCards = results.flatMap((result) => (result.status === "fulfilled" ? result.value.cards : []));
+  return [...firstPage.cards, ...loadedCards];
 }
 
 function MissingCard({
@@ -750,7 +800,7 @@ function buildCollectionSummary(items: CollectionItem[], pokemonSets: PokemonSet
         total,
         totalLabel: total ? String(total) : `${owned}+`,
         percent,
-        missingLabel: total ? `${Math.max(total - owned, 0)} faltantes` : "Total não informado"
+        missingLabel: total ? `${Math.max(total - owned, 0)} faltantes` : "Total nÃ£o informado"
       };
     })
     .sort((a, b) => b.percent - a.percent || b.owned - a.owned || a.name.localeCompare(b.name));
@@ -800,6 +850,7 @@ function MetricCard({ icon: Icon, label, value }: { icon: typeof Layers3; label:
     </div>
   );
 }
+
 
 
 
