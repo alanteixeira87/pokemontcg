@@ -1,4 +1,4 @@
-﻿import { AlertTriangle, BarChart3, ChevronDown, ChevronUp, Download, Heart, Layers3, Plus, RefreshCw, Trash2, Trophy, Upload } from "lucide-react";
+﻿import { AlertTriangle, BarChart3, ChevronDown, ChevronUp, Download, Heart, Layers3, Plus, RefreshCw, SlidersHorizontal, Trash2, Trophy, Upload } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CardTile } from "../components/CardTile";
 import { EmptyState } from "../components/EmptyState";
@@ -303,6 +303,13 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
     setShowSelectedCollectionOnly(Boolean(draftFilters.set));
   }
 
+  function clearSelectedFilters() {
+    const reset = { set: "", favorite: false, forTrade: false, missingOnly: false, sort: "numberAsc" as SortOption };
+    setDraftFilters(reset);
+    setFilters(reset);
+    setShowSelectedCollectionOnly(false);
+  }
+
   function applySetFilter(setName: string) {
     setDraftFilters((current) => ({ ...current, set: setName }));
     setFilters({ set: setName });
@@ -465,7 +472,7 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
             </div>
             <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300">{items.length} cartas no filtro</span>
           </div>
-          <div className="grid gap-3 md:grid-cols-6">
+          <div className="grid gap-3 md:grid-cols-5">
           <Select value={draftFilters.set} onChange={(event) => updateDraftFilters({ set: event.target.value })}>
             <option value="">Todos os sets</option>
             {sets.map((set) => (
@@ -493,9 +500,16 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
             <option value="price">Preco</option>
             <option value="quantity">Quantidade</option>
           </Select>
-          <Button variant={hasPendingFilterChanges ? "primary" : "secondary"} disabled={!hasPendingFilterChanges} onClick={applySelectedFilters}>
-            Aplicar filtros
-          </Button>
+          </div>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <Button className="w-full sm:w-auto" variant="primary" onClick={applySelectedFilters}>
+              <SlidersHorizontal size={16} />
+              Aplicar filtros selecionados
+            </Button>
+            <Button className="w-full sm:w-auto" variant="secondary" onClick={clearSelectedFilters}>
+              Limpar filtros
+            </Button>
+            {hasPendingFilterChanges && <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-300">Filtros pendentes de aplicacao</span>}
           </div>
           {loadingMissingCards && <p className="mt-2 text-xs font-medium text-slate-500 dark:text-slate-400">Carregando cartas faltantes...</p>}
           </div>
@@ -850,6 +864,7 @@ function MetricCard({ icon: Icon, label, value }: { icon: typeof Layers3; label:
     </div>
   );
 }
+
 
 
 
