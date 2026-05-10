@@ -11,6 +11,7 @@ import { useAppStore } from "../store/useAppStore";
 import type { CollectionItem, ExploreCard, PokemonSet } from "../types";
 import type { ToastState } from "../components/ui/Toast";
 import { cardDisplayName, cardDisplayNumber, realCollectionTotal } from "../lib/cardDisplay";
+import { currency } from "../lib/utils";
 
 export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean; onToast: (toast: ToastState) => void }) {
   const [items, setItems] = useState<CollectionItem[]>([]);
@@ -23,6 +24,7 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
   const [pendingRemove, setPendingRemove] = useState<CollectionItem | null>(null);
   const [setCards, setSetCards] = useState<ExploreCard[]>([]);
   const [wishlistIds, setWishlistIds] = useState<Set<string>>(new Set());
+  const [activeMissingIds, setActiveMissingIds] = useState<Set<string>>(new Set());
   const [showSelectedCollectionOnly, setShowSelectedCollectionOnly] = useState(false);
   const { filters, setFilters } = useAppStore();
   const restoreScrollRef = useRef<number | null>(null);
@@ -134,8 +136,32 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
       .filter((card) => (filters.favorite ? wishlistIds.has(card.id) : true))
       .filter(() => (filters.forTrade ? false : true));
   }, [allItems, filters.favorite, filters.forTrade, filters.set, setCards, wishlistIds]);
-  const visibleItems = filters.missingOnly ? [] : items;
+  const ownedByCardId = useMemo(() => {
+    const map = new Map<string, CollectionItem>();
+    items.forEach((item) => map.set(item.cardId, item));
+    return map;
+  }, [items]);
+  const missingById = useMemo(() => {
+    const map = new Map<string, ExploreCard>();
+    missingCards.forEach((card) => map.set(card.id, card));
+    return map;
+  }, [missingCards]);
+  const setOrderedEntries = useMemo<Array<{ type: "owned"; item: CollectionItem } | { type: "missing"; card: ExploreCard }>>(() => {
+    if (!filters.set) return [];
+    return setCards.reduce<Array<{ type: "owned"; item: CollectionItem } | { type: "missing"; card: ExploreCard }>>((acc, card) => {
+      const owned = ownedByCardId.get(card.id);
+      if (owned) {
+        acc.push({ type: "owned" as const, item: owned });
+        return acc;
+      }
+      const missing = missingById.get(card.id);
+      if (missing) acc.push({ type: "missing" as const, card: missing });
+      return acc;
+    }, []);
+  }, [filters.set, missingById, ownedByCardId, setCards]);
+  const visibleItems = filters.missingOnly ? [] : filters.set ? [] : items;
   const visibleMissingCards = filters.set ? missingCards : [];
+  const hasSetOrderedCards = Boolean(filters.set) && setOrderedEntries.length > 0 && !tradeOnly;
   const totalUnique = allItems.length;
   const totalCopies = useMemo(() => allItems.reduce((sum, item) => sum + item.quantity, 0), [allItems]);
   const completedSets = collectionSummary.filter((set) => set.percent >= 100).length;
@@ -149,8 +175,13 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
   useEffect(() => {
     if (!filters.set) {
       setShowSelectedCollectionOnly(false);
+      setActiveMissingIds(new Set());
     }
   }, [filters.set]);
+
+  useEffect(() => {
+    setActiveMissingIds(new Set());
+  }, [filters.set, setCards.length]);
 
   useEffect(() => {
     if (restoreScrollRef.current === null) return;
@@ -198,6 +229,7 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
   }
 
   async function addMissing(card: ExploreCard) {
+    setActiveMissingIds((current) => new Set(current).add(card.id));
     try {
       preserveScrollPosition();
       const created = await apiService.addToCollection(card, 1);
@@ -209,6 +241,15 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
     } catch {
       onToast({ type: "error", message: "Não foi possível adicionar esta carta." });
     }
+  }
+
+  function markMissingAsActive(cardId: string) {
+    setActiveMissingIds((current) => {
+      if (current.has(cardId)) return current;
+      const next = new Set(current);
+      next.add(cardId);
+      return next;
+    });
   }
 
   async function toggleMissingWishlist(card: ExploreCard) {
@@ -445,6 +486,12 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
             Por set
           </Button>
         )}
+        {!tradeOnly && (
+          <Button variant="secondary" onClick={() => window.open(apiService.exportUrl("missing", filters.set || undefined), "_blank")}>
+            <Download size={16} />
+            Faltantes
+          </Button>
+        )}
       </div>
 
       {loading ? (
@@ -453,15 +500,50 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
             <Skeleton key={index} className="h-96" />
           ))}
         </div>
-      ) : visibleItems.length || visibleMissingCards.length ? (
+      ) : visibleItems.length || visibleMissingCards.length || hasSetOrderedCards ? (
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-          {visibleItems.map((item) => (
-            <CardTile key={item.id} mode="collection" card={item} onUpdate={update} onRemove={() => setPendingRemove(item)} onExport={exportCard} />
-          ))}
-          {!tradeOnly &&
-            visibleMissingCards.map((card) => (
-              <MissingCard key={`missing-${card.id}`} card={card} wished={wishlistIds.has(card.id)} onAdd={addMissing} onToggleWishlist={toggleMissingWishlist} />
-            ))}
+          {hasSetOrderedCards
+            ? setOrderedEntries.map((entry) =>
+                entry.type === "owned" ? (
+                  <CardTile
+                    key={entry.item.id}
+                    mode="collection"
+                    card={entry.item}
+                    onUpdate={update}
+                    onRemove={() => setPendingRemove(entry.item)}
+                    onExport={exportCard}
+                  />
+                ) : (
+                  <MissingCard
+                    key={`missing-${entry.card.id}`}
+                    card={entry.card}
+                    wished={wishlistIds.has(entry.card.id)}
+                    active={activeMissingIds.has(entry.card.id)}
+                    onHoverActivate={markMissingAsActive}
+                    onAdd={addMissing}
+                    onToggleWishlist={toggleMissingWishlist}
+                  />
+                )
+              )
+            : (
+                <>
+                  {visibleItems.map((item) => (
+                    <CardTile key={item.id} mode="collection" card={item} onUpdate={update} onRemove={() => setPendingRemove(item)} onExport={exportCard} />
+                  ))}
+                  {!tradeOnly &&
+                    visibleMissingCards.map((card) => (
+                      <MissingCard
+                        key={`missing-${card.id}`}
+                        card={card}
+                        wished={wishlistIds.has(card.id)}
+                        active={activeMissingIds.has(card.id)}
+                        onHoverActivate={markMissingAsActive}
+                        onAdd={addMissing}
+                        onToggleWishlist={toggleMissingWishlist}
+                      />
+                    ))}
+                </>
+              )}
         </div>
       ) : (
         <EmptyState
@@ -505,9 +587,28 @@ async function loadSetCards(setId: string): Promise<ExploreCard[]> {
   return [...firstPage.cards, ...results.flatMap((result) => result.cards)];
 }
 
-function MissingCard({ card, wished, onAdd, onToggleWishlist }: { card: ExploreCard; wished: boolean; onAdd: (card: ExploreCard) => void; onToggleWishlist: (card: ExploreCard) => void }) {
+function MissingCard({
+  card,
+  wished,
+  active,
+  onHoverActivate,
+  onAdd,
+  onToggleWishlist
+}: {
+  card: ExploreCard;
+  wished: boolean;
+  active: boolean;
+  onHoverActivate: (cardId: string) => void;
+  onAdd: (card: ExploreCard) => void;
+  onToggleWishlist: (card: ExploreCard) => void;
+}) {
   return (
-    <article className="overflow-hidden rounded-xl border border-slate-200 bg-white opacity-75 grayscale transition hover:opacity-100 hover:grayscale-0 dark:border-slate-800 dark:bg-slate-900">
+    <article
+      onMouseEnter={() => onHoverActivate(card.id)}
+      className={`overflow-hidden rounded-xl border border-slate-200 bg-white transition hover:opacity-100 hover:grayscale-0 dark:border-slate-800 dark:bg-slate-900 ${
+        active ? "opacity-100 grayscale-0" : "opacity-75 grayscale"
+      }`}
+    >
       <div className="relative bg-slate-100 px-4 pb-3 pt-4 dark:bg-slate-950/40">
         <img src={card.image} alt={card.name} loading="lazy" className="mx-auto aspect-[63/88] w-full max-w-[184px] rounded-lg object-contain" />
         <span className="absolute right-3 top-3 rounded-full bg-slate-900 px-2.5 py-1 text-[11px] font-semibold text-white">Faltante</span>
@@ -526,6 +627,10 @@ function MissingCard({ card, wished, onAdd, onToggleWishlist }: { card: ExploreC
         <div>
           <h3 className="line-clamp-2 min-h-10 text-[15px] font-semibold leading-5 text-slate-950 dark:text-white">{cardDisplayName(card.name, card.number, card.id)}</h3>
           <p className="mt-1 truncate text-xs text-slate-500 dark:text-slate-400">{card.set} - {cardDisplayNumber(card.number, card.id)}</p>
+        </div>
+        <div className="rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-950/50">
+          <p className="text-[11px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Preco sugerido</p>
+          <strong className="text-lg font-semibold text-slate-950 dark:text-white">{card.marketPrice === null ? "N/D" : currency(card.marketPrice)}</strong>
         </div>
         <Button className="w-full" variant="secondary" onClick={() => onAdd(card)}>
           <Plus size={16} />

@@ -248,10 +248,11 @@ export const apiService = {
     return response.data;
   },
 
-  exportUrl(type: "full" | "set" | "card", value?: string): string {
+  exportUrl(type: "full" | "set" | "card" | "missing", value?: string): string {
     const params = new URLSearchParams({ type });
     if (type === "set" && value) params.set("set", value);
     if (type === "card" && value) params.set("id", value);
+    if (type === "missing" && value) params.set("set", value);
     const token = localStorage.getItem("pokemon-tcg-token");
     if (token) params.set("token", token);
     return `${apiBaseUrl}/export?${params.toString()}`;

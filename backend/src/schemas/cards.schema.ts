@@ -9,7 +9,7 @@ export const cardsQuerySchema = z.object({
 });
 
 export const exportQuerySchema = z.object({
-  type: z.enum(["full", "set", "card"]).default("full"),
+  type: z.enum(["full", "set", "card", "missing"]).default("full"),
   set: z.string().trim().optional(),
   id: z.string().trim().optional()
 });
