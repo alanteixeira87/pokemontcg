@@ -105,7 +105,7 @@ async function runOcrPasses(worker: Awaited<ReturnType<typeof createWorker>>, im
       preserve_interword_spaces: "1",
       tessedit_char_whitelist: pass.whitelist ?? ""
     });
-    const recognized = await worker.recognize(imageBuffer);
+    const recognized = await worker.recognize(imageBuffer, { rotateAuto: true });
     const text = recognized.data.text?.trim();
     if (text) parts.push(text);
   }
@@ -483,6 +483,37 @@ async function loadCandidates(extracted: ExtractedScanData): Promise<{ candidate
   };
 }
 
+async function fetchExactNumberSetCandidates(extracted: ExtractedScanData, setIdHints: Set<string>): Promise<CachedCardCandidate[]> {
+  if (!extracted.cardNumbers.length || !setIdHints.size) return [];
+
+  const exactCards: CachedCardCandidate[] = [];
+  const searched = new Set<string>();
+
+  for (const setIdHint of setIdHints) {
+    for (const number of extracted.cardNumbers) {
+      const key = `${setIdHint}:${number}`;
+      if (searched.has(key)) continue;
+      searched.add(key);
+
+      const exact = await pokemonService.findCardBySetAndNumber(setIdHint, number);
+      if (!exact) continue;
+
+      exactCards.push({
+        id: exact.id,
+        name: exact.name,
+        image: exact.image,
+        set: exact.set,
+        setId: exact.setId ?? null,
+        number: exact.number ?? null,
+        rarity: exact.rarity ?? null,
+        marketPrice: exact.marketPrice
+      });
+    }
+  }
+
+  return exactCards;
+}
+
 export const scanService = {
   async analyze(input: ScanInput): Promise<ScanAnalysisResult> {
     const worker = await getOcrWorker();
@@ -515,8 +546,10 @@ export const scanService = {
     }
 
     const { candidates, setIdHints, setNameHints } = await loadCandidates(extracted);
+    const exactCandidates = await fetchExactNumberSetCandidates(extracted, setIdHints);
+    const mergedCandidates = [...exactCandidates, ...candidates];
 
-    const scored = candidates
+    const scored = mergedCandidates
       .map((candidate) => ({
         cardId: candidate.id,
         name: candidate.name,
@@ -538,12 +571,28 @@ export const scanService = {
 
     const matches = Array.from(dedup.values()).slice(0, 8);
     const bestMatch = matches[0] ?? null;
+    const secondMatch = matches[1] ?? null;
 
     const confidence = bestMatch?.confidence ?? {
       score: 0,
       level: "LOW" as const,
       reasons: ["Nao foi possivel identificar uma correspondencia segura"]
     };
+
+    const isAmbiguousTopResults =
+      Boolean(bestMatch && secondMatch) &&
+      bestMatch!.confidence.score >= 80 &&
+      secondMatch!.confidence.score >= 80 &&
+      Math.abs(bestMatch!.confidence.score - secondMatch!.confidence.score) <= 5;
+
+    if (isAmbiguousTopResults && bestMatch) {
+      bestMatch.confidence = {
+        ...bestMatch.confidence,
+        score: Math.max(0, bestMatch.confidence.score - 8),
+        level: confidenceLevel(Math.max(0, bestMatch.confidence.score - 8)),
+        reasons: [...bestMatch.confidence.reasons, "Resultado proximo de outra carta (revisao manual recomendada)"]
+      };
+    }
 
     return {
       extracted: {
@@ -559,8 +608,8 @@ export const scanService = {
       rawText,
       matches,
       bestMatch,
-      confidence,
-      requiresManualConfirmation: confidence.score < 85,
+      confidence: isAmbiguousTopResults && bestMatch ? bestMatch.confidence : confidence,
+      requiresManualConfirmation: (isAmbiguousTopResults && Boolean(bestMatch)) || confidence.score < 85,
       fallbackMessage: matches.length === 0 ? "Nao conseguimos identificar a carta automaticamente." : undefined
     };
   }
