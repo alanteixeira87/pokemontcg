@@ -1,11 +1,11 @@
 ﻿import { AlertTriangle, Camera, CheckCircle2, Heart, ImagePlus, Loader2, RotateCcw, ScanLine, Search, Sparkles, Star } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "../components/ui/Button";
 import { EmptyState } from "../components/EmptyState";
 import { Modal } from "../components/ui/Modal";
 import { apiService } from "../services/api";
 import { useAppStore } from "../store/useAppStore";
-import type { CollectionItem, ExploreCard, ScanMatch, ScanResult } from "../types";
+import type { ExploreCard, ScanMatch, ScanResult } from "../types";
 import type { ToastState } from "../components/ui/Toast";
 import { currency } from "../lib/utils";
 
@@ -30,6 +30,12 @@ export function Scanner({ onToast }: { onToast: (toast: ToastState) => void }) {
   const [selectedMatch, setSelectedMatch] = useState<ScanMatch | null>(null);
   const [confirmAction, setConfirmAction] = useState<null | "collection" | "wishlist" | "favorite">(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [guidedOpen, setGuidedOpen] = useState(false);
+  const [cameraStarting, setCameraStarting] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [capturing, setCapturing] = useState(false);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
   const requiresManual = scanResult?.requiresManualConfirmation ?? false;
 
@@ -39,6 +45,89 @@ export function Scanner({ onToast }: { onToast: (toast: ToastState) => void }) {
     if (level === "MEDIUM") return "bg-amber-100 text-amber-700";
     return "bg-rose-100 text-rose-700";
   }, [scanResult?.confidence.level]);
+
+  useEffect(() => {
+    return () => {
+      stopCameraStream();
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
+  async function startGuidedCamera() {
+    setGuidedOpen(true);
+    setCameraError(null);
+    setCameraStarting(true);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: { ideal: "environment" },
+          width: { ideal: 1920 },
+          height: { ideal: 1080 }
+        },
+        audio: false
+      });
+
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+      }
+    } catch {
+      setCameraError("Nao foi possivel acessar a camera. Verifique a permissao do navegador.");
+      onToast({ type: "error", message: "Nao foi possivel abrir a camera guiada." });
+    } finally {
+      setCameraStarting(false);
+    }
+  }
+
+  function stopCameraStream() {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+  }
+
+  function closeGuidedCamera() {
+    setGuidedOpen(false);
+    setCameraError(null);
+    stopCameraStream();
+  }
+
+  async function captureFromGuidedCamera() {
+    const video = videoRef.current;
+    if (!video || video.videoWidth === 0 || video.videoHeight === 0) {
+      onToast({ type: "error", message: "Camera ainda nao esta pronta para captura." });
+      return;
+    }
+
+    setCapturing(true);
+    try {
+      const canvas = document.createElement("canvas");
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const context = canvas.getContext("2d");
+      if (!context) {
+        throw new Error("Canvas indisponivel");
+      }
+
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.95));
+      if (!blob) {
+        throw new Error("Falha ao capturar imagem");
+      }
+
+      const capturedFile = new File([blob], `scanner-${Date.now()}.jpg`, { type: "image/jpeg" });
+      await onSelectImage(capturedFile);
+      closeGuidedCamera();
+    } catch {
+      onToast({ type: "error", message: "Nao foi possivel capturar a imagem da camera." });
+    } finally {
+      setCapturing(false);
+    }
+  }
 
   async function validateImage(nextFile: File): Promise<ImageValidation> {
     if (!ACCEPTED_TYPES.includes(nextFile.type)) {
@@ -83,10 +172,12 @@ export function Scanner({ onToast }: { onToast: (toast: ToastState) => void }) {
     if (!result.valid) {
       onToast({ type: "error", message: result.fatalError ?? "Imagem inválida." });
       setFile(null);
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
       setPreviewUrl("");
       return;
     }
 
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
     setFile(nextFile);
     setPreviewUrl(URL.createObjectURL(nextFile));
     if (result.warnings.length) {
@@ -117,6 +208,7 @@ export function Scanner({ onToast }: { onToast: (toast: ToastState) => void }) {
 
   function clearScanner() {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
+    closeGuidedCamera();
     setFile(null);
     setPreviewUrl("");
     setValidation(null);
@@ -169,6 +261,11 @@ export function Scanner({ onToast }: { onToast: (toast: ToastState) => void }) {
 
         <div className="grid gap-4 lg:grid-cols-[320px_1fr]">
           <div className="space-y-3">
+            <Button className="w-full" variant="primary" onClick={() => void startGuidedCamera()}>
+              <Camera size={16} />
+              Modo guiado (recomendado)
+            </Button>
+
             <label className="flex h-11 cursor-pointer items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200">
               <Camera size={16} />
               Abrir camera
@@ -196,6 +293,13 @@ export function Scanner({ onToast }: { onToast: (toast: ToastState) => void }) {
               {loading ? <Loader2 size={16} className="animate-spin" /> : <ScanLine size={16} />}
               {loading ? "Analisando..." : "Analisar carta"}
             </Button>
+
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-950/40 dark:text-slate-300">
+              <p className="font-semibold">Dicas para maior precisao</p>
+              <p>1. Enquadre toda a carta dentro da moldura.</p>
+              <p>2. Evite reflexo e sombra sobre numero/set.</p>
+              <p>3. Mantenha a camera firme por 1 segundo antes de capturar.</p>
+            </div>
 
             {validation?.warnings?.length ? (
               <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-700">
@@ -328,6 +432,47 @@ export function Scanner({ onToast }: { onToast: (toast: ToastState) => void }) {
           </div>
         </section>
       )}
+
+      <Modal title="Camera guiada" open={guidedOpen} onClose={closeGuidedCamera}>
+        <div className="space-y-3">
+          <div className="relative overflow-hidden rounded-lg border border-slate-200 bg-slate-950 dark:border-slate-700">
+            <video ref={videoRef} autoPlay playsInline muted className="h-[360px] w-full object-cover" />
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+              <div className="relative h-[70%] w-[62%] rounded-xl border-2 border-cyan-300/90 shadow-[0_0_0_9999px_rgba(15,23,42,0.45)]">
+                <span className="absolute -top-6 left-1/2 -translate-x-1/2 rounded-full bg-cyan-500 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white">
+                  Enquadre a carta aqui
+                </span>
+              </div>
+            </div>
+            {cameraStarting && (
+              <div className="absolute inset-0 flex items-center justify-center bg-slate-950/70 text-white">
+                <Loader2 size={18} className="animate-spin" />
+                <span className="ml-2 text-sm">Iniciando camera...</span>
+              </div>
+            )}
+          </div>
+
+          {cameraError && (
+            <p className="rounded-lg border border-rose-200 bg-rose-50 p-2 text-xs font-semibold text-rose-700">
+              {cameraError}
+            </p>
+          )}
+
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Centralize a carta na moldura, mantenha boa iluminacao e toque em Capturar foto.
+          </p>
+
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={closeGuidedCamera}>
+              Cancelar
+            </Button>
+            <Button variant="primary" disabled={capturing || cameraStarting} onClick={() => void captureFromGuidedCamera()}>
+              {capturing ? <Loader2 size={16} className="animate-spin" /> : <Camera size={16} />}
+              Capturar foto
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       <Modal title="Confirmacao" open={Boolean(confirmAction)} onClose={() => setConfirmAction(null)}>
         <div className="space-y-4">
