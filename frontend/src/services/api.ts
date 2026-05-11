@@ -18,6 +18,7 @@ import type {
   TradeStatus,
   TradeUser,
   WishlistAvailability,
+  ScanResult,
   WishlistItem,
   UserProfile
 } from "../types";
@@ -245,6 +246,19 @@ export const apiService = {
 
   async sendTradeMessage(id: number, message: string): Promise<TradeMessage> {
     const response = await api.post<TradeMessage>(`/trade/proposals/${id}/messages`, { message });
+    return response.data;
+  },
+
+  async scanCard(file: File, input?: { language?: string; condition?: string; variantType?: string }): Promise<ScanResult> {
+    const formData = new FormData();
+    formData.append("file", file);
+    if (input?.language) formData.append("language", input.language);
+    if (input?.condition) formData.append("condition", input.condition);
+    if (input?.variantType) formData.append("variantType", input.variantType);
+
+    const response = await api.post<ScanResult>("/scan/analyze", formData, {
+      headers: { "Content-Type": "multipart/form-data" }
+    });
     return response.data;
   },
 

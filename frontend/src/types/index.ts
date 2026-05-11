@@ -265,3 +265,40 @@ export type AdminUser = {
     receivedTrades: number;
   };
 };
+
+export type ScanConfidence = {
+  score: number;
+  level: "HIGH" | "MEDIUM" | "LOW";
+  reasons: string[];
+};
+
+export type ScanMatch = {
+  cardId: string;
+  name: string;
+  image: string;
+  set: string;
+  setId: string | null;
+  number: string | null;
+  rarity: string | null;
+  marketPrice: number | null;
+  confidence: ScanConfidence;
+};
+
+export type ScanResult = {
+  extracted: {
+    cardName: string | null;
+    cardNumbers: string[];
+    collectionName: string | null;
+    setCodes: string[];
+    rarity: string | null;
+    variantType: string;
+    language: string;
+    condition: string;
+  };
+  rawText: string;
+  matches: ScanMatch[];
+  bestMatch: ScanMatch | null;
+  confidence: ScanConfidence;
+  requiresManualConfirmation: boolean;
+  fallbackMessage?: string;
+};

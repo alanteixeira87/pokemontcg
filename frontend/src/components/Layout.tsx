@@ -1,12 +1,13 @@
-import { BarChart3, Boxes, Heart, HeartHandshake, Library, LogOut, Menu, Moon, Search, SlidersHorizontal, Sun, UserCircle, X } from "lucide-react";
+﻿import { BarChart3, Boxes, Camera, Heart, HeartHandshake, Library, LogOut, Menu, Moon, Search, SlidersHorizontal, Sun, UserCircle, X } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { useAppStore } from "../store/useAppStore";
 import { Button } from "./ui/Button";
 
 const nav = [
-  { id: "explore", label: "Jornada Pokémon", icon: Library },
+  { id: "explore", label: "Jornada Pokemon", icon: Library },
   { id: "dashboard", label: "Dashboard", icon: BarChart3 },
-  { id: "collection", label: "Pokédex", icon: Boxes },
+  { id: "collection", label: "Pokedex", icon: Boxes },
+  { id: "scanner", label: "Scanner", icon: Camera },
   { id: "wishlist", label: "Lista de desejos", icon: Heart },
   { id: "trades", label: "Trocas", icon: HeartHandshake },
   { id: "profile", label: "Perfil", icon: UserCircle },
