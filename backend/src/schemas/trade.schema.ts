@@ -7,7 +7,8 @@ export const userSearchSchema = z.object({
 
 export const tradeCardsQuerySchema = z.object({
   set: z.string().trim().max(160).optional(),
-  search: z.string().trim().max(80).optional()
+  search: z.string().trim().max(80).optional(),
+  repeatedOnly: z.coerce.boolean().optional()
 });
 
 export const createTradeSchema = z.object({
@@ -20,8 +21,8 @@ export const createTradeSchema = z.object({
         quantity: z.coerce.number().int().min(1).max(99)
       })
     )
-    .min(1)
-    .max(20),
+    .max(20)
+    .optional(),
   offeredCards: z
     .array(
       z.object({
@@ -30,10 +31,18 @@ export const createTradeSchema = z.object({
         quantity: z.coerce.number().int().min(1).max(99)
       })
     )
-    .min(1)
     .max(20),
   requestedCardIds: z.array(z.coerce.number().int().positive()).max(20).optional(),
   offeredCardIds: z.array(z.coerce.number().int().positive()).max(20).optional()
+}).superRefine((input, ctx) => {
+  const requestedCount = (input.requestedCards?.length ?? 0) + (input.requestedCardIds?.length ?? 0);
+  if (requestedCount === 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["requestedCards"],
+      message: "Selecione ao menos uma carta solicitada."
+    });
+  }
 });
 
 export const updateTradeStatusSchema = z.object({

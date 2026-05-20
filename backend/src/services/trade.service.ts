@@ -27,6 +27,7 @@ type UserSearchFilters = {
 type TradeCardsFilters = {
   set?: string;
   search?: string;
+  repeatedOnly?: boolean;
 };
 
 type DiscoveryCard = {
@@ -79,6 +80,16 @@ function tradeCandidateWhere(): Prisma.CollectionWhereInput {
   };
 }
 
+function repeatedCardWhere(): Prisma.CollectionWhereInput {
+  return {
+    OR: [{ quantity: { gt: 1 } }, { variants: { some: { ownedQuantity: { gt: 1 } } } }]
+  };
+}
+
+function discoverableCardWhere(): Prisma.CollectionWhereInput {
+  return { OR: [tradeCandidateWhere(), repeatedCardWhere()] };
+}
+
 function suggestedCards(cards: DiscoveryCard[]) {
   return sortTradeCards(cards.map((card) => ({ ...card, cardId: String(card.id) })))
     .slice(0, 5)
@@ -101,8 +112,8 @@ function buildUserWhere(currentUserId: number, filters: UserSearchFilters): Pris
     terms.push({
       OR: [
         { name: { contains: search, mode: "insensitive" } },
-        { collection: { some: { name: { contains: search, mode: "insensitive" }, ...tradeCandidateWhere() } } },
-        { collection: { some: { set: { contains: search, mode: "insensitive" }, ...tradeCandidateWhere() } } }
+        { collection: { some: { name: { contains: search, mode: "insensitive" }, ...discoverableCardWhere() } } },
+        { collection: { some: { set: { contains: search, mode: "insensitive" }, ...discoverableCardWhere() } } }
       ]
     });
   }
@@ -111,15 +122,15 @@ function buildUserWhere(currentUserId: number, filters: UserSearchFilters): Pris
     terms.push({
       OR: [
         { interests: { contains: interest, mode: "insensitive" } },
-        { collection: { some: { name: { contains: interest, mode: "insensitive" }, ...tradeCandidateWhere() } } },
-        { collection: { some: { set: { contains: interest, mode: "insensitive" }, ...tradeCandidateWhere() } } }
+        { collection: { some: { name: { contains: interest, mode: "insensitive" }, ...discoverableCardWhere() } } },
+        { collection: { some: { set: { contains: interest, mode: "insensitive" }, ...discoverableCardWhere() } } }
       ]
     });
   }
 
   return {
     id: { not: currentUserId },
-    collection: { some: tradeCandidateWhere() },
+    collection: { some: discoverableCardWhere() },
     AND: terms
   };
 }
@@ -149,12 +160,21 @@ function getSelections(input: { requestedCards?: TradeSelectionInput[]; offeredC
 }
 
 async function getTradeCardsForUser(userId: number, filters: TradeCardsFilters = {}, mode: "public" | "mine" = "public") {
+  const repeatedOnly = mode === "public" ? Boolean(filters.repeatedOnly) : false;
   const cards = await prisma.collection.findMany({
     where: {
       userId,
       set: filters.set || undefined,
       name: filters.search ? { contains: filters.search, mode: "insensitive" } : undefined,
-      OR: mode === "mine" ? undefined : [tradeConfiguredWhere(), { forTrade: true, quantity: { gt: 0 } }]
+      AND:
+        mode === "mine"
+          ? undefined
+          : [
+              repeatedOnly ? repeatedCardWhere() : {},
+              {
+                OR: [tradeConfiguredWhere(), { forTrade: true, quantity: { gt: 0 } }, ...(repeatedOnly ? [repeatedCardWhere()] : [])]
+              }
+            ]
     },
     include: {
       variants: {
@@ -174,8 +194,11 @@ async function getTradeCardsForUser(userId: number, filters: TradeCardsFilters =
   }));
 }
 
-async function validateSelections(userId: number, selections: TradeSelectionInput[], ownerLabel: string) {
+async function validateSelections(userId: number, selections: TradeSelectionInput[], ownerLabel: string, allowEmpty = false) {
   if (!selections.length) {
+    if (allowEmpty) {
+      return [];
+    }
     throw new HttpError(400, `Selecione ao menos uma carta de ${ownerLabel}.`);
   }
 
@@ -396,7 +419,7 @@ export const tradeService = {
     const selections = getSelections(input);
     const [requested, offered] = await Promise.all([
       validateSelections(input.receiverId, selections.requested, "quem vai receber a proposta"),
-      validateSelections(requesterId, selections.offered, "quem esta oferecendo")
+      validateSelections(requesterId, selections.offered, "quem esta oferecendo", true)
     ]);
 
     const duplicate = await prisma.trade.findFirst({

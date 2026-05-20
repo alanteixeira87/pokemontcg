@@ -9,7 +9,7 @@ const nav = [
   { id: "collection", label: "Pokedex", icon: Boxes },
   { id: "scanner", label: "Scanner", icon: Camera },
   { id: "wishlist", label: "Lista de desejos", icon: Heart },
-  { id: "trades", label: "Trocas", icon: HeartHandshake },
+  { id: "trades", label: "Usuarios e trocas", icon: HeartHandshake },
   { id: "profile", label: "Perfil", icon: UserCircle },
   { id: "admin", label: "Admin", icon: SlidersHorizontal }
 ] as const;

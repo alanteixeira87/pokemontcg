@@ -6,7 +6,7 @@ Aplicacao fullstack local para explorar cartas Pokemon TCG, gerenciar colecao, f
 
 - Frontend: React + Vite + TypeScript + Tailwind CSS + Zustand
 - Backend: Node.js + Express + TypeScript
-- Banco: PostgreSQL + Prisma ORM
+- Banco: SQLite + Prisma ORM
 - Integracoes: Pokemon TCG API, Axios, Zod, ExcelJS, dotenv
 
 ## Como rodar
@@ -42,7 +42,7 @@ O arquivo `backend/.env` ja vem configurado para uso local:
 
 ```env
 PORT=3001
-DATABASE_URL="postgresql://USER:PASSWORD@HOST:5432/DATABASE?schema=public"
+DATABASE_URL="file:./dev.db"
 POKEMON_TCG_API_URL="https://api.pokemontcg.io/v2"
 POKEMON_TCG_API_KEY=""
 POKEWALLET_API_URL="https://api.pokewallet.io"
@@ -68,6 +68,21 @@ A chave da Pokemon TCG API e opcional para uso basico, mas pode ser preenchida e
 - Filtros e ordenacao persistidos em `localStorage`
 - Exportacao Excel completa, por set e por carta individual
 - UI dark mode, responsiva, com skeleton, empty state, modal/toast base e cards visuais
+
+## Atualizacoes recentes (trocas e negociacao)
+
+- Nova aba reforcada de `Usuarios e trocas` no menu principal.
+- Listagem de usuarios com foco em visibilidade de cartas repetidas para negociacao.
+- Filtro de cartas do usuario alvo com opcao `Apenas repetidas`.
+- Novo botao `Aplicar filtros` no mercado de trocas para aplicar os filtros selecionados manualmente.
+- Botao `Limpar filtros` para restaurar a busca de cartas no fluxo de troca.
+- Favoritar cartas de outros usuarios diretamente na tela de trocas (integrado com lista de desejos).
+- Selecao de intencao por carta solicitada:
+  - `Comprar`
+  - `Trocar`
+- Envio de proposta/negociacao com chat iniciado automaticamente e mensagem inicial de contexto.
+- Suporte a negociacao de compra (sem obrigar cartas oferecidas), mantendo validacoes de seguranca no backend.
+- Cartoes de proposta atualizados para exibir corretamente negociacoes sem cartas oferecidas.
 
 ## Endpoints
 

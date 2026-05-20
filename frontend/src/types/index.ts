@@ -219,6 +219,8 @@ export type TradeSelectionInput = {
   quantity: number;
 };
 
+export type NegotiationIntent = "BUY" | "TRADE";
+
 export type UserProfile = AuthUser & {
   createdAt: string;
   _count: {

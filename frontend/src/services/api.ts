@@ -209,7 +209,7 @@ export const apiService = {
     return response.data;
   },
 
-  async tradeUserCards(userId: number, params: { set?: string; search?: string } = {}): Promise<TradeCardsResponse> {
+  async tradeUserCards(userId: number, params: { set?: string; search?: string; repeatedOnly?: boolean } = {}): Promise<TradeCardsResponse> {
     const response = await api.get<TradeCardsResponse>(`/trade/users/${userId}/cards`, { params });
     return response.data;
   },
@@ -224,7 +224,7 @@ export const apiService = {
     return response.data;
   },
 
-  async createTradeProposal(input: { receiverId: number; requestedCards: TradeSelectionInput[]; offeredCards: TradeSelectionInput[] }): Promise<TradeProposal> {
+  async createTradeProposal(input: { receiverId: number; requestedCards: TradeSelectionInput[]; offeredCards?: TradeSelectionInput[] }): Promise<TradeProposal> {
     const response = await api.post<TradeProposal>("/trade/proposals", input);
     return response.data;
   },

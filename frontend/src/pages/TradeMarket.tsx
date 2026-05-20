@@ -1,4 +1,4 @@
-import { Check, Clock, Eye, FilterX, Handshake, MessageCircle, Save, Search, Send, Settings2, X } from "lucide-react";
+import { Check, Clock, Eye, FilterX, Handshake, Heart, HeartOff, MessageCircle, Repeat, Save, Search, Send, Settings2, ShoppingCart, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { EmptyState } from "../components/EmptyState";
@@ -11,7 +11,7 @@ import { useDebounce } from "../hooks/useDebounce";
 import { apiService } from "../services/api";
 import { joinTradeChat, onTradeMessage, onTradeNotification, sendRealtimeTradeMessage } from "../services/socket";
 import { useAppStore } from "../store/useAppStore";
-import type { CardVariant, TradeCard, TradeCardSnapshot, TradeMessage, TradeProposal, TradeSelectionInput, TradeStatus, TradeUser, VariantType } from "../types";
+import type { CardVariant, NegotiationIntent, TradeCard, TradeCardSnapshot, TradeMessage, TradeProposal, TradeSelectionInput, TradeStatus, TradeUser, VariantType } from "../types";
 import { cardDisplayName, cardDisplayNumber } from "../lib/cardDisplay";
 import { currency } from "../lib/utils";
 
@@ -70,11 +70,18 @@ export function TradeMarket({ onToast }: { onToast: (toast: ToastState) => void 
   const [proposals, setProposals] = useState<TradeProposal[]>([]);
   const [search, setSearch] = useState("");
   const [interest, setInterest] = useState("");
+  const [cardSearchDraft, setCardSearchDraft] = useState("");
+  const [targetSetDraft, setTargetSetDraft] = useState("");
+  const [mySetDraft, setMySetDraft] = useState("");
+  const [repeatedOnlyDraft, setRepeatedOnlyDraft] = useState(true);
   const [cardSearch, setCardSearch] = useState("");
   const [targetSet, setTargetSet] = useState("");
   const [mySet, setMySet] = useState("");
+  const [repeatedOnly, setRepeatedOnly] = useState(true);
   const [requested, setRequested] = useState<SelectedLine[]>([]);
   const [offered, setOffered] = useState<SelectedLine[]>([]);
+  const [requestedIntent, setRequestedIntent] = useState<Record<string, NegotiationIntent>>({});
+  const [wishlistIds, setWishlistIds] = useState<Set<string>>(new Set());
   const [zoomCard, setZoomCard] = useState<{ card: TradeCard | TradeCardSnapshot; variantType?: VariantType } | null>(null);
   const [variantCard, setVariantCard] = useState<TradeCard | null>(null);
   const [chatTrade, setChatTrade] = useState<TradeProposal | null>(null);
@@ -85,7 +92,15 @@ export function TradeMarket({ onToast }: { onToast: (toast: ToastState) => void 
   const [sending, setSending] = useState(false);
   const debouncedSearch = useDebounce(search);
   const debouncedInterest = useDebounce(interest);
-  const debouncedCardSearch = useDebounce(cardSearch);
+
+  const loadWishlist = useCallback(async () => {
+    try {
+      const items = await apiService.wishlist();
+      setWishlistIds(new Set(items.map((item) => item.cardId)));
+    } catch {
+      onToast({ type: "error", message: "Nao foi possivel carregar favoritos de troca." });
+    }
+  }, [onToast]);
 
   const loadUsers = useCallback(async () => {
     setLoadingUsers(true);
@@ -115,9 +130,13 @@ export function TradeMarket({ onToast }: { onToast: (toast: ToastState) => void 
     setLoadingCards(true);
     try {
       const [mine, target] = await Promise.all([
-        apiService.myTradeCards({ set: mySet || undefined, search: debouncedCardSearch || undefined }),
+        apiService.myTradeCards({ set: mySet || undefined, search: cardSearch || undefined }),
         selectedUser
-          ? apiService.tradeUserCards(selectedUser.id, { set: targetSet || undefined, search: debouncedCardSearch || undefined })
+          ? apiService.tradeUserCards(selectedUser.id, {
+              set: targetSet || undefined,
+              search: cardSearch || undefined,
+              repeatedOnly
+            })
           : Promise.resolve({ sets: [], cards: [] })
       ]);
       setMyCards(mine.cards);
@@ -129,7 +148,7 @@ export function TradeMarket({ onToast }: { onToast: (toast: ToastState) => void 
     } finally {
       setLoadingCards(false);
     }
-  }, [debouncedCardSearch, mySet, onToast, selectedUser, targetSet]);
+  }, [cardSearch, mySet, onToast, repeatedOnly, selectedUser, targetSet]);
 
   useEffect(() => {
     void loadUsers();
@@ -140,13 +159,25 @@ export function TradeMarket({ onToast }: { onToast: (toast: ToastState) => void 
   }, [loadProposals]);
 
   useEffect(() => {
+    void loadWishlist();
+  }, [loadWishlist]);
+
+  useEffect(() => {
     void loadCards();
   }, [loadCards]);
 
   useEffect(() => {
     setRequested([]);
     setOffered([]);
+    setRequestedIntent({});
+    setCardSearchDraft("");
+    setCardSearch("");
+    setTargetSetDraft("");
     setTargetSet("");
+    setMySetDraft("");
+    setMySet("");
+    setRepeatedOnlyDraft(true);
+    setRepeatedOnly(true);
   }, [selectedUser?.id]);
 
   useEffect(() => {
@@ -181,9 +212,21 @@ export function TradeMarket({ onToast }: { onToast: (toast: ToastState) => void 
 
   function upsertSelection(kind: "requested" | "offered", line: SelectedLine) {
     const setter = kind === "requested" ? setRequested : setOffered;
+    const key = selectionKey(line);
+    if (kind === "requested") {
+      setRequestedIntent((current) => {
+        const next = { ...current };
+        if (next[key]) {
+          delete next[key];
+        } else {
+          next[key] = "TRADE";
+        }
+        return next;
+      });
+    }
     setter((current) => {
-      const exists = current.some((item) => selectionKey(item) === selectionKey(line));
-      return exists ? current.filter((item) => selectionKey(item) !== selectionKey(line)) : [...current, line];
+      const exists = current.some((item) => selectionKey(item) === key);
+      return exists ? current.filter((item) => selectionKey(item) !== key) : [...current, line];
     });
   }
 
@@ -192,22 +235,83 @@ export function TradeMarket({ onToast }: { onToast: (toast: ToastState) => void 
     setter((current) => current.map((item) => (selectionKey(item) === selectionKey(line) ? { ...item, quantity } : item)));
   }
 
+  function applyCardFilters() {
+    setCardSearch(cardSearchDraft.trim());
+    setTargetSet(targetSetDraft);
+    setMySet(mySetDraft);
+    setRepeatedOnly(repeatedOnlyDraft);
+  }
+
+  function clearCardFilters() {
+    setCardSearchDraft("");
+    setTargetSetDraft("");
+    setMySetDraft("");
+    setRepeatedOnlyDraft(true);
+    setCardSearch("");
+    setTargetSet("");
+    setMySet("");
+    setRepeatedOnly(true);
+  }
+
+  function updateRequestedIntent(line: SelectedLine, intent: NegotiationIntent) {
+    const key = selectionKey(line);
+    setRequestedIntent((current) => ({ ...current, [key]: intent }));
+  }
+
+  async function toggleFavorite(card: TradeCard) {
+    const isFavorite = wishlistIds.has(card.cardId);
+    try {
+      if (isFavorite) {
+        await apiService.removeWishlist(card.cardId);
+      } else {
+        await apiService.addWishlist({
+          id: card.cardId,
+          name: card.name,
+          image: card.image,
+          set: card.set,
+          number: card.number ?? undefined,
+          rarity: card.rarity ?? undefined,
+          marketPrice: card.price ?? 0
+        });
+      }
+      await loadWishlist();
+    } catch {
+      onToast({ type: "error", message: "Nao foi possivel atualizar o favorito da carta." });
+    }
+  }
+
   async function sendProposal() {
-    if (!selectedUser || requested.length === 0 || offered.length === 0) return;
+    if (!selectedUser || requested.length === 0) return;
+    const hasTradeIntent = requested.some((line) => requestedIntent[selectionKey(line)] !== "BUY");
+    if (hasTradeIntent && offered.length === 0) {
+      onToast({ type: "error", message: "Selecione cartas para oferecer nas negociacoes de troca." });
+      return;
+    }
     setSending(true);
     try {
-      await apiService.createTradeProposal({
+      const createdTrade = await apiService.createTradeProposal({
         receiverId: selectedUser.id,
         requestedCards: requested,
-        offeredCards: offered
+        offeredCards: hasTradeIntent ? offered : []
       });
+      const buyLines = requested.filter((line) => requestedIntent[selectionKey(line)] === "BUY");
+      const tradeLines = requested.filter((line) => requestedIntent[selectionKey(line)] !== "BUY");
+      const baseMessage =
+        buyLines.length && tradeLines.length
+          ? `Interesse inicial: ${buyLines.length} carta(s) para compra e ${tradeLines.length} para troca.`
+          : buyLines.length
+            ? `Interesse inicial: compra de ${buyLines.length} carta(s).`
+            : `Interesse inicial: troca de ${tradeLines.length} carta(s).`;
+      await apiService.sendTradeMessage(createdTrade.id, `${baseMessage} Vamos combinar os detalhes por aqui.`);
       setRequested([]);
       setOffered([]);
+      setRequestedIntent({});
       await loadProposals();
-      onToast({ type: "success", message: "Proposta de troca enviada." });
+      setChatTrade(createdTrade);
+      onToast({ type: "success", message: hasTradeIntent ? "Proposta enviada com sucesso." : "Negociacao de compra iniciada." });
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Não foi possível enviar a proposta.";
-      onToast({ type: "error", message: message.includes("400") ? "Selecione tipo e quantidade válidos antes de enviar." : "Não foi possível enviar a proposta." });
+      const message = error instanceof Error ? error.message : "Nao foi possivel enviar a proposta.";
+      onToast({ type: "error", message: message.includes("400") ? "Selecione tipo e quantidade validos antes de enviar." : "Nao foi possivel enviar a proposta." });
     } finally {
       setSending(false);
     }
@@ -306,16 +410,33 @@ export function TradeMarket({ onToast }: { onToast: (toast: ToastState) => void 
                 <p className="text-xs font-semibold uppercase text-indigo-600">Cartas para troca</p>
                 <h3 className="text-xl font-semibold text-slate-950 dark:text-white">{selectedUser ? selectedUser.name : "Selecione um usuário"}</h3>
               </div>
-              <div className="grid gap-2 sm:grid-cols-3 lg:min-w-[620px]">
-                <Input placeholder="Buscar carta selecionavel" value={cardSearch} onChange={(event) => setCardSearch(event.target.value)} />
-                <Select value={targetSet} onChange={(event) => setTargetSet(event.target.value)}>
+              <div className="grid gap-2 sm:grid-cols-4 lg:min-w-[760px]">
+                <Input placeholder="Buscar carta selecionavel" value={cardSearchDraft} onChange={(event) => setCardSearchDraft(event.target.value)} />
+                <Select value={targetSetDraft} onChange={(event) => setTargetSetDraft(event.target.value)}>
                   <option value="">Sets do usuário</option>
                   {targetSets.map((set) => <option key={set} value={set}>{set}</option>)}
                 </Select>
-                <Select value={mySet} onChange={(event) => setMySet(event.target.value)}>
+                <Select value={mySetDraft} onChange={(event) => setMySetDraft(event.target.value)}>
                   <option value="">Meus sets</option>
                   {mySets.map((set) => <option key={set} value={set}>{set}</option>)}
                 </Select>
+                <div className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 px-3 py-2">
+                  <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-slate-700">
+                    <input type="checkbox" checked={repeatedOnlyDraft} onChange={(event) => setRepeatedOnlyDraft(event.target.checked)} />
+                    Apenas repetidas
+                  </label>
+                  <span className="text-[11px] font-medium text-slate-500">usuario</span>
+                </div>
+              </div>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <Button variant="primary" onClick={applyCardFilters} disabled={loadingCards}>
+                  <Search size={16} />
+                  Aplicar filtros
+                </Button>
+                <Button variant="secondary" onClick={clearCardFilters} disabled={loadingCards}>
+                  <FilterX size={16} />
+                  Limpar filtros
+                </Button>
               </div>
             </div>
 
@@ -324,11 +445,15 @@ export function TradeMarket({ onToast }: { onToast: (toast: ToastState) => void 
                 title="Quero receber"
                 cards={targetCards}
                 selected={requested}
+                selectionIntent={requestedIntent}
                 loading={loadingCards}
                 emptyTitle="Nenhuma carta disponível"
                 emptyDescription="Esse usuário ainda não definiu tipos para troca nesse filtro."
                 onToggle={(line) => upsertSelection("requested", line)}
                 onQuantity={(line, quantity) => changeQuantity("requested", line, quantity)}
+                onIntentChange={(line, intent) => updateRequestedIntent(line, intent)}
+                favoriteCardIds={wishlistIds}
+                onFavorite={toggleFavorite}
                 onZoom={(card, variantType) => setZoomCard({ card, variantType })}
               />
               <TradeCardPanel
@@ -356,9 +481,9 @@ export function TradeMarket({ onToast }: { onToast: (toast: ToastState) => void 
                   Receber: {currency(requestedValue)} | Oferecer: {currency(offeredValue)} | Diferenca: {currency(offeredValue - requestedValue)}
                 </p>
               </div>
-              <Button variant="primary" disabled={!selectedUser || requested.length === 0 || offered.length === 0 || sending} onClick={sendProposal}>
+              <Button variant="primary" disabled={!selectedUser || requested.length === 0 || sending} onClick={sendProposal}>
                 <Send size={16} />
-                {sending ? "Enviando..." : "Enviar proposta"}
+                {sending ? "Enviando..." : "Iniciar negociacao"}
               </Button>
             </div>
             <div className="mt-4 grid gap-3 md:grid-cols-2">
@@ -427,6 +552,7 @@ function TradeCardPanel(props: {
   title: string;
   cards: TradeCard[];
   selected: SelectedLine[];
+  selectionIntent?: Record<string, NegotiationIntent>;
   loading: boolean;
   emptyTitle: string;
   emptyDescription: string;
@@ -434,6 +560,9 @@ function TradeCardPanel(props: {
   onConfigure?: (card: TradeCard) => void;
   onToggle: (line: SelectedLine) => void;
   onQuantity: (line: SelectedLine, quantity: number) => void;
+  onIntentChange?: (line: SelectedLine, intent: NegotiationIntent) => void;
+  favoriteCardIds?: Set<string>;
+  onFavorite?: (card: TradeCard) => void;
   onZoom: (card: TradeCard, variantType?: VariantType) => void;
 }) {
   if (props.loading) return <Skeleton className="h-96" />;
@@ -457,10 +586,23 @@ function TradeCardPanel(props: {
                   <p className="mt-1 truncate text-xs font-semibold text-slate-500">{card.set}</p>
                   <p className="mt-1 text-xs font-medium text-indigo-600">#{card.number ?? card.cardId.split("-").at(-1) ?? "N/D"}</p>
                 </div>
-                {props.mine && (
+                {props.mine ? (
                   <Button title="Configurar variantes" size="icon" variant="secondary" onClick={() => props.onConfigure?.(card)}>
                     <Settings2 size={15} />
                   </Button>
+                ) : (
+                  <button
+                    type="button"
+                    title={props.favoriteCardIds?.has(card.cardId) ? "Remover dos favoritos" : "Favoritar para negociar depois"}
+                    onClick={() => props.onFavorite?.(card)}
+                    className={`flex h-9 w-9 items-center justify-center rounded-lg border transition ${
+                      props.favoriteCardIds?.has(card.cardId)
+                        ? "border-rose-200 bg-rose-50 text-rose-600"
+                        : "border-slate-200 bg-white text-slate-500 hover:border-rose-200 hover:text-rose-600"
+                    }`}
+                  >
+                    {props.favoriteCardIds?.has(card.cardId) ? <Heart size={15} /> : <HeartOff size={15} />}
+                  </button>
                 )}
               </div>
               <div className="mt-3 space-y-2">
@@ -504,14 +646,50 @@ function TradeCardPanel(props: {
                          </button>
                          <span className="text-xs font-medium text-slate-500">troca {variant.tradeQuantity} / possui {variant.ownedQuantity}</span>
                          {selected && (
-                           <Select
-                             className="ml-auto h-8 w-20"
-                             value={String(selected.quantity)}
-                             onClick={(event) => event.stopPropagation()}
-                             onChange={(event) => props.onQuantity(selected, Number(event.target.value))}
-                           >
-                             {Array.from({ length: variant.tradeQuantity }).map((_, index) => <option key={index + 1} value={index + 1}>{index + 1}</option>)}
-                           </Select>
+                           <div className="ml-auto flex items-center gap-2">
+                             <Select
+                               className="h-8 w-20"
+                               value={String(selected.quantity)}
+                               onClick={(event) => event.stopPropagation()}
+                               onChange={(event) => props.onQuantity(selected, Number(event.target.value))}
+                             >
+                               {Array.from({ length: variant.tradeQuantity }).map((_, index) => <option key={index + 1} value={index + 1}>{index + 1}</option>)}
+                             </Select>
+                             {!props.mine && (
+                               <div className="flex items-center gap-1">
+                                 <button
+                                   type="button"
+                                   onClick={(event) => {
+                                     event.stopPropagation();
+                                     props.onIntentChange?.(selected, "BUY");
+                                   }}
+                                   className={`flex items-center gap-1 rounded-full border px-2 py-1 text-[11px] font-semibold ${
+                                     (props.selectionIntent?.[selectionKey(selected)] ?? "TRADE") === "BUY"
+                                       ? "border-emerald-300 bg-emerald-50 text-emerald-700"
+                                       : "border-slate-200 bg-white text-slate-500"
+                                   }`}
+                                 >
+                                   <ShoppingCart size={12} />
+                                   Comprar
+                                 </button>
+                                 <button
+                                   type="button"
+                                   onClick={(event) => {
+                                     event.stopPropagation();
+                                     props.onIntentChange?.(selected, "TRADE");
+                                   }}
+                                   className={`flex items-center gap-1 rounded-full border px-2 py-1 text-[11px] font-semibold ${
+                                     (props.selectionIntent?.[selectionKey(selected)] ?? "TRADE") === "TRADE"
+                                       ? "border-indigo-300 bg-indigo-50 text-indigo-700"
+                                       : "border-slate-200 bg-white text-slate-500"
+                                   }`}
+                                 >
+                                   <Repeat size={12} />
+                                   Trocar
+                                 </button>
+                               </div>
+                             )}
+                           </div>
                          )}
                        </div>
                      </div>
@@ -555,12 +733,19 @@ function ProposalCard({ proposal, currentUserId, onUpdate, onChat, onZoom }: { p
   const canCancel = proposal.requesterId === currentUserId && proposal.status === "PENDING";
   const offered = proposal.cards?.filter((card) => card.side === "OFFERED") ?? proposal.offeredCards;
   const requested = proposal.cards?.filter((card) => card.side === "REQUESTED") ?? proposal.requestedCards;
+  const isBuyNegotiation = offered.length === 0 && requested.length > 0;
   return (
     <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm  transition-all duration-200 hover:shadow-md dark:border-slate-800 dark:bg-slate-950/55">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${statusClass[proposal.status]}`}>{statusLabel[proposal.status]}</span>
-          <h4 className="mt-2 text-base font-semibold text-slate-950">{incoming ? `${proposal.requester.name} quer trocar com você` : `Proposta para ${proposal.receiver.name}`}</h4>
+          <h4 className="mt-2 text-base font-semibold text-slate-950">
+            {incoming
+              ? isBuyNegotiation
+                ? `${proposal.requester.name} quer negociar compra com voce`
+                : `${proposal.requester.name} quer trocar com voce`
+              : `Proposta para ${proposal.receiver.name}`}
+          </h4>
           <p className="text-xs font-semibold text-slate-500">{new Date(proposal.createdAt).toLocaleString("pt-BR")}</p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -578,7 +763,7 @@ function ProposalCard({ proposal, currentUserId, onUpdate, onChat, onZoom }: { p
 }
 
 function ProposalCards({ title, cards, onZoom }: { title: string; cards: TradeCardSnapshot[]; onZoom: (card: TradeCardSnapshot) => void }) {
-  return <div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-950/40"><p className="mb-2 text-xs font-semibold uppercase text-slate-500">{title}</p><div className="space-y-2">{cards.map((card) => <button type="button" key={`${card.collectionId}-${card.cardId}-${card.variantType ?? "legacy"}`} onClick={() => onZoom(card)} className="grid w-full grid-cols-[38px_1fr] items-center gap-2 rounded-lg p-1 text-left transition duration-150 hover:bg-white dark:hover:bg-slate-900"><img src={card.image} alt={card.name} loading="lazy" className="h-12 w-9 object-contain" /><div className="min-w-0"><p className="truncate text-sm font-medium text-slate-800 dark:text-slate-100">{cardDisplayName(card.name, card.number, card.cardId)}</p><p className="text-xs text-slate-500 dark:text-slate-400">{card.set} {cardDisplayNumber(card.number, card.cardId)} · {variantLabel(card.variantType)} · x{card.quantity}</p></div></button>)}</div></div>;
+  return <div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-950/40"><p className="mb-2 text-xs font-semibold uppercase text-slate-500">{title}</p><div className="space-y-2">{cards.length ? cards.map((card) => <button type="button" key={`${card.collectionId}-${card.cardId}-${card.variantType ?? "legacy"}`} onClick={() => onZoom(card)} className="grid w-full grid-cols-[38px_1fr] items-center gap-2 rounded-lg p-1 text-left transition duration-150 hover:bg-white dark:hover:bg-slate-900"><img src={card.image} alt={card.name} loading="lazy" className="h-12 w-9 object-contain" /><div className="min-w-0"><p className="truncate text-sm font-medium text-slate-800 dark:text-slate-100">{cardDisplayName(card.name, card.number, card.cardId)}</p><p className="text-xs text-slate-500 dark:text-slate-400">{card.set} {cardDisplayNumber(card.number, card.cardId)} · {variantLabel(card.variantType)} · x{card.quantity}</p></div></button>) : <p className="text-xs font-medium text-slate-500">Sem cartas nesta etapa da negociacao.</p>}</div></div>;
 }
 
 function CardZoom({ data, onClose }: { data: { card: TradeCard | TradeCardSnapshot; variantType?: VariantType }; onClose: () => void }) {
