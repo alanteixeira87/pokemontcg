@@ -73,11 +73,11 @@ export function TradeMarket({ onToast }: { onToast: (toast: ToastState) => void 
   const [cardSearchDraft, setCardSearchDraft] = useState("");
   const [targetSetDraft, setTargetSetDraft] = useState("");
   const [mySetDraft, setMySetDraft] = useState("");
-  const [repeatedOnlyDraft, setRepeatedOnlyDraft] = useState(true);
+  const [repeatedOnlyDraft, setRepeatedOnlyDraft] = useState(false);
   const [cardSearch, setCardSearch] = useState("");
   const [targetSet, setTargetSet] = useState("");
   const [mySet, setMySet] = useState("");
-  const [repeatedOnly, setRepeatedOnly] = useState(true);
+  const [repeatedOnly, setRepeatedOnly] = useState(false);
   const [requested, setRequested] = useState<SelectedLine[]>([]);
   const [offered, setOffered] = useState<SelectedLine[]>([]);
   const [requestedIntent, setRequestedIntent] = useState<Record<string, NegotiationIntent>>({});
@@ -176,8 +176,8 @@ export function TradeMarket({ onToast }: { onToast: (toast: ToastState) => void 
     setTargetSet("");
     setMySetDraft("");
     setMySet("");
-    setRepeatedOnlyDraft(true);
-    setRepeatedOnly(true);
+    setRepeatedOnlyDraft(false);
+    setRepeatedOnly(false);
   }, [selectedUser?.id]);
 
   useEffect(() => {
@@ -246,11 +246,11 @@ export function TradeMarket({ onToast }: { onToast: (toast: ToastState) => void 
     setCardSearchDraft("");
     setTargetSetDraft("");
     setMySetDraft("");
-    setRepeatedOnlyDraft(true);
+    setRepeatedOnlyDraft(false);
     setCardSearch("");
     setTargetSet("");
     setMySet("");
-    setRepeatedOnly(true);
+    setRepeatedOnly(false);
   }
 
   function updateRequestedIntent(line: SelectedLine, intent: NegotiationIntent) {

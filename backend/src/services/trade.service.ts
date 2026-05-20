@@ -172,7 +172,7 @@ async function getTradeCardsForUser(userId: number, filters: TradeCardsFilters =
           : [
               repeatedOnly ? repeatedCardWhere() : {},
               {
-                OR: [tradeConfiguredWhere(), { forTrade: true, quantity: { gt: 0 } }, ...(repeatedOnly ? [repeatedCardWhere()] : [])]
+                OR: [tradeConfiguredWhere(), { forTrade: true, quantity: { gt: 0 } }, repeatedCardWhere()]
               }
             ]
     },
