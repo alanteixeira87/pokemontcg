@@ -1,4 +1,4 @@
-import { Check, Clock, Eye, FilterX, Handshake, Heart, HeartOff, MessageCircle, Repeat, Save, Search, Send, Settings2, ShoppingCart, X } from "lucide-react";
+import { Clock, Eye, FilterX, Handshake, Heart, HeartOff, LayoutGrid, List, MessageCircle, Repeat, Save, Search, Send, Settings2, ShoppingCart, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { EmptyState } from "../components/EmptyState";
@@ -87,6 +87,7 @@ export function TradeMarket({ onToast }: { onToast: (toast: ToastState) => void 
   const [chatTrade, setChatTrade] = useState<TradeProposal | null>(null);
   const [messages, setMessages] = useState<TradeMessage[]>([]);
   const [messageText, setMessageText] = useState("");
+  const [cardLayout, setCardLayout] = useState<"vertical" | "horizontal">("vertical");
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [loadingCards, setLoadingCards] = useState(false);
   const [sending, setSending] = useState(false);
@@ -354,7 +355,7 @@ export function TradeMarket({ onToast }: { onToast: (toast: ToastState) => void 
         </div>
       </section>
 
-      <div className="grid gap-5 xl:grid-cols-[320px_1fr]">
+      <div className="grid gap-5">
         <section className="space-y-3">
           <h3 className="text-lg font-semibold text-slate-950 dark:text-white">Usuarios encontrados</h3>
           {loadingUsers ? <Skeleton className="h-80" /> : users.length ? (
@@ -427,6 +428,14 @@ export function TradeMarket({ onToast }: { onToast: (toast: ToastState) => void 
                   <FilterX size={16} />
                   Limpar filtros
                 </Button>
+                <Button variant={cardLayout === "vertical" ? "primary" : "secondary"} onClick={() => setCardLayout("vertical")}>
+                  <LayoutGrid size={16} />
+                  Colunas verticais
+                </Button>
+                <Button variant={cardLayout === "horizontal" ? "primary" : "secondary"} onClick={() => setCardLayout("horizontal")}>
+                  <List size={16} />
+                  Linhas horizontais
+                </Button>
               </div>
             </div>
 
@@ -444,6 +453,7 @@ export function TradeMarket({ onToast }: { onToast: (toast: ToastState) => void 
                 onIntentChange={(line, intent) => updateRequestedIntent(line, intent)}
                 favoriteCardIds={wishlistIds}
                 onFavorite={toggleFavorite}
+                layout={cardLayout}
                 onZoom={(card, variantType) => setZoomCard({ card, variantType })}
               />
               <TradeCardPanel
@@ -457,6 +467,7 @@ export function TradeMarket({ onToast }: { onToast: (toast: ToastState) => void 
                 onConfigure={setVariantCard}
                 onToggle={(line) => upsertSelection("offered", line)}
                 onQuantity={(line, quantity) => changeQuantity("offered", line, quantity)}
+                layout={cardLayout}
                 onZoom={(card, variantType) => setZoomCard({ card, variantType })}
               />
             </div>
@@ -543,6 +554,7 @@ function TradeCardPanel(props: {
   cards: TradeCard[];
   selected: SelectedLine[];
   selectionIntent?: Record<string, NegotiationIntent>;
+  layout?: "vertical" | "horizontal";
   loading: boolean;
   emptyTitle: string;
   emptyDescription: string;
@@ -563,7 +575,7 @@ function TradeCardPanel(props: {
         <span className="rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600">{props.selected.length} tipos</span>
       </div>
       {props.cards.length ? (
-        <div className="max-h-[650px] space-y-3 overflow-y-auto pr-1">
+        <div className={`max-h-[650px] overflow-y-auto pr-1 ${props.layout === "horizontal" ? "grid gap-3 md:grid-cols-2 xl:grid-cols-3" : "space-y-3"}`}>
           {props.cards.map((card, index) => (
             <div key={card.id} className="space-y-2">
               {(index === 0 || props.cards[index - 1]?.set !== card.set) && (
@@ -620,16 +632,17 @@ function TradeCardPanel(props: {
                        className={`cursor-pointer rounded-md border p-2 transition ${selected ? "border-indigo-600 bg-indigo-50" : "border-slate-200 bg-slate-50 hover:border-indigo-200 hover:bg-white"}`}
                      >
                        <div className="flex flex-wrap items-center gap-2">
-                         <button
-                           type="button"
-                           onClick={(event) => {
-                             event.stopPropagation();
-                             props.onToggle(line);
-                           }}
-                           className={`flex h-6 w-6 items-center justify-center rounded-full border ${selected ? "border-indigo-600 bg-indigo-600 text-white" : "border-slate-300 bg-white"}`}
-                         >
-                           {selected && <Check size={14} />}
-                         </button>
+                         <label className="flex items-center gap-2 text-xs font-semibold text-slate-700">
+                           <input
+                             type="checkbox"
+                             checked={Boolean(selected)}
+                             onChange={(event) => {
+                               event.stopPropagation();
+                               props.onToggle(line);
+                             }}
+                           />
+                           Selecionar
+                         </label>
                          <button
                            type="button"
                            onClick={(event) => {
@@ -695,13 +708,13 @@ function TradeCardPanel(props: {
                      <button
                        type="button"
                        onClick={() => props.onConfigure?.(card)}
-                       className="w-full rounded-md border border-amber-200 bg-amber-50 p-2 text-left text-xs font-semibold text-amber-800 transition hover:border-amber-300 hover:bg-amber-100"
+                       className="w-full rounded-md border border-indigo-200 bg-indigo-50 p-2 text-left text-xs font-semibold text-indigo-700 transition hover:border-indigo-300 hover:bg-indigo-100"
                      >
-                       Selecione o tipo da carta antes de disponibilizar para troca. Clique aqui para configurar.
+                       Configure variantes e disponibilidade para esta carta.
                      </button>
                    ) : (
-                     <div className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs font-semibold text-amber-800">
-                       Selecione o tipo da carta antes de disponibilizar para troca.
+                     <div className="rounded-md border border-slate-200 bg-slate-50 p-2 text-xs font-semibold text-slate-600">
+                       Carta visivel para negociacao.
                      </div>
                    )
                  )}
