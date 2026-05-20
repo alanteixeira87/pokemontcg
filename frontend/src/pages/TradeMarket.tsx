@@ -289,26 +289,16 @@ export function TradeMarket({ onToast }: { onToast: (toast: ToastState) => void 
     }
     setSending(true);
     try {
-      const createdTrade = await apiService.createTradeProposal({
+      await apiService.createTradeProposal({
         receiverId: selectedUser.id,
         requestedCards: requested,
         offeredCards: hasTradeIntent ? offered : []
       });
-      const buyLines = requested.filter((line) => requestedIntent[selectionKey(line)] === "BUY");
-      const tradeLines = requested.filter((line) => requestedIntent[selectionKey(line)] !== "BUY");
-      const baseMessage =
-        buyLines.length && tradeLines.length
-          ? `Interesse inicial: ${buyLines.length} carta(s) para compra e ${tradeLines.length} para troca.`
-          : buyLines.length
-            ? `Interesse inicial: compra de ${buyLines.length} carta(s).`
-            : `Interesse inicial: troca de ${tradeLines.length} carta(s).`;
-      await apiService.sendTradeMessage(createdTrade.id, `${baseMessage} Vamos combinar os detalhes por aqui.`);
       setRequested([]);
       setOffered([]);
       setRequestedIntent({});
       await loadProposals();
-      setChatTrade(createdTrade);
-      onToast({ type: "success", message: hasTradeIntent ? "Proposta enviada com sucesso." : "Negociacao de compra iniciada." });
+      onToast({ type: "success", message: "Proposta enviada. A negociacao inicia apos o aceite." });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Nao foi possivel enviar a proposta.";
       onToast({ type: "error", message: message.includes("400") ? "Selecione tipo e quantidade validos antes de enviar." : "Nao foi possivel enviar a proposta." });
@@ -574,8 +564,14 @@ function TradeCardPanel(props: {
       </div>
       {props.cards.length ? (
         <div className="max-h-[650px] space-y-3 overflow-y-auto pr-1">
-          {props.cards.map((card) => (
-            <div key={card.id} className="rounded-lg border border-slate-200 bg-white p-2 shadow-sm transition hover:border-indigo-200 hover:shadow-md dark:border-slate-800 dark:bg-slate-950/50">
+          {props.cards.map((card, index) => (
+            <div key={card.id} className="space-y-2">
+              {(index === 0 || props.cards[index - 1]?.set !== card.set) && (
+                <div className="rounded-md border border-indigo-100 bg-indigo-50 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-indigo-700">
+                  Colecao: {card.set}
+                </div>
+              )}
+              <div className="rounded-lg border border-slate-200 bg-white p-2 shadow-sm transition hover:border-indigo-200 hover:shadow-md dark:border-slate-800 dark:bg-slate-950/50">
               <div className="grid grid-cols-[72px_1fr_auto] gap-3">
                 <button type="button" onClick={() => props.onZoom(card)} className="relative">
                   <img src={card.image} alt={card.name} loading="lazy" className="h-24 w-[68px] object-contain" />
@@ -711,6 +707,7 @@ function TradeCardPanel(props: {
                  )}
                </div>
              </div>
+            </div>
           ))}
         </div>
       ) : <EmptyState title={props.emptyTitle} description={props.emptyDescription} />}
@@ -731,6 +728,7 @@ function ProposalCard({ proposal, currentUserId, onUpdate, onChat, onZoom }: { p
   const incoming = proposal.receiverId === currentUserId;
   const canAnswer = incoming && proposal.status === "PENDING";
   const canCancel = proposal.requesterId === currentUserId && proposal.status === "PENDING";
+  const canChat = proposal.status === "ACCEPTED";
   const offered = proposal.cards?.filter((card) => card.side === "OFFERED") ?? proposal.offeredCards;
   const requested = proposal.cards?.filter((card) => card.side === "REQUESTED") ?? proposal.requestedCards;
   const isBuyNegotiation = offered.length === 0 && requested.length > 0;
@@ -749,7 +747,10 @@ function ProposalCard({ proposal, currentUserId, onUpdate, onChat, onZoom }: { p
           <p className="text-xs font-semibold text-slate-500">{new Date(proposal.createdAt).toLocaleString("pt-BR")}</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button size="sm" variant="secondary" onClick={() => onChat(proposal)}><MessageCircle size={14} />Chat</Button>
+          <Button size="sm" variant="secondary" disabled={!canChat} onClick={() => onChat(proposal)}>
+            <MessageCircle size={14} />
+            {canChat ? "Chat" : "Aguardando aceite"}
+          </Button>
           {canAnswer && <><Button size="sm" variant="primary" onClick={() => void onUpdate(proposal.id, "ACCEPTED")}><Handshake size={14} />Aceitar</Button><Button size="sm" variant="danger" onClick={() => void onUpdate(proposal.id, "REJECTED")}><X size={14} />Recusar</Button></>}
           {canCancel && <Button size="sm" variant="danger" onClick={() => void onUpdate(proposal.id, "CANCELLED")}>Cancelar</Button>}
         </div>
