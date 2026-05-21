@@ -612,10 +612,14 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
             Por set
           </Button>
         )}
-        {filters.set && !tradeOnly && (
-          <Button variant="secondary" onClick={() => window.open(apiService.exportUrl("repeatedPdf", filters.set), "_blank")}>
+        {!tradeOnly && (
+          <Button
+            variant="primary"
+            className="shadow-md"
+            onClick={() => window.open(apiService.exportUrl("repeatedPdf", filters.set || undefined), "_blank")}
+          >
             <Download size={16} />
-            Download PDF repetidas
+            Download PDF repetidas (A4)
           </Button>
         )}
         {!tradeOnly && (
