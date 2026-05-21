@@ -389,6 +389,14 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
     window.open(apiService.exportUrl("card", cardId), "_blank");
   }
 
+  function downloadRepeatedPdf() {
+    if (!filters.set) {
+      onToast({ type: "error", message: "Selecione um set para baixar o PDF de repetidas." });
+      return;
+    }
+    window.open(apiService.exportUrl("repeatedPdf", filters.set), "_blank");
+  }
+
   async function importExcel(file: File | undefined) {
     if (!file) return;
     setImporting(true);
@@ -616,7 +624,8 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
           <Button
             variant="primary"
             className="shadow-md"
-            onClick={() => window.open(apiService.exportUrl("repeatedPdf", filters.set || undefined), "_blank")}
+            disabled={!filters.set}
+            onClick={downloadRepeatedPdf}
           >
             <Download size={16} />
             Download PDF repetidas (A4)
