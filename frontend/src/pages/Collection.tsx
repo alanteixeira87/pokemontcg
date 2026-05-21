@@ -402,7 +402,8 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
       onToast({ type: "success", message: "Download do PDF iniciado." });
     } catch (error) {
       const message = await extractDownloadErrorMessage(error);
-      onToast({ type: "error", message });
+      onToast({ type: "error", message: `${message} Tentando modo alternativo...` });
+      window.location.assign(apiService.exportUrl("repeatedPdf", filters.set));
     } finally {
       setDownloadingRepeatedPdf(false);
     }
