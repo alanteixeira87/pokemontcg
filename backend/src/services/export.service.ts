@@ -23,6 +23,7 @@ type RepeatedCardRow = {
 };
 
 type SetCoverMap = Map<string, string>;
+type ImageBufferMap = Map<string, Buffer | null>;
 
 export const exportService = {
   async buildWorkbook(userId: number, params: ExportParams): Promise<ExcelJS.Workbook> {
@@ -138,6 +139,22 @@ export const exportService = {
     }, new Map());
 
     const setCovers = await loadSetCoverMap();
+    const fallbackCoverBySet = new Map<string, string>();
+    const imageUrls = new Set<string>();
+
+    for (const [setName, cards] of grouped.entries()) {
+      const normalizedSetName = normalizeSetName(setName);
+      const coverImageUrl = setCovers.get(normalizedSetName) ?? upscaleCardImage(cards[0]?.image ?? null);
+      if (coverImageUrl) {
+        fallbackCoverBySet.set(setName, coverImageUrl);
+        imageUrls.add(coverImageUrl);
+      }
+      cards.forEach((card) => {
+        if (card.image) imageUrls.add(card.image);
+      });
+    }
+
+    const imageBuffers = await preloadImageBuffers(Array.from(imageUrls), 12);
     const doc = new PDFDocument({ size: "A4", margin: 20 });
     const chunks: Buffer[] = [];
     doc.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
@@ -153,10 +170,9 @@ export const exportService = {
       }
       firstSet = false;
 
-      const normalizedSetName = normalizeSetName(setName);
-      const coverImageUrl = setCovers.get(normalizedSetName) ?? upscaleCardImage(cards[0]?.image ?? null);
-      await renderSetCover(doc, setName, coverImageUrl);
-      await renderSetGridPages(doc, setName, cards);
+      const coverImageUrl = fallbackCoverBySet.get(setName) ?? null;
+      renderSetCover(doc, setName, coverImageUrl, imageBuffers);
+      renderSetGridPages(doc, setName, cards, imageBuffers);
     }
 
     doc.end();
@@ -164,7 +180,7 @@ export const exportService = {
   }
 };
 
-async function renderSetCover(doc: PDFKit.PDFDocument, setName: string, coverImageUrl: string | null) {
+function renderSetCover(doc: PDFKit.PDFDocument, setName: string, coverImageUrl: string | null, imageBuffers: ImageBufferMap) {
   const pageWidth = doc.page.width;
   const pageHeight = doc.page.height;
   const margin = 30;
@@ -174,7 +190,7 @@ async function renderSetCover(doc: PDFKit.PDFDocument, setName: string, coverIma
   doc.rect(margin, margin, contentWidth, contentHeight).fill("#0f172a");
 
   if (coverImageUrl) {
-    const image = await fetchImageBuffer(coverImageUrl);
+    const image = imageBuffers.get(coverImageUrl) ?? null;
     if (image) {
       const imageWidth = contentWidth * 0.6;
       const imageHeight = contentHeight * 0.62;
@@ -202,7 +218,7 @@ async function renderSetCover(doc: PDFKit.PDFDocument, setName: string, coverIma
   });
 }
 
-async function renderSetGridPages(doc: PDFKit.PDFDocument, setName: string, cards: RepeatedCardRow[]) {
+function renderSetGridPages(doc: PDFKit.PDFDocument, setName: string, cards: RepeatedCardRow[], imageBuffers: ImageBufferMap) {
   const cols = 5;
   const rows = 10;
   const perPage = cols * rows;
@@ -235,12 +251,12 @@ async function renderSetGridPages(doc: PDFKit.PDFDocument, setName: string, card
       const row = Math.floor(index / cols);
       const x = margin + col * (cellWidth + gapX);
       const y = margin + titleHeight + row * (cellHeight + gapY);
-      await drawCardCell(doc, card, x, y, cellWidth, cellHeight);
+      drawCardCell(doc, card, x, y, cellWidth, cellHeight, imageBuffers);
     }
   }
 }
 
-async function drawCardCell(doc: PDFKit.PDFDocument, card: RepeatedCardRow, x: number, y: number, width: number, height: number) {
+function drawCardCell(doc: PDFKit.PDFDocument, card: RepeatedCardRow, x: number, y: number, width: number, height: number, imageBuffers: ImageBufferMap) {
   doc.roundedRect(x, y, width, height, 4).fillAndStroke("#ffffff", "#cbd5e1");
 
   const imageWidth = Math.min(34, Math.max(22, width * 0.28));
@@ -249,7 +265,7 @@ async function drawCardCell(doc: PDFKit.PDFDocument, card: RepeatedCardRow, x: n
   const imageY = y + 5;
 
   if (card.image) {
-    const buffer = await fetchImageBuffer(upscaleCardImage(card.image));
+    const buffer = imageBuffers.get(card.image) ?? null;
     if (buffer) {
       try {
         doc.image(buffer, imageX, imageY, {
@@ -277,12 +293,33 @@ async function fetchImageBuffer(url: string): Promise<Buffer | null> {
   if (cached) return cached;
 
   const task = axios
-    .get<ArrayBuffer>(url, { responseType: "arraybuffer", timeout: 10000 })
+    .get<ArrayBuffer>(url, { responseType: "arraybuffer", timeout: 7000 })
     .then((response) => Buffer.from(response.data))
     .catch(() => null);
 
   imageCache.set(url, task);
   return task;
+}
+
+async function preloadImageBuffers(urls: string[], concurrency = 10): Promise<ImageBufferMap> {
+  const uniqueUrls = Array.from(new Set(urls.filter(Boolean)));
+  const result: ImageBufferMap = new Map();
+  if (!uniqueUrls.length) return result;
+
+  let index = 0;
+  const workers = Array.from({ length: Math.min(concurrency, uniqueUrls.length) }, async () => {
+    while (index < uniqueUrls.length) {
+      const currentIndex = index;
+      index += 1;
+      const url = uniqueUrls[currentIndex];
+      if (!url) continue;
+      const buffer = await fetchImageBuffer(url);
+      result.set(url, buffer);
+    }
+  });
+
+  await Promise.all(workers);
+  return result;
 }
 
 async function loadSetCoverMap(): Promise<SetCoverMap> {
