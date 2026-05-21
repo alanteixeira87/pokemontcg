@@ -25,6 +25,10 @@ type RepeatedCardRow = {
 type SetCoverMap = Map<string, string>;
 type ImageBufferMap = Map<string, Buffer | null>;
 
+const PDF_IMAGE_TIMEOUT_MS = 3500;
+const PDF_PRELOAD_BUDGET_MS = 20000;
+const PDF_MAX_IMAGE_DOWNLOADS = 120;
+
 export const exportService = {
   async buildWorkbook(userId: number, params: ExportParams): Promise<ExcelJS.Workbook> {
     if (params.type === "repeatedPdf") {
@@ -150,11 +154,12 @@ export const exportService = {
         imageUrls.add(coverImageUrl);
       }
       cards.forEach((card) => {
-        if (card.image) imageUrls.add(card.image);
+        if (card.image) imageUrls.add(upscaleCardImage(card.image));
       });
     }
 
-    const imageBuffers = await preloadImageBuffers(Array.from(imageUrls), 12);
+    const prioritizedImageUrls = prioritizeImageUrls(Array.from(imageUrls));
+    const imageBuffers = await preloadImageBuffers(prioritizedImageUrls, 12, PDF_PRELOAD_BUDGET_MS);
     const doc = new PDFDocument({ size: "A4", margin: 20 });
     const chunks: Buffer[] = [];
     doc.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
@@ -265,7 +270,7 @@ function drawCardCell(doc: PDFKit.PDFDocument, card: RepeatedCardRow, x: number,
   const imageY = y + 5;
 
   if (card.image) {
-    const buffer = imageBuffers.get(card.image) ?? null;
+    const buffer = imageBuffers.get(upscaleCardImage(card.image)) ?? null;
     if (buffer) {
       try {
         doc.image(buffer, imageX, imageY, {
@@ -293,7 +298,7 @@ async function fetchImageBuffer(url: string): Promise<Buffer | null> {
   if (cached) return cached;
 
   const task = axios
-    .get<ArrayBuffer>(url, { responseType: "arraybuffer", timeout: 7000 })
+    .get<ArrayBuffer>(url, { responseType: "arraybuffer", timeout: PDF_IMAGE_TIMEOUT_MS })
     .then((response) => Buffer.from(response.data))
     .catch(() => null);
 
@@ -301,14 +306,15 @@ async function fetchImageBuffer(url: string): Promise<Buffer | null> {
   return task;
 }
 
-async function preloadImageBuffers(urls: string[], concurrency = 10): Promise<ImageBufferMap> {
-  const uniqueUrls = Array.from(new Set(urls.filter(Boolean)));
+async function preloadImageBuffers(urls: string[], concurrency = 10, budgetMs = PDF_PRELOAD_BUDGET_MS): Promise<ImageBufferMap> {
+  const uniqueUrls = Array.from(new Set(urls.filter(Boolean))).slice(0, PDF_MAX_IMAGE_DOWNLOADS);
   const result: ImageBufferMap = new Map();
   if (!uniqueUrls.length) return result;
+  const deadline = Date.now() + budgetMs;
 
   let index = 0;
   const workers = Array.from({ length: Math.min(concurrency, uniqueUrls.length) }, async () => {
-    while (index < uniqueUrls.length) {
+    while (index < uniqueUrls.length && Date.now() < deadline) {
       const currentIndex = index;
       index += 1;
       const url = uniqueUrls[currentIndex];
@@ -320,6 +326,13 @@ async function preloadImageBuffers(urls: string[], concurrency = 10): Promise<Im
 
   await Promise.all(workers);
   return result;
+}
+
+function prioritizeImageUrls(urls: string[]): string[] {
+  const unique = Array.from(new Set(urls.filter(Boolean)));
+  const coverLike = unique.filter((url) => !url.includes("/cards/"));
+  const cardLike = unique.filter((url) => !coverLike.includes(url));
+  return [...coverLike, ...cardLike];
 }
 
 async function loadSetCoverMap(): Promise<SetCoverMap> {

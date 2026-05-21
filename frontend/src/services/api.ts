@@ -296,7 +296,8 @@ export const apiService = {
 
     const response = await api.get<Blob>("/export", {
       params,
-      responseType: "blob"
+      responseType: "blob",
+      timeout: type === "repeatedPdf" ? 180000 : 30000
     });
 
     const contentDisposition = response.headers["content-disposition"];
