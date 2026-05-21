@@ -7,6 +7,17 @@ export const exportController = {
   async download(req: Request, res: Response, next: NextFunction) {
     try {
       const query = exportQuerySchema.parse(req.query);
+      if (query.type === "repeatedPdf") {
+        const pdf = await exportService.buildRepeatedCardsPdf(getAuthenticatedUserId(req), query.set);
+        const filename = query.set
+          ? `pokemon-repetidas-${query.set.replace(/\s+/g, "-").toLowerCase()}.pdf`
+          : "pokemon-repetidas.pdf";
+        res.setHeader("Content-Type", "application/pdf");
+        res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+        res.send(pdf);
+        return;
+      }
+
       const workbook = await exportService.buildWorkbook(getAuthenticatedUserId(req), query);
       const filename = `pokemon-colecao-${query.type}.xlsx`;
 

@@ -42,6 +42,8 @@ export type PokemonSet = {
   ptcgoCode?: string;
   printedTotal?: number;
   total?: number;
+  logo?: string;
+  symbol?: string;
 };
 
 export type ExploreCard = {

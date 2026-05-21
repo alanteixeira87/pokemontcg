@@ -67,6 +67,7 @@ A chave da Pokemon TCG API e opcional para uso basico, mas pode ser preenchida e
 - Tela exclusiva de trocas
 - Filtros e ordenacao persistidos em `localStorage`
 - Exportacao Excel completa, por set e por carta individual
+- Exportacao visual em PDF de cartas repetidas por set (A4 com capa e grade 5x10)
 - UI dark mode, responsiva, com skeleton, empty state, modal/toast base e cards visuais
 
 ## Atualizacoes recentes (trocas e negociacao)
@@ -100,6 +101,7 @@ A chave da Pokemon TCG API e opcional para uso basico, mas pode ser preenchida e
 - `GET /api/export?type=full`
 - `GET /api/export?type=set&set=Base`
 - `GET /api/export?type=card&id=base1-4`
+- `GET /api/export?type=repeatedPdf&set=Base`
 - `POST /api/import/collection`
 
 ## Importacao Excel
