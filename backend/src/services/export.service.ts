@@ -25,10 +25,10 @@ type RepeatedCardRow = {
 type SetCoverMap = Map<string, string>;
 type ImageBufferMap = Map<string, Buffer | null>;
 
-const PDF_IMAGE_TIMEOUT_MS = 3500;
-const PDF_PRELOAD_BUDGET_MS = 20000;
-const PDF_MAX_IMAGE_DOWNLOADS = 120;
-const PDF_MAX_CARDS_WITH_IMAGES = 80;
+const PDF_IMAGE_TIMEOUT_MS = 2500;
+const PDF_GRID_COLUMNS = 4;
+const PDF_GRID_ROWS = 4;
+const PDF_PAGE_IMAGE_CONCURRENCY = PDF_GRID_COLUMNS * PDF_GRID_ROWS;
 
 export const exportService = {
   async buildWorkbook(userId: number, params: ExportParams): Promise<ExcelJS.Workbook> {
@@ -143,29 +143,7 @@ export const exportService = {
       return acc;
     }, new Map());
 
-    const includeImages = repeatedCards.length <= PDF_MAX_CARDS_WITH_IMAGES;
-    const setCovers = includeImages ? await loadSetCoverMap() : new Map<string, string>();
-    const fallbackCoverBySet = new Map<string, string>();
-    const imageBuffers = new Map<string, Buffer | null>();
-
-    if (includeImages) {
-      const imageUrls = new Set<string>();
-      for (const [setName, cards] of grouped.entries()) {
-        const normalizedSetName = normalizeSetName(setName);
-        const coverImageUrl = setCovers.get(normalizedSetName) ?? optimizeCardImageForPdf(cards[0]?.image ?? null);
-        if (coverImageUrl) {
-          fallbackCoverBySet.set(setName, coverImageUrl);
-          imageUrls.add(coverImageUrl);
-        }
-        cards.forEach((card) => {
-          if (card.image) imageUrls.add(optimizeCardImageForPdf(card.image));
-        });
-      }
-      const prioritizedImageUrls = prioritizeImageUrls(Array.from(imageUrls));
-      const loaded = await preloadImageBuffers(prioritizedImageUrls, 12, PDF_PRELOAD_BUDGET_MS);
-      loaded.forEach((value, key) => imageBuffers.set(key, value));
-    }
-
+    const setCovers = await loadSetCoverMap();
     const doc = new PDFDocument({ size: "A4", margin: 20, compress: true });
     const done = new Promise<void>((resolve, reject) => {
       doc.once("error", reject);
@@ -181,9 +159,11 @@ export const exportService = {
       }
       firstSet = false;
 
-      const coverImageUrl = includeImages ? fallbackCoverBySet.get(setName) ?? null : null;
-      renderSetCover(doc, setName, coverImageUrl, imageBuffers);
-      renderSetGridPages(doc, setName, cards, imageBuffers, includeImages);
+      const normalizedSetName = normalizeSetName(setName);
+      const coverImageUrl = setCovers.get(normalizedSetName) ?? optimizeCardImageForPdf(cards[0]?.image ?? null);
+      const coverImage = coverImageUrl ? await fetchImageBuffer(coverImageUrl) : null;
+      renderSetCover(doc, setName, coverImage);
+      await renderSetGridPages(doc, setName, cards);
     }
 
     doc.end();
@@ -191,7 +171,7 @@ export const exportService = {
   }
 };
 
-function renderSetCover(doc: PDFKit.PDFDocument, setName: string, coverImageUrl: string | null, imageBuffers: ImageBufferMap) {
+function renderSetCover(doc: PDFKit.PDFDocument, setName: string, coverImage: Buffer | null) {
   const pageWidth = doc.page.width;
   const pageHeight = doc.page.height;
   const margin = 30;
@@ -200,19 +180,16 @@ function renderSetCover(doc: PDFKit.PDFDocument, setName: string, coverImageUrl:
 
   doc.rect(margin, margin, contentWidth, contentHeight).fill("#0f172a");
 
-  if (coverImageUrl) {
-    const image = imageBuffers.get(coverImageUrl) ?? null;
-    if (image) {
-      const imageWidth = contentWidth * 0.6;
-      const imageHeight = contentHeight * 0.62;
-      const x = (pageWidth - imageWidth) / 2;
-      const y = margin + 46;
-      doc.image(image, x, y, {
-        fit: [imageWidth, imageHeight],
-        align: "center",
-        valign: "center"
-      });
-    }
+  if (coverImage) {
+    const imageWidth = contentWidth * 0.52;
+    const imageHeight = contentHeight * 0.58;
+    const x = (pageWidth - imageWidth) / 2;
+    const y = margin + 48;
+    doc.image(coverImage, x, y, {
+      fit: [imageWidth, imageHeight],
+      align: "center",
+      valign: "center"
+    });
   }
 
   doc.fillColor("#e2e8f0").fontSize(14).text("Catalogo de Cartas Repetidas", margin, pageHeight - 150, {
@@ -223,19 +200,19 @@ function renderSetCover(doc: PDFKit.PDFDocument, setName: string, coverImageUrl:
     width: contentWidth,
     align: "center"
   });
-  doc.fillColor("#cbd5e1").fontSize(11).text("Formato A4 - 5 colunas x 10 linhas", margin, pageHeight - 82, {
+  doc.fillColor("#cbd5e1").fontSize(11).text("Formato A4 - imagens visiveis - 4 colunas x 4 linhas", margin, pageHeight - 82, {
     width: contentWidth,
     align: "center"
   });
 }
 
-function renderSetGridPages(doc: PDFKit.PDFDocument, setName: string, cards: RepeatedCardRow[], imageBuffers: ImageBufferMap, includeImages: boolean) {
-  const cols = 5;
-  const rows = 10;
+async function renderSetGridPages(doc: PDFKit.PDFDocument, setName: string, cards: RepeatedCardRow[]) {
+  const cols = PDF_GRID_COLUMNS;
+  const rows = PDF_GRID_ROWS;
   const perPage = cols * rows;
-  const margin = 18;
-  const gapX = 8;
-  const gapY = 6;
+  const margin = 22;
+  const gapX = 10;
+  const gapY = 10;
 
   const pageWidth = doc.page.width;
   const pageHeight = doc.page.height;
@@ -257,12 +234,17 @@ function renderSetGridPages(doc: PDFKit.PDFDocument, setName: string, cards: Rep
       align: "right"
     });
 
+    const pageImageBuffers = await preloadImageBuffers(
+      pageCards.map((card) => optimizeCardImageForPdf(card.image)).filter(Boolean),
+      PDF_PAGE_IMAGE_CONCURRENCY
+    );
+
     for (const [index, card] of pageCards.entries()) {
       const col = index % cols;
       const row = Math.floor(index / cols);
       const x = margin + col * (cellWidth + gapX);
       const y = margin + titleHeight + row * (cellHeight + gapY);
-      drawCardCell(doc, card, x, y, cellWidth, cellHeight, imageBuffers, includeImages);
+      drawCardCell(doc, card, x, y, cellWidth, cellHeight, pageImageBuffers);
     }
   }
 }
@@ -274,19 +256,18 @@ function drawCardCell(
   y: number,
   width: number,
   height: number,
-  imageBuffers: ImageBufferMap,
-  includeImages: boolean
+  imageBuffers: ImageBufferMap
 ) {
   doc.roundedRect(x, y, width, height, 4).fillAndStroke("#ffffff", "#cbd5e1");
 
-  const imageWidth = includeImages ? Math.min(34, Math.max(22, width * 0.28)) : 0;
-  const textX = x + (includeImages ? imageWidth + 8 : 4);
-  const textWidth = width - (textX - x) - 4;
+  const padding = 6;
+  const labelHeight = 34;
+  const imageX = x + padding;
+  const imageY = y + padding;
+  const imageWidth = width - padding * 2;
+  const imageHeight = height - labelHeight - padding * 3;
 
-  if (includeImages && card.image) {
-    const imageHeight = height - 10;
-    const imageX = x + 4;
-    const imageY = y + 5;
+  if (card.image) {
     const buffer = imageBuffers.get(optimizeCardImageForPdf(card.image)) ?? null;
     if (buffer) {
       try {
@@ -298,12 +279,27 @@ function drawCardCell(
       } catch {
         // ignore invalid image buffers and keep textual data visible
       }
+    } else {
+      doc.roundedRect(imageX, imageY, imageWidth, imageHeight, 4).fillAndStroke("#f8fafc", "#e2e8f0");
+      doc.fillColor("#94a3b8").fontSize(7).text("Imagem indisponivel", imageX, imageY + imageHeight / 2 - 4, {
+        width: imageWidth,
+        align: "center"
+      });
     }
   }
 
-  doc.fillColor("#334155").fontSize(6.6).text(card.set, textX, y + 6, { width: textWidth, lineBreak: false });
-  doc.fillColor("#0f172a").fontSize(8.6).text(`#${formatExportCardNumber(card.number, card.cardId)}`, textX, y + 20, { width: textWidth, lineBreak: false });
-  doc.fillColor("#0f172a").fontSize(8.6).text(`Qtd: ${card.quantity}`, textX, y + 34, { width: textWidth, lineBreak: false });
+  const textY = y + height - labelHeight - 2;
+  const textWidth = width - padding * 2;
+  doc.fillColor("#334155").fontSize(6.4).text(card.set, x + padding, textY, { width: textWidth, lineBreak: false });
+  doc.fillColor("#0f172a").fontSize(9).text(`#${formatExportCardNumber(card.number, card.cardId)}`, x + padding, textY + 11, {
+    width: textWidth / 2,
+    lineBreak: false
+  });
+  doc.fillColor("#0f172a").fontSize(9).text(`Qtd: ${card.quantity}`, x + width / 2, textY + 11, {
+    width: textWidth / 2,
+    align: "right",
+    lineBreak: false
+  });
 }
 
 const imageCache = new Map<string, Promise<Buffer | null>>();
@@ -321,15 +317,14 @@ async function fetchImageBuffer(url: string): Promise<Buffer | null> {
   return task;
 }
 
-async function preloadImageBuffers(urls: string[], concurrency = 10, budgetMs = PDF_PRELOAD_BUDGET_MS): Promise<ImageBufferMap> {
-  const uniqueUrls = Array.from(new Set(urls.filter(Boolean))).slice(0, PDF_MAX_IMAGE_DOWNLOADS);
+async function preloadImageBuffers(urls: string[], concurrency = 10): Promise<ImageBufferMap> {
+  const uniqueUrls = Array.from(new Set(urls.filter(Boolean)));
   const result: ImageBufferMap = new Map();
   if (!uniqueUrls.length) return result;
-  const deadline = Date.now() + budgetMs;
 
   let index = 0;
   const workers = Array.from({ length: Math.min(concurrency, uniqueUrls.length) }, async () => {
-    while (index < uniqueUrls.length && Date.now() < deadline) {
+    while (index < uniqueUrls.length) {
       const currentIndex = index;
       index += 1;
       const url = uniqueUrls[currentIndex];
@@ -341,13 +336,6 @@ async function preloadImageBuffers(urls: string[], concurrency = 10, budgetMs = 
 
   await Promise.all(workers);
   return result;
-}
-
-function prioritizeImageUrls(urls: string[]): string[] {
-  const unique = Array.from(new Set(urls.filter(Boolean)));
-  const coverLike = unique.filter((url) => !url.includes("/cards/"));
-  const cardLike = unique.filter((url) => !coverLike.includes(url));
-  return [...coverLike, ...cardLike];
 }
 
 async function loadSetCoverMap(): Promise<SetCoverMap> {
@@ -369,6 +357,8 @@ function upscaleCardImage(url: string | null): string {
 function optimizeCardImageForPdf(url: string | null): string {
   if (!url) return "";
   if (url.endsWith("/high.png")) return url.replace("/high.png", "/low.png");
+  if (url.includes("/large/")) return url.replace("/large/", "/small/");
+  if (url.includes("_large.")) return url.replace("_large.", "_small.");
   return upscaleCardImage(url);
 }
 
