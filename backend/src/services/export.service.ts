@@ -28,6 +28,7 @@ type ImageBufferMap = Map<string, Buffer | null>;
 const PDF_IMAGE_TIMEOUT_MS = 3500;
 const PDF_PRELOAD_BUDGET_MS = 20000;
 const PDF_MAX_IMAGE_DOWNLOADS = 120;
+const PDF_MAX_CARDS_WITH_IMAGES = 80;
 
 export const exportService = {
   async buildWorkbook(userId: number, params: ExportParams): Promise<ExcelJS.Workbook> {
@@ -112,11 +113,11 @@ export const exportService = {
     return workbook;
   },
 
-  async buildRepeatedCardsPdf(userId: number, selectedSet?: string): Promise<Buffer> {
+  async streamRepeatedCardsPdf(userId: number, selectedSet: string, output: NodeJS.WritableStream): Promise<void> {
     const repeatedCards = await prisma.collection.findMany({
       where: {
         userId,
-        set: selectedSet || undefined,
+        set: selectedSet,
         quantity: { gt: 1 }
       },
       select: {
@@ -142,31 +143,36 @@ export const exportService = {
       return acc;
     }, new Map());
 
-    const setCovers = await loadSetCoverMap();
+    const includeImages = repeatedCards.length <= PDF_MAX_CARDS_WITH_IMAGES;
+    const setCovers = includeImages ? await loadSetCoverMap() : new Map<string, string>();
     const fallbackCoverBySet = new Map<string, string>();
-    const imageUrls = new Set<string>();
+    const imageBuffers = new Map<string, Buffer | null>();
 
-    for (const [setName, cards] of grouped.entries()) {
-      const normalizedSetName = normalizeSetName(setName);
-      const coverImageUrl = setCovers.get(normalizedSetName) ?? upscaleCardImage(cards[0]?.image ?? null);
-      if (coverImageUrl) {
-        fallbackCoverBySet.set(setName, coverImageUrl);
-        imageUrls.add(coverImageUrl);
+    if (includeImages) {
+      const imageUrls = new Set<string>();
+      for (const [setName, cards] of grouped.entries()) {
+        const normalizedSetName = normalizeSetName(setName);
+        const coverImageUrl = setCovers.get(normalizedSetName) ?? optimizeCardImageForPdf(cards[0]?.image ?? null);
+        if (coverImageUrl) {
+          fallbackCoverBySet.set(setName, coverImageUrl);
+          imageUrls.add(coverImageUrl);
+        }
+        cards.forEach((card) => {
+          if (card.image) imageUrls.add(optimizeCardImageForPdf(card.image));
+        });
       }
-      cards.forEach((card) => {
-        if (card.image) imageUrls.add(upscaleCardImage(card.image));
-      });
+      const prioritizedImageUrls = prioritizeImageUrls(Array.from(imageUrls));
+      const loaded = await preloadImageBuffers(prioritizedImageUrls, 12, PDF_PRELOAD_BUDGET_MS);
+      loaded.forEach((value, key) => imageBuffers.set(key, value));
     }
 
-    const prioritizedImageUrls = prioritizeImageUrls(Array.from(imageUrls));
-    const imageBuffers = await preloadImageBuffers(prioritizedImageUrls, 12, PDF_PRELOAD_BUDGET_MS);
-    const doc = new PDFDocument({ size: "A4", margin: 20 });
-    const chunks: Buffer[] = [];
-    doc.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
-    const result = new Promise<Buffer>((resolve, reject) => {
-      doc.on("end", () => resolve(Buffer.concat(chunks)));
-      doc.on("error", reject);
+    const doc = new PDFDocument({ size: "A4", margin: 20, compress: true });
+    const done = new Promise<void>((resolve, reject) => {
+      doc.once("error", reject);
+      output.once("error", reject);
+      output.once("finish", () => resolve());
     });
+    doc.pipe(output);
 
     let firstSet = true;
     for (const [setName, cards] of grouped.entries()) {
@@ -175,13 +181,13 @@ export const exportService = {
       }
       firstSet = false;
 
-      const coverImageUrl = fallbackCoverBySet.get(setName) ?? null;
+      const coverImageUrl = includeImages ? fallbackCoverBySet.get(setName) ?? null : null;
       renderSetCover(doc, setName, coverImageUrl, imageBuffers);
-      renderSetGridPages(doc, setName, cards, imageBuffers);
+      renderSetGridPages(doc, setName, cards, imageBuffers, includeImages);
     }
 
     doc.end();
-    return result;
+    await done;
   }
 };
 
@@ -223,7 +229,7 @@ function renderSetCover(doc: PDFKit.PDFDocument, setName: string, coverImageUrl:
   });
 }
 
-function renderSetGridPages(doc: PDFKit.PDFDocument, setName: string, cards: RepeatedCardRow[], imageBuffers: ImageBufferMap) {
+function renderSetGridPages(doc: PDFKit.PDFDocument, setName: string, cards: RepeatedCardRow[], imageBuffers: ImageBufferMap, includeImages: boolean) {
   const cols = 5;
   const rows = 10;
   const perPage = cols * rows;
@@ -256,21 +262,32 @@ function renderSetGridPages(doc: PDFKit.PDFDocument, setName: string, cards: Rep
       const row = Math.floor(index / cols);
       const x = margin + col * (cellWidth + gapX);
       const y = margin + titleHeight + row * (cellHeight + gapY);
-      drawCardCell(doc, card, x, y, cellWidth, cellHeight, imageBuffers);
+      drawCardCell(doc, card, x, y, cellWidth, cellHeight, imageBuffers, includeImages);
     }
   }
 }
 
-function drawCardCell(doc: PDFKit.PDFDocument, card: RepeatedCardRow, x: number, y: number, width: number, height: number, imageBuffers: ImageBufferMap) {
+function drawCardCell(
+  doc: PDFKit.PDFDocument,
+  card: RepeatedCardRow,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  imageBuffers: ImageBufferMap,
+  includeImages: boolean
+) {
   doc.roundedRect(x, y, width, height, 4).fillAndStroke("#ffffff", "#cbd5e1");
 
-  const imageWidth = Math.min(34, Math.max(22, width * 0.28));
-  const imageHeight = height - 10;
-  const imageX = x + 4;
-  const imageY = y + 5;
+  const imageWidth = includeImages ? Math.min(34, Math.max(22, width * 0.28)) : 0;
+  const textX = x + (includeImages ? imageWidth + 8 : 4);
+  const textWidth = width - (textX - x) - 4;
 
-  if (card.image) {
-    const buffer = imageBuffers.get(upscaleCardImage(card.image)) ?? null;
+  if (includeImages && card.image) {
+    const imageHeight = height - 10;
+    const imageX = x + 4;
+    const imageY = y + 5;
+    const buffer = imageBuffers.get(optimizeCardImageForPdf(card.image)) ?? null;
     if (buffer) {
       try {
         doc.image(buffer, imageX, imageY, {
@@ -284,8 +301,6 @@ function drawCardCell(doc: PDFKit.PDFDocument, card: RepeatedCardRow, x: number,
     }
   }
 
-  const textX = imageX + imageWidth + 4;
-  const textWidth = width - (textX - x) - 4;
   doc.fillColor("#334155").fontSize(6.6).text(card.set, textX, y + 6, { width: textWidth, lineBreak: false });
   doc.fillColor("#0f172a").fontSize(8.6).text(`#${formatExportCardNumber(card.number, card.cardId)}`, textX, y + 20, { width: textWidth, lineBreak: false });
   doc.fillColor("#0f172a").fontSize(8.6).text(`Qtd: ${card.quantity}`, textX, y + 34, { width: textWidth, lineBreak: false });
@@ -349,6 +364,12 @@ function upscaleCardImage(url: string | null): string {
   if (url.includes("/small/")) return url.replace("/small/", "/large/");
   if (url.includes("_small.")) return url.replace("_small.", "_large.");
   return url;
+}
+
+function optimizeCardImageForPdf(url: string | null): string {
+  if (!url) return "";
+  if (url.endsWith("/high.png")) return url.replace("/high.png", "/low.png");
+  return upscaleCardImage(url);
 }
 
 async function buildMissingWorkbook(userId: number, selectedSet?: string): Promise<ExcelJS.Workbook> {
