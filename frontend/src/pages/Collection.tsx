@@ -28,6 +28,7 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
   const [activeMissingIds, setActiveMissingIds] = useState<Set<string>>(new Set());
   const [showSelectedCollectionOnly, setShowSelectedCollectionOnly] = useState(false);
   const [loadingMissingCards, setLoadingMissingCards] = useState(false);
+  const [downloadingRepeatedPdf, setDownloadingRepeatedPdf] = useState(false);
   const { filters, setFilters } = useAppStore();
   const [draftFilters, setDraftFilters] = useState(filters);
   const restoreScrollRef = useRef<number | null>(null);
@@ -389,12 +390,22 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
     window.open(apiService.exportUrl("card", cardId), "_blank");
   }
 
-  function downloadRepeatedPdf() {
+  async function downloadRepeatedPdf() {
     if (!filters.set) {
       onToast({ type: "error", message: "Selecione um set para baixar o PDF de repetidas." });
       return;
     }
-    window.open(apiService.exportUrl("repeatedPdf", filters.set), "_blank");
+    setDownloadingRepeatedPdf(true);
+    try {
+      const result = await apiService.downloadExport("repeatedPdf", filters.set);
+      downloadBlob(result.blob, result.filename);
+      onToast({ type: "success", message: "Download do PDF iniciado." });
+    } catch (error) {
+      const message = await extractDownloadErrorMessage(error);
+      onToast({ type: "error", message });
+    } finally {
+      setDownloadingRepeatedPdf(false);
+    }
   }
 
   async function importExcel(file: File | undefined) {
@@ -624,11 +635,11 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
           <Button
             variant="primary"
             className="shadow-md"
-            disabled={!filters.set}
-            onClick={downloadRepeatedPdf}
+            disabled={!filters.set || downloadingRepeatedPdf}
+            onClick={() => void downloadRepeatedPdf()}
           >
             <Download size={16} />
-            Download PDF repetidas (A4)
+            {downloadingRepeatedPdf ? "Gerando PDF..." : "Download PDF repetidas (A4)"}
           </Button>
         )}
         {!tradeOnly && (
@@ -870,6 +881,43 @@ function upsertCollectionItem(items: CollectionItem[], item: CollectionItem, sor
 function cardNumberValue(number?: string | null): number {
   const parsed = Number(number?.match(/\d+/)?.[0] ?? Number.MAX_SAFE_INTEGER);
   return Number.isFinite(parsed) ? parsed : Number.MAX_SAFE_INTEGER;
+}
+
+function downloadBlob(blob: Blob, filename: string) {
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => window.URL.revokeObjectURL(url), 2000);
+}
+
+async function extractDownloadErrorMessage(error: unknown): Promise<string> {
+  const fallback = "Nao foi possivel concluir o download do PDF agora.";
+  if (typeof error !== "object" || !error) return fallback;
+
+  const response = (error as { response?: { data?: unknown } }).response;
+  if (!response?.data) return fallback;
+
+  const data = response.data;
+  if (data instanceof Blob) {
+    try {
+      const text = await data.text();
+      const parsed = JSON.parse(text) as { message?: string };
+      if (parsed.message) return parsed.message;
+    } catch {
+      return fallback;
+    }
+  }
+
+  if (typeof data === "object" && data && "message" in data) {
+    const message = (data as { message?: string }).message;
+    if (message) return message;
+  }
+
+  return fallback;
 }
 
 function MetricCard({ icon: Icon, label, value }: { icon: typeof Layers3; label: string; value: number }) {

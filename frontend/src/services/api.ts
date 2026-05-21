@@ -63,6 +63,20 @@ function booleanParam(value?: boolean): string | undefined {
   return typeof value === "boolean" ? String(value) : undefined;
 }
 
+function extractFilename(contentDisposition?: string): string | null {
+  if (!contentDisposition) return null;
+  const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utf8Match?.[1]) {
+    try {
+      return decodeURIComponent(utf8Match[1]);
+    } catch {
+      return utf8Match[1];
+    }
+  }
+  const basicMatch = contentDisposition.match(/filename="?([^";]+)"?/i);
+  return basicMatch?.[1] ?? null;
+}
+
 export const apiService = {
   async register(input: { name: string; email: string; password: string }): Promise<AuthResponse> {
     const response = await api.post<AuthResponse>("/auth/register", input);
@@ -271,5 +285,25 @@ export const apiService = {
     const token = localStorage.getItem("pokemon-tcg-token");
     if (token) params.set("token", token);
     return `${apiBaseUrl}/export?${params.toString()}`;
+  },
+
+  async downloadExport(type: "full" | "set" | "card" | "missing" | "repeatedPdf", value?: string): Promise<{ blob: Blob; filename: string }> {
+    const params: Record<string, string> = { type };
+    if (type === "set" && value) params.set = value;
+    if (type === "card" && value) params.id = value;
+    if (type === "missing" && value) params.set = value;
+    if (type === "repeatedPdf" && value) params.set = value;
+
+    const response = await api.get<Blob>("/export", {
+      params,
+      responseType: "blob"
+    });
+
+    const contentDisposition = response.headers["content-disposition"];
+    const fallbackFilename = type === "repeatedPdf" ? "pokemon-repetidas.pdf" : `pokemon-colecao-${type}.xlsx`;
+    return {
+      blob: response.data,
+      filename: extractFilename(contentDisposition) ?? fallbackFilename
+    };
   }
 };
