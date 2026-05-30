@@ -1,4 +1,4 @@
-import { AlertTriangle, BarChart3, ChevronDown, ChevronUp, Download, Heart, Layers3, Plus, RefreshCw, SlidersHorizontal, Trash2, Trophy, Upload } from "lucide-react";
+import { AlertTriangle, BarChart3, CheckSquare, ChevronDown, ChevronUp, Columns3, Download, Grid3X3, Heart, Layers3, List, Plus, RefreshCw, SlidersHorizontal, Trash2, Trophy, Upload } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CardTile } from "../components/CardTile";
 import { EmptyState } from "../components/EmptyState";
@@ -26,6 +26,10 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
   const [allMissingCards, setAllMissingCards] = useState<ExploreCard[]>([]);
   const [wishlistIds, setWishlistIds] = useState<Set<string>>(new Set());
   const [activeMissingIds, setActiveMissingIds] = useState<Set<string>>(new Set());
+  const [collectionViewMode, setCollectionViewMode] = useState<"grid" | "list" | "columns">("grid");
+  const [selectedMissingIds, setSelectedMissingIds] = useState<Set<string>>(new Set());
+  const [missingQuantities, setMissingQuantities] = useState<Record<string, number>>({});
+  const [confirmBatchMissing, setConfirmBatchMissing] = useState(false);
   const [showSelectedCollectionOnly, setShowSelectedCollectionOnly] = useState(false);
   const [loadingMissingCards, setLoadingMissingCards] = useState(false);
   const [downloadingRepeatedPdf, setDownloadingRepeatedPdf] = useState(false);
@@ -251,6 +255,23 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
           .sort((a, b) => normalizeSetName(a.set).localeCompare(normalizeSetName(b.set)) || cardNumberValue(a.number) - cardNumberValue(b.number) || a.name.localeCompare(b.name))
       : [];
   const hasSetOrderedCards = Boolean(filters.set) && setOrderedEntries.length > 0 && !tradeOnly && !filters.missingOnly;
+  const selectableMissingCards = useMemo(
+    () =>
+      tradeOnly
+        ? []
+        : hasSetOrderedCards
+          ? setOrderedEntries.flatMap((entry) => (entry.type === "missing" ? [entry.card] : []))
+          : visibleMissingCards,
+    [hasSetOrderedCards, setOrderedEntries, tradeOnly, visibleMissingCards]
+  );
+  const selectableMissingIdsKey = useMemo(() => selectableMissingCards.map((card) => card.id).join("|"), [selectableMissingCards]);
+  const selectedMissingCards = useMemo(() => selectableMissingCards.filter((card) => selectedMissingIds.has(card.id)), [selectableMissingCards, selectedMissingIds]);
+  const totalSelectedMissingCopies = useMemo(
+    () => selectedMissingCards.reduce((sum, card) => sum + (missingQuantities[card.id] ?? 1), 0),
+    [missingQuantities, selectedMissingCards]
+  );
+  const canUseMissingSelection = !tradeOnly && selectableMissingCards.length > 0;
+  const shouldUseSelectableMissingView = canUseMissingSelection && collectionViewMode !== "grid";
   const hasPendingFilterChanges = useMemo(
     () =>
       draftFilters.set !== filters.set ||
@@ -281,6 +302,11 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
   useEffect(() => {
     setActiveMissingIds(new Set());
   }, [filters.set, setCards.length]);
+
+  useEffect(() => {
+    setSelectedMissingIds(new Set());
+    setConfirmBatchMissing(false);
+  }, [filters.favorite, filters.forTrade, filters.missingOnly, filters.set, selectableMissingIdsKey]);
 
   useEffect(() => {
     if (restoreScrollRef.current === null) return;
@@ -317,6 +343,19 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
     setShowSelectedCollectionOnly(Boolean(setName));
   }
 
+  function setMissingQuantity(cardId: string, quantity: number) {
+    setMissingQuantities((current) => ({ ...current, [cardId]: Math.max(1, quantity) }));
+  }
+
+  function toggleSelectedMissing(cardId: string) {
+    setSelectedMissingIds((current) => {
+      const next = new Set(current);
+      if (next.has(cardId)) next.delete(cardId);
+      else next.add(cardId);
+      return next;
+    });
+  }
+
   async function update(id: number, data: Partial<Pick<CollectionItem, "quantity" | "price" | "favorite" | "forTrade">>) {
     const previous = items;
     setItems((current) => current.map((item) => (item.id === id ? { ...item, ...data } : item)));
@@ -344,18 +383,45 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
     }
   }
 
-  async function addMissing(card: ExploreCard) {
+  async function addMissing(card: ExploreCard, quantity = missingQuantities[card.id] ?? 1) {
     setActiveMissingIds((current) => new Set(current).add(card.id));
     try {
       preserveScrollPosition();
-      const created = await apiService.addToCollection(card, 1);
+      const created = await apiService.addToCollection(card, quantity);
       setAllItems((current) => upsertCollectionItem(current, created, "name"));
       if (!filters.missingOnly && matchesCollectionFilters(created, filters.set, filters.favorite, filters.forTrade)) {
         setItems((current) => upsertCollectionItem(current, created, filters.sort));
       }
-      onToast({ type: "success", message: "Carta adicionada à coleção." });
+      setSelectedMissingIds((current) => {
+        if (!current.has(card.id)) return current;
+        const next = new Set(current);
+        next.delete(card.id);
+        return next;
+      });
+      onToast({ type: "success", message: `${quantity} cópia(s) adicionada(s) à coleção.` });
     } catch {
       onToast({ type: "error", message: "Não foi possível adicionar esta carta." });
+    }
+  }
+
+  async function addSelectedMissing() {
+    if (selectedMissingCards.length === 0) return;
+    try {
+      preserveScrollPosition();
+      const createdItems = await Promise.all(selectedMissingCards.map((card) => apiService.addToCollection(card, missingQuantities[card.id] ?? 1)));
+      setAllItems((current) => createdItems.reduce((next, item) => upsertCollectionItem(next, item, "name"), current));
+      if (!filters.missingOnly) {
+        setItems((current) =>
+          createdItems
+            .filter((item) => matchesCollectionFilters(item, filters.set, filters.favorite, filters.forTrade))
+            .reduce((next, item) => upsertCollectionItem(next, item, filters.sort), current)
+        );
+      }
+      setSelectedMissingIds(new Set());
+      setConfirmBatchMissing(false);
+      onToast({ type: "success", message: `${selectedMissingCards.length} carta(s) e ${totalSelectedMissingCopies} cópia(s) adicionada(s) à coleção.` });
+    } catch {
+      onToast({ type: "error", message: "Não foi possível adicionar as cartas selecionadas." });
     }
   }
 
@@ -651,10 +717,57 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
         )}
       </div>
 
+      {canUseMissingSelection && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 p-2 dark:border-slate-800 dark:bg-slate-950/40">
+          <div className="flex items-center gap-1">
+            <CollectionModeButton active={collectionViewMode === "grid"} onClick={() => setCollectionViewMode("grid")} icon={Grid3X3} label="Grid" />
+            <CollectionModeButton active={collectionViewMode === "list"} onClick={() => setCollectionViewMode("list")} icon={List} label="Lista" />
+            <CollectionModeButton active={collectionViewMode === "columns"} onClick={() => setCollectionViewMode("columns")} icon={Columns3} label="Colunas" />
+          </div>
+          {collectionViewMode !== "grid" && (
+            <Button variant="primary" disabled={selectedMissingIds.size === 0} onClick={() => setConfirmBatchMissing(true)}>
+              <CheckSquare size={16} />
+              Adicionar selecionadas ({selectedMissingIds.size})
+            </Button>
+          )}
+        </div>
+      )}
+
       {isGridLoading ? (
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
           {Array.from({ length: 10 }).map((_, index) => (
             <Skeleton key={index} className="h-96" />
+          ))}
+        </div>
+      ) : shouldUseSelectableMissingView && collectionViewMode === "list" ? (
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          {selectableMissingCards.map((card) => (
+            <MissingCardListRow
+              key={card.id}
+              card={card}
+              selected={selectedMissingIds.has(card.id)}
+              wished={wishlistIds.has(card.id)}
+              quantity={missingQuantities[card.id] ?? 1}
+              onSelect={() => toggleSelectedMissing(card.id)}
+              onQuantityChange={setMissingQuantity}
+              onAdd={addMissing}
+              onToggleWishlist={toggleMissingWishlist}
+            />
+          ))}
+        </div>
+      ) : shouldUseSelectableMissingView && collectionViewMode === "columns" ? (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8">
+          {selectableMissingCards.map((card) => (
+            <MissingCompactCard
+              key={card.id}
+              card={card}
+              selected={selectedMissingIds.has(card.id)}
+              wished={wishlistIds.has(card.id)}
+              quantity={missingQuantities[card.id] ?? 1}
+              onSelect={() => toggleSelectedMissing(card.id)}
+              onQuantityChange={setMissingQuantity}
+              onToggleWishlist={toggleMissingWishlist}
+            />
           ))}
         </div>
       ) : visibleItems.length || visibleMissingCards.length || hasSetOrderedCards ? (
@@ -676,7 +789,9 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
                     card={entry.card}
                     wished={wishlistIds.has(entry.card.id)}
                     active={activeMissingIds.has(entry.card.id)}
+                    quantity={missingQuantities[entry.card.id] ?? 1}
                     onHoverActivate={markMissingAsActive}
+                    onQuantityChange={setMissingQuantity}
                     onAdd={addMissing}
                     onToggleWishlist={toggleMissingWishlist}
                   />
@@ -694,7 +809,9 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
                         card={card}
                         wished={wishlistIds.has(card.id)}
                         active={activeMissingIds.has(card.id)}
+                        quantity={missingQuantities[card.id] ?? 1}
                         onHoverActivate={markMissingAsActive}
+                        onQuantityChange={setMissingQuantity}
                         onAdd={addMissing}
                         onToggleWishlist={toggleMissingWishlist}
                       />
@@ -708,6 +825,21 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
           description={tradeOnly ? "Marque cartas como troca para visualizá-las aqui." : "Explore cartas e adicione os primeiros itens à sua coleção local."}
         />
       )}
+      <Modal title="Adicionar cartas faltantes" open={confirmBatchMissing} onClose={() => setConfirmBatchMissing(false)}>
+        <div className="space-y-4">
+          <p className="text-sm text-slate-600 dark:text-slate-300">
+            Deseja adicionar {selectedMissingCards.length} carta(s) faltante(s), somando {totalSelectedMissingCopies} cópia(s), à sua coleção?
+          </p>
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setConfirmBatchMissing(false)}>
+              Cancelar
+            </Button>
+            <Button variant="primary" onClick={() => void addSelectedMissing()}>
+              Adicionar selecionadas
+            </Button>
+          </div>
+        </div>
+      </Modal>
       <Modal title="Remover carta" open={Boolean(pendingRemove)} onClose={() => setPendingRemove(null)}>
         <div className="space-y-4">
           <p className="text-sm text-slate-600 dark:text-slate-300">Deseja realmente remover esta carta da sua coleção?</p>
@@ -745,19 +877,151 @@ async function loadSetCards(setId: string): Promise<ExploreCard[]> {
   return [...firstPage.cards, ...loadedCards];
 }
 
+function CollectionModeButton({ active, onClick, icon: Icon, label }: { active: boolean; onClick: () => void; icon: typeof Grid3X3; label: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition ${
+        active ? "bg-indigo-600 text-white shadow-sm" : "text-slate-600 hover:bg-white dark:text-slate-300 dark:hover:bg-slate-900"
+      }`}
+    >
+      <Icon size={16} />
+      {label}
+    </button>
+  );
+}
+
+function QuantityStepper({
+  cardId,
+  quantity,
+  onQuantityChange
+}: {
+  cardId: string;
+  quantity: number;
+  onQuantityChange: (cardId: string, quantity: number) => void;
+}) {
+  return (
+    <div className="flex h-10 items-center overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
+      <button
+        type="button"
+        className="flex h-10 w-9 items-center justify-center text-slate-600 transition hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+        onClick={() => onQuantityChange(cardId, Math.max(1, quantity - 1))}
+        aria-label="Diminuir quantidade"
+      >
+        -
+      </button>
+      <span className="flex h-10 min-w-10 items-center justify-center border-x border-slate-200 text-sm font-semibold text-slate-900 dark:border-slate-700 dark:text-white">
+        {quantity}
+      </span>
+      <button
+        type="button"
+        className="flex h-10 w-9 items-center justify-center text-slate-600 transition hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+        onClick={() => onQuantityChange(cardId, quantity + 1)}
+        aria-label="Aumentar quantidade"
+      >
+        +
+      </button>
+    </div>
+  );
+}
+
+function MissingCardListRow({
+  card,
+  selected,
+  wished,
+  quantity,
+  onSelect,
+  onQuantityChange,
+  onAdd,
+  onToggleWishlist
+}: {
+  card: ExploreCard;
+  selected: boolean;
+  wished: boolean;
+  quantity: number;
+  onSelect: () => void;
+  onQuantityChange: (cardId: string, quantity: number) => void;
+  onAdd: (card: ExploreCard, quantity?: number) => void;
+  onToggleWishlist: (card: ExploreCard) => void;
+}) {
+  return (
+    <div className="grid grid-cols-[auto_52px_1fr_auto] items-center gap-3 border-b border-slate-100 p-3 last:border-b-0 dark:border-slate-800">
+      <input type="checkbox" checked={selected} onChange={onSelect} className="h-4 w-4 rounded border-slate-300 text-indigo-600" aria-label={`Selecionar ${card.name}`} />
+      <img src={card.image} alt={card.name} loading="lazy" className="h-16 w-12 rounded-md object-contain grayscale" />
+      <div className="min-w-0">
+        <p className="truncate text-sm font-semibold text-slate-950 dark:text-white">{cardDisplayName(card.name, card.number, card.id)}</p>
+        <p className="truncate text-xs font-medium text-slate-500 dark:text-slate-400">
+          {card.set} - {cardDisplayNumber(card.number, card.id)}
+        </p>
+        <p className="text-xs text-slate-500 dark:text-slate-400">{card.marketPrice === null ? "Preço N/D" : `Preço sugerido ${currency(card.marketPrice)}`}</p>
+      </div>
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <button type="button" onClick={() => onToggleWishlist(card)} className={wished ? "text-rose-500" : "text-slate-400 hover:text-rose-500"} aria-label="Lista de desejos">
+          <Heart size={18} fill={wished ? "currentColor" : "none"} />
+        </button>
+        <QuantityStepper cardId={card.id} quantity={quantity} onQuantityChange={onQuantityChange} />
+        <Button variant="secondary" size="sm" onClick={() => onAdd(card, quantity)}>
+          <Plus size={16} />
+          Adicionar
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function MissingCompactCard({
+  card,
+  selected,
+  wished,
+  quantity,
+  onSelect,
+  onQuantityChange,
+  onToggleWishlist
+}: {
+  card: ExploreCard;
+  selected: boolean;
+  wished: boolean;
+  quantity: number;
+  onSelect: () => void;
+  onQuantityChange: (cardId: string, quantity: number) => void;
+  onToggleWishlist: (card: ExploreCard) => void;
+}) {
+  return (
+    <div className={`rounded-xl border bg-white p-2 shadow-sm transition hover:shadow-md dark:bg-slate-900 ${selected ? "border-indigo-400 ring-2 ring-indigo-500/20" : "border-slate-200 dark:border-slate-800"}`}>
+      <div className="mb-2 flex items-center justify-between">
+        <input type="checkbox" checked={selected} onChange={onSelect} className="h-4 w-4 rounded border-slate-300 text-indigo-600" aria-label={`Selecionar ${card.name}`} />
+        <button type="button" onClick={() => onToggleWishlist(card)} className={wished ? "text-rose-500" : "text-slate-400 hover:text-rose-500"} aria-label="Lista de desejos">
+          <Heart size={16} fill={wished ? "currentColor" : "none"} />
+        </button>
+      </div>
+      <img src={card.image} alt={card.name} loading="lazy" className="mx-auto h-24 w-full rounded-md object-contain grayscale" />
+      <p className="mt-2 line-clamp-2 min-h-8 text-xs font-semibold text-slate-950 dark:text-white">{cardDisplayName(card.name, card.number, card.id)}</p>
+      <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">{cardDisplayNumber(card.number, card.id)}</p>
+      <div className="mt-2 flex scale-90 justify-center">
+        <QuantityStepper cardId={card.id} quantity={quantity} onQuantityChange={onQuantityChange} />
+      </div>
+    </div>
+  );
+}
+
 function MissingCard({
   card,
   wished,
   active,
+  quantity,
   onHoverActivate,
+  onQuantityChange,
   onAdd,
   onToggleWishlist
 }: {
   card: ExploreCard;
   wished: boolean;
   active: boolean;
+  quantity: number;
   onHoverActivate: (cardId: string) => void;
-  onAdd: (card: ExploreCard) => void;
+  onQuantityChange: (cardId: string, quantity: number) => void;
+  onAdd: (card: ExploreCard, quantity?: number) => void;
   onToggleWishlist: (card: ExploreCard) => void;
 }) {
   return (
@@ -790,10 +1054,13 @@ function MissingCard({
           <p className="text-[11px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Preco sugerido</p>
           <strong className="text-lg font-semibold text-slate-950 dark:text-white">{card.marketPrice === null ? "N/D" : currency(card.marketPrice)}</strong>
         </div>
-        <Button className="w-full" variant="secondary" onClick={() => onAdd(card)}>
-          <Plus size={16} />
-          Adicionar manualmente
-        </Button>
+        <div className="flex items-center gap-2">
+          <QuantityStepper cardId={card.id} quantity={quantity} onQuantityChange={onQuantityChange} />
+          <Button className="flex-1" variant="secondary" onClick={() => onAdd(card, quantity)}>
+            <Plus size={16} />
+            Adicionar
+          </Button>
+        </div>
       </div>
     </article>
   );

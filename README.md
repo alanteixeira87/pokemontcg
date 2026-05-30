@@ -61,6 +61,7 @@ A chave da Pokemon TCG API e opcional para uso basico, mas pode ser preenchida e
 - Adicionar cartas sem duplicar registros: se ja existir, soma quantidade
 - Usar valor estimado como preco inicial, mantendo edicao manual livre
 - Colecao com edicao inline de quantidade, preco manual, favorito e troca
+- Pokedex com selecao de visualizacao em grid, lista ou colunas para cartas faltantes, incluindo selecao em massa e quantidade por carta
 - Importar planilha Excel `.xlsx` com colunas `serie`, `numero`, `sequencia` e `status`
 - Login e cadastro com colecao separada por usuario
 - Quantidade minima igual a 1 e preco minimo igual a 0
