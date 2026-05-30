@@ -255,7 +255,6 @@ function equivalentSetIds(id: string): string[] {
 }
 
 function setCodeCandidates(set: PokemonSet): string[] {
-  const compactName = compactCode(set.name);
   const wordInitials = normalizeLookupText(set.name)
     .split(" ")
     .filter(Boolean)
@@ -263,7 +262,7 @@ function setCodeCandidates(set: PokemonSet): string[] {
     .join("");
 
   return Array.from(
-    new Set([set.id, set.ptcgoCode ?? "", compactName.slice(0, 3), wordInitials].map((value) => compactCode(value)).filter(Boolean))
+    new Set([set.id, set.ptcgoCode ?? "", wordInitials].map((value) => compactCode(value)).filter(Boolean))
   );
 }
 
