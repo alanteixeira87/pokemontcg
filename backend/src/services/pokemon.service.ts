@@ -34,6 +34,15 @@ type TcgDexSet = {
   };
 };
 
+type PokemonApiSet = PokemonSet & {
+  releaseDate?: string;
+  updatedAt?: string;
+  images?: {
+    symbol?: string;
+    logo?: string;
+  };
+};
+
 type TcgDexCardBrief = {
   id: string;
   localId?: string;
@@ -190,6 +199,23 @@ function compactCode(value: string): string {
   return normalizeLookupText(value).replace(/\s+/g, "");
 }
 
+const specialEquivalentSetIds = new Map<string, string[]>([
+  ["zsv10pt5", ["sv10.5b", "sv10pt5b"]],
+  ["sv10.5b", ["zsv10pt5", "sv10pt5b"]],
+  ["rsv10pt5", ["sv10.5w", "sv10pt5w"]],
+  ["sv10.5w", ["rsv10pt5", "sv10pt5w"]],
+  ["me1", ["me01"]],
+  ["me01", ["me1"]],
+  ["me2", ["me02"]],
+  ["me02", ["me2"]],
+  ["me2pt5", ["me02.5", "me02pt5"]],
+  ["me02.5", ["me2pt5", "me02pt5"]],
+  ["me3", ["me03"]],
+  ["me03", ["me3"]],
+  ["me4", ["me04"]],
+  ["me04", ["me4"]]
+]);
+
 function equivalentSetIds(id: string): string[] {
   const normalized = id.trim().toLowerCase();
   const scarletVioletShort = normalized.replace(/^sv0(\d)(.*)$/, "sv$1$2");
@@ -200,8 +226,32 @@ function equivalentSetIds(id: string): string[] {
   const dotLong = ptToDot.replace(/^sv(\d)(\..*)$/, "sv0$1$2");
   const dotShort = ptToDot.replace(/^sv0(\d)(\..*)$/, "sv$1$2");
   const ptLong = dotToPt.replace(/^sv(\d)(pt.*)$/, "sv0$1$2");
+  const megaShort = normalized.replace(/^me0(\d)(.*)$/, "me$1$2");
+  const megaLong = normalized.replace(/^me(\d)(.*)$/, "me0$1$2");
+  const megaPtToDot = normalized.replace(/^me0?(\d)pt(\d+)$/, "me0$1.$2");
+  const megaDotToPt = normalized.replace(/^me0?(\d)\.(\d+)$/, "me$1pt$2");
+  const explicit = specialEquivalentSetIds.get(normalized) ?? [];
 
-  return Array.from(new Set([normalized, scarletVioletShort, scarletVioletLong, ptToDot, dotToPt, ptShort, dotLong, dotShort, ptLong].filter(Boolean)));
+  return Array.from(
+    new Set(
+      [
+        normalized,
+        scarletVioletShort,
+        scarletVioletLong,
+        ptToDot,
+        dotToPt,
+        ptShort,
+        dotLong,
+        dotShort,
+        ptLong,
+        megaShort,
+        megaLong,
+        megaPtToDot,
+        megaDotToPt,
+        ...explicit
+      ].filter(Boolean)
+    )
+  );
 }
 
 function setCodeCandidates(set: PokemonSet): string[] {
@@ -336,21 +386,25 @@ async function listPokemonCards(page: number, pageSize: number, search?: string,
 }
 
 async function listPokemonSets(): Promise<PokemonSet[]> {
-  const response = await withRetry(() => api.get<{ data: PokemonSet[] }>("/sets"), 1);
-  const sets = response.data.data.map((set) => ({
+  const response = await withRetry(() => api.get<{ data: PokemonApiSet[] }>("/sets"), 1);
+  const sets = response.data.data.map((set, index) => ({
     id: set.id,
     name: set.name,
     series: set.series,
     ptcgoCode: set.ptcgoCode,
     printedTotal: set.printedTotal,
-    total: set.total
+    total: set.total,
+    logo: set.images?.logo,
+    symbol: set.images?.symbol,
+    releaseDate: set.releaseDate,
+    sortOrder: index
   }));
   void persistCachedSets(sets);
   return sets;
 }
 
 async function listSetsFromPersistentCache(): Promise<PokemonSet[]> {
-  const rows = await prisma.cachedSet.findMany({ orderBy: { name: "asc" } });
+  const rows = await prisma.cachedSet.findMany({ orderBy: { updatedAt: "desc" } });
   return rows.map((set) => ({
     id: set.id,
     name: set.name,
@@ -503,11 +557,14 @@ async function normalizeCardWithPrice(card: PokemonCard): Promise<ReturnType<typ
 const setAliases = new Map<string, string>([
   ["asc", "me02.5"],
   ["blk", "sv10.5b"],
+  ["black bolt", "sv10.5b"],
   ["dri", "sv10"],
   ["jtg", "sv09"],
   ["lor", "swsh11"],
   ["m23", "2023sv"],
+  ["mee", "mee"],
   ["meg", "me01"],
+  ["mega evolution", "me01"],
   ["mep", "mep"],
   ["mew", "sv03.5"],
   ["obf", "sv03"],
@@ -515,8 +572,11 @@ const setAliases = new Map<string, string>([
   ["pal", "sv02"],
   ["par", "sv04"],
   ["pfl", "me02"],
+  ["phantasmal flames", "me02"],
   ["por", "me03"],
+  ["perfect order", "me03"],
   ["pre", "sv08.5"],
+  ["cri", "me04"],
   ["scr", "sv07"],
   ["src", "sv07"],
   ["ssp", "sv08"],
@@ -526,6 +586,7 @@ const setAliases = new Map<string, string>([
   ["twm", "sv06"],
   ["umb", "svp"],
   ["wht", "sv10.5w"],
+  ["white flare", "sv10.5w"],
   ["escarlate e violeta", "sv1"],
   ["scarlet violet", "sv1"],
   ["evoluidos em paldea", "sv2"],
@@ -553,7 +614,18 @@ const setAliases = new Map<string, string>([
   ["jornada juntos", "sv9"],
   ["journey together", "sv9"],
   ["rivais destinados", "sv10"],
-  ["destined rivals", "sv10"]
+  ["destined rivals", "sv10"],
+  ["raio negro", "sv10.5b"],
+  ["chama branca", "sv10.5w"],
+  ["megavolucao", "me01"],
+  ["mega evolucao", "me01"],
+  ["chamas fantasmagoricas", "me02"],
+  ["ascended heroes", "me02.5"],
+  ["herois ascendentes", "me02.5"],
+  ["ordem perfeita", "me03"],
+  ["chaos rising", "me04"],
+  ["caos ascendente", "me04"],
+  ["caos crescente", "me04"]
 ]);
 
 async function resolveSetCandidates(input: string, setTotal?: string): Promise<PokemonSet[]> {
@@ -569,7 +641,7 @@ async function resolveSetCandidates(input: string, setTotal?: string): Promise<P
       set.ptcgoCode?.toLowerCase() === input.trim().toLowerCase() ||
       normalizeLookupText(set.name) === normalizedInput ||
       setCodeCandidates(set).includes(compactInput) ||
-      (aliasId ? set.id === aliasId : false)
+      (aliasId ? equivalentSetIds(set.id).some((id) => equivalentSetIds(aliasId).includes(id)) : false)
   );
   if (exact.length) {
     const exactWithTotal = Number.isFinite(totalNumber)
@@ -599,12 +671,14 @@ async function listTcgDexSets(): Promise<PokemonSet[]> {
   if (cached) return cached;
 
   const response = await withRetry(() => tcgDexApi.get<TcgDexSet[]>("/sets"));
-  const sets = response.data.map((set) => ({
+  const sets = response.data.map((set, index) => ({
     id: set.id,
     name: set.name,
+    series: inferSeriesFromSetId(set.id),
     ptcgoCode: preferredSetCode(set.id),
     printedTotal: set.cardCount?.official,
-    total: set.cardCount?.total
+    total: set.cardCount?.total,
+    sortOrder: index
   }));
   void persistCachedSets(sets);
   return setCached("tcgdex:sets", sets);
@@ -618,6 +692,63 @@ function preferredSetCode(setId: string): string {
   });
 
   return (alias?.[0] ?? setId).toUpperCase();
+}
+
+function inferSeriesFromSetId(setId: string): string | undefined {
+  const normalized = setId.toLowerCase();
+  if (normalized.startsWith("me")) return "Mega Evolution";
+  if (normalized.startsWith("sv")) return "Scarlet & Violet";
+  if (normalized.startsWith("swsh")) return "Sword & Shield";
+  if (normalized.startsWith("sm")) return "Sun & Moon";
+  if (normalized.startsWith("xy")) return "XY";
+  if (/^a\d|^b\d/.test(normalized)) return "Pokemon Pocket";
+  return undefined;
+}
+
+function setEquivalenceKey(set: PokemonSet): string {
+  return equivalentSetIds(set.id).sort()[0] ?? set.id.toLowerCase();
+}
+
+function mergeSetData(preferred: PokemonSet, fallback: PokemonSet): PokemonSet {
+  return {
+    ...fallback,
+    ...preferred,
+    series: preferred.series ?? fallback.series,
+    ptcgoCode: preferred.ptcgoCode ?? fallback.ptcgoCode,
+    printedTotal: preferred.printedTotal ?? fallback.printedTotal,
+    total: preferred.total ?? fallback.total,
+    logo: preferred.logo ?? fallback.logo,
+    symbol: preferred.symbol ?? fallback.symbol,
+    releaseDate: preferred.releaseDate ?? fallback.releaseDate,
+    sortOrder: Math.max(preferred.sortOrder ?? -1, fallback.sortOrder ?? -1)
+  };
+}
+
+function compareSetsNewestFirst(a: PokemonSet, b: PokemonSet): number {
+  const orderDiff = (b.sortOrder ?? -1) - (a.sortOrder ?? -1);
+  if (orderDiff !== 0) return orderDiff;
+
+  const bTime = b.releaseDate ? Date.parse(b.releaseDate.replaceAll("/", "-")) : 0;
+  const aTime = a.releaseDate ? Date.parse(a.releaseDate.replaceAll("/", "-")) : 0;
+  if (bTime !== aTime) return bTime - aTime;
+
+  return a.name.localeCompare(b.name);
+}
+
+function mergeSetsByEquivalence(preferredSets: PokemonSet[], fallbackSets: PokemonSet[]): PokemonSet[] {
+  const merged = new Map<string, PokemonSet>();
+
+  for (const set of fallbackSets) {
+    merged.set(setEquivalenceKey(set), set);
+  }
+
+  for (const set of preferredSets) {
+    const key = setEquivalenceKey(set);
+    const existing = merged.get(key);
+    merged.set(key, existing ? mergeSetData(set, existing) : set);
+  }
+
+  return Array.from(merged.values()).sort(compareSetsNewestFirst);
 }
 
 async function listCardsFromTcgDex(page: number, pageSize: number, search?: string, set?: string, sort: "numberAsc" | "numberDesc" | "name" = "numberAsc"): Promise<PaginatedCards> {
@@ -803,16 +934,25 @@ export const pokemonService = {
     const cached = getCached<PokemonSet[]>("sets");
     if (cached) return cached;
 
-    try {
-      return setCached("sets", await listTcgDexSets());
-    } catch (error) {
-      console.warn(JSON.stringify({ level: "warn", message: "TCGdex set listing failed", error: String(error) }));
+    const [pokemonResult, tcgDexResult] = await Promise.allSettled([listPokemonSets(), listTcgDexSets()]);
+    const pokemonSets = pokemonResult.status === "fulfilled" ? pokemonResult.value : [];
+    const tcgDexSets = tcgDexResult.status === "fulfilled" ? tcgDexResult.value : [];
+
+    if (pokemonResult.status === "rejected") {
+      console.warn(JSON.stringify({ level: "warn", message: "Pokemon API set listing failed", error: String(pokemonResult.reason) }));
+    }
+    if (tcgDexResult.status === "rejected") {
+      console.warn(JSON.stringify({ level: "warn", message: "TCGdex set listing failed", error: String(tcgDexResult.reason) }));
+    }
+
+    if (pokemonSets.length || tcgDexSets.length) {
+      return setCached("sets", mergeSetsByEquivalence(pokemonSets, tcgDexSets));
     }
 
     const persisted = await listSetsFromPersistentCache();
-    if (persisted.length) return setCached("sets", persisted);
+    if (persisted.length) return setCached("sets", persisted.sort(compareSetsNewestFirst));
 
-    return setCached("sets", await listPokemonSets());
+    throw new Error("All set listing sources failed");
   },
 
   async findCardsBySetAndNumbers(setName: string, numbers: string[]): Promise<Map<string, ExploreCard>> {

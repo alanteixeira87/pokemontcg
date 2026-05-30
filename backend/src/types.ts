@@ -44,6 +44,8 @@ export type PokemonSet = {
   total?: number;
   logo?: string;
   symbol?: string;
+  releaseDate?: string;
+  sortOrder?: number;
 };
 
 export type ExploreCard = {

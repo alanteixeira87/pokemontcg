@@ -66,19 +66,41 @@ type CachedCardCandidate = {
 const OCR_NUMBER_WHITELIST = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/-. ";
 const setAliases = new Map<string, string>([
   ["asc", "me02.5"],
+  ["black bolt", "sv10.5b"],
+  ["blk", "sv10.5b"],
+  ["chaos rising", "me04"],
+  ["cri", "me04"],
   ["mew", "sv03.5"],
+  ["meg", "me01"],
+  ["mega evolution", "me01"],
   ["paf", "sv04.5"],
+  ["perfect order", "me03"],
+  ["phantasmal flames", "me02"],
+  ["pfl", "me02"],
+  ["por", "me03"],
   ["pre", "sv08.5"],
   ["ssp", "sv08"],
   ["svi", "sv01"],
   ["svp", "svp"],
   ["tef", "sv05"],
   ["twm", "sv06"],
+  ["white flare", "sv10.5w"],
+  ["wht", "sv10.5w"],
   ["151", "sv03.5"],
   ["destined rivals", "sv10"],
   ["jornada juntos", "sv09"],
   ["rivais destinados", "sv10"],
-  ["evolucoes prismaticas", "sv08.5"]
+  ["evolucoes prismaticas", "sv08.5"],
+  ["raio negro", "sv10.5b"],
+  ["chama branca", "sv10.5w"],
+  ["megavolucao", "me01"],
+  ["mega evolucao", "me01"],
+  ["chamas fantasmagoricas", "me02"],
+  ["ascended heroes", "me02.5"],
+  ["herois ascendentes", "me02.5"],
+  ["ordem perfeita", "me03"],
+  ["caos ascendente", "me04"],
+  ["caos crescente", "me04"]
 ]);
 
 let ocrWorkerPromise: Promise<Awaited<ReturnType<typeof createWorker>>> | null = null;
@@ -135,14 +157,38 @@ function compactCode(value: string): string {
   return normalizeText(value).replace(/\s+/g, "");
 }
 
+const specialEquivalentSetIds = new Map<string, string[]>([
+  ["zsv10pt5", ["sv10.5b", "sv10pt5b"]],
+  ["sv10.5b", ["zsv10pt5", "sv10pt5b"]],
+  ["rsv10pt5", ["sv10.5w", "sv10pt5w"]],
+  ["sv10.5w", ["rsv10pt5", "sv10pt5w"]],
+  ["me1", ["me01"]],
+  ["me01", ["me1"]],
+  ["me2", ["me02"]],
+  ["me02", ["me2"]],
+  ["me2pt5", ["me02.5", "me02pt5"]],
+  ["me02.5", ["me2pt5", "me02pt5"]],
+  ["me3", ["me03"]],
+  ["me03", ["me3"]],
+  ["me4", ["me04"]],
+  ["me04", ["me4"]]
+]);
+
 function equivalentSetIds(id: string): string[] {
   const normalized = id.trim().toLowerCase();
   const scarletVioletShort = normalized.replace(/^sv0(\d)(.*)$/, "sv$1$2");
   const scarletVioletLong = normalized.replace(/^sv(\d)(.*)$/, "sv0$1$2");
   const ptToDot = normalized.replace(/pt(\d+)$/, ".$1");
   const dotToPt = normalized.replace(/\.(\d+)$/, "pt$1");
+  const megaShort = normalized.replace(/^me0(\d)(.*)$/, "me$1$2");
+  const megaLong = normalized.replace(/^me(\d)(.*)$/, "me0$1$2");
+  const megaPtToDot = normalized.replace(/^me0?(\d)pt(\d+)$/, "me0$1.$2");
+  const megaDotToPt = normalized.replace(/^me0?(\d)\.(\d+)$/, "me$1pt$2");
+  const explicit = specialEquivalentSetIds.get(normalized) ?? [];
 
-  return Array.from(new Set([normalized, scarletVioletShort, scarletVioletLong, ptToDot, dotToPt].filter(Boolean)));
+  return Array.from(
+    new Set([normalized, scarletVioletShort, scarletVioletLong, ptToDot, dotToPt, megaShort, megaLong, megaPtToDot, megaDotToPt, ...explicit].filter(Boolean))
+  );
 }
 
 function fixAmbiguousToken(raw: string): string {

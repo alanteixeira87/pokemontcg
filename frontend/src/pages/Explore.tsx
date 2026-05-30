@@ -307,7 +307,7 @@ export function Explore({ onToast }: { onToast: (toast: ToastState) => void }) {
             </div>
           )}
           <div className="flex flex-wrap gap-2">
-            {["ASC", "SSP", "Prismatic Evolutions", "charizard", "pikachu"].map((term) => (
+            {["Chaos Rising", "Perfect Order", "Ascended Heroes", "Black Bolt", "White Flare", "charizard", "pikachu"].map((term) => (
               <button
                 key={term}
                 type="button"

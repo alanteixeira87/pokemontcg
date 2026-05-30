@@ -30,6 +30,8 @@ export type PokemonSet = {
   ptcgoCode?: string;
   printedTotal?: number;
   total?: number;
+  releaseDate?: string;
+  sortOrder?: number;
 };
 
 export type PaginatedCards = {

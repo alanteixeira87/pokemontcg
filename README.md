@@ -55,6 +55,7 @@ A chave da Pokemon TCG API e opcional para uso basico, mas pode ser preenchida e
 ## Funcionalidades
 
 - Explorar cartas com paginacao, busca com debounce e filtro por set
+- Colecoes sempre atualizadas a partir de TCGdex + Pokemon TCG API, com equivalencia entre IDs oficiais novos e IDs TCGdex
 - Exibir valor estimado da Pokemon TCG API quando disponivel
 - Validar preco com PokéWallet quando `POKEWALLET_API_KEY` estiver configurada
 - Adicionar cartas sem duplicar registros: se ja existir, soma quantidade
