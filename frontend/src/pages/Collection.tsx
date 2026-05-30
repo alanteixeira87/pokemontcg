@@ -255,14 +255,17 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
           .sort((a, b) => normalizeSetName(a.set).localeCompare(normalizeSetName(b.set)) || cardNumberValue(a.number) - cardNumberValue(b.number) || a.name.localeCompare(b.name))
       : [];
   const hasSetOrderedCards = Boolean(filters.set) && setOrderedEntries.length > 0 && !tradeOnly && !filters.missingOnly;
+  const collectionDisplayEntries = useMemo<Array<{ type: "owned"; item: CollectionItem } | { type: "missing"; card: ExploreCard }>>(() => {
+    if (tradeOnly) return [];
+    if (hasSetOrderedCards) return setOrderedEntries;
+    return [
+      ...visibleItems.map((item) => ({ type: "owned" as const, item })),
+      ...visibleMissingCards.map((card) => ({ type: "missing" as const, card }))
+    ];
+  }, [hasSetOrderedCards, setOrderedEntries, tradeOnly, visibleItems, visibleMissingCards]);
   const selectableMissingCards = useMemo(
-    () =>
-      tradeOnly
-        ? []
-        : hasSetOrderedCards
-          ? setOrderedEntries.flatMap((entry) => (entry.type === "missing" ? [entry.card] : []))
-          : visibleMissingCards,
-    [hasSetOrderedCards, setOrderedEntries, tradeOnly, visibleMissingCards]
+    () => collectionDisplayEntries.flatMap((entry) => (entry.type === "missing" ? [entry.card] : [])),
+    [collectionDisplayEntries]
   );
   const selectableMissingIdsKey = useMemo(() => selectableMissingCards.map((card) => card.id).join("|"), [selectableMissingCards]);
   const selectedMissingCards = useMemo(() => selectableMissingCards.filter((card) => selectedMissingIds.has(card.id)), [selectableMissingCards, selectedMissingIds]);
@@ -271,7 +274,8 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
     [missingQuantities, selectedMissingCards]
   );
   const canUseMissingSelection = !tradeOnly && selectableMissingCards.length > 0;
-  const shouldUseSelectableMissingView = canUseMissingSelection && collectionViewMode !== "grid";
+  const canUseCollectionView = !tradeOnly && collectionDisplayEntries.length > 0;
+  const shouldUseCollectionView = canUseCollectionView && collectionViewMode !== "grid";
   const hasPendingFilterChanges = useMemo(
     () =>
       draftFilters.set !== filters.set ||
@@ -717,14 +721,14 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
         )}
       </div>
 
-      {canUseMissingSelection && (
+      {canUseCollectionView && (
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 p-2 dark:border-slate-800 dark:bg-slate-950/40">
           <div className="flex items-center gap-1">
             <CollectionModeButton active={collectionViewMode === "grid"} onClick={() => setCollectionViewMode("grid")} icon={Grid3X3} label="Grid" />
             <CollectionModeButton active={collectionViewMode === "list"} onClick={() => setCollectionViewMode("list")} icon={List} label="Lista" />
             <CollectionModeButton active={collectionViewMode === "columns"} onClick={() => setCollectionViewMode("columns")} icon={Columns3} label="Colunas" />
           </div>
-          {collectionViewMode !== "grid" && (
+          {collectionViewMode !== "grid" && canUseMissingSelection && (
             <Button variant="primary" disabled={selectedMissingIds.size === 0} onClick={() => setConfirmBatchMissing(true)}>
               <CheckSquare size={16} />
               Adicionar selecionadas ({selectedMissingIds.size})
@@ -739,36 +743,50 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
             <Skeleton key={index} className="h-96" />
           ))}
         </div>
-      ) : shouldUseSelectableMissingView && collectionViewMode === "list" ? (
+      ) : shouldUseCollectionView && collectionViewMode === "list" ? (
         <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
-          {selectableMissingCards.map((card) => (
-            <MissingCardListRow
-              key={card.id}
-              card={card}
-              selected={selectedMissingIds.has(card.id)}
-              wished={wishlistIds.has(card.id)}
-              quantity={missingQuantities[card.id] ?? 1}
-              onSelect={() => toggleSelectedMissing(card.id)}
-              onQuantityChange={setMissingQuantity}
-              onAdd={addMissing}
-              onToggleWishlist={toggleMissingWishlist}
-            />
-          ))}
+          {collectionDisplayEntries.map((entry) =>
+            entry.type === "owned" ? (
+              <OwnedCardListRow
+                key={`owned-${entry.item.id}`}
+                item={entry.item}
+                onUpdate={update}
+                onRemove={() => setPendingRemove(entry.item)}
+                onExport={exportCard}
+              />
+            ) : (
+              <MissingCardListRow
+                key={`missing-${entry.card.id}`}
+                card={entry.card}
+                selected={selectedMissingIds.has(entry.card.id)}
+                wished={wishlistIds.has(entry.card.id)}
+                quantity={missingQuantities[entry.card.id] ?? 1}
+                onSelect={() => toggleSelectedMissing(entry.card.id)}
+                onQuantityChange={setMissingQuantity}
+                onAdd={addMissing}
+                onToggleWishlist={toggleMissingWishlist}
+              />
+            )
+          )}
         </div>
-      ) : shouldUseSelectableMissingView && collectionViewMode === "columns" ? (
+      ) : shouldUseCollectionView && collectionViewMode === "columns" ? (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8">
-          {selectableMissingCards.map((card) => (
-            <MissingCompactCard
-              key={card.id}
-              card={card}
-              selected={selectedMissingIds.has(card.id)}
-              wished={wishlistIds.has(card.id)}
-              quantity={missingQuantities[card.id] ?? 1}
-              onSelect={() => toggleSelectedMissing(card.id)}
-              onQuantityChange={setMissingQuantity}
-              onToggleWishlist={toggleMissingWishlist}
-            />
-          ))}
+          {collectionDisplayEntries.map((entry) =>
+            entry.type === "owned" ? (
+              <OwnedCompactCard key={`owned-${entry.item.id}`} item={entry.item} onUpdate={update} />
+            ) : (
+              <MissingCompactCard
+                key={`missing-${entry.card.id}`}
+                card={entry.card}
+                selected={selectedMissingIds.has(entry.card.id)}
+                wished={wishlistIds.has(entry.card.id)}
+                quantity={missingQuantities[entry.card.id] ?? 1}
+                onSelect={() => toggleSelectedMissing(entry.card.id)}
+                onQuantityChange={setMissingQuantity}
+                onToggleWishlist={toggleMissingWishlist}
+              />
+            )
+          )}
         </div>
       ) : visibleItems.length || visibleMissingCards.length || hasSetOrderedCards ? (
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
@@ -965,6 +983,107 @@ function MissingCardListRow({
           <Plus size={16} />
           Adicionar
         </Button>
+      </div>
+    </div>
+  );
+}
+
+function OwnedQuantityStepper({ quantity, onChange }: { quantity: number; onChange: (quantity: number) => void }) {
+  return (
+    <div className="flex h-10 items-center overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
+      <button
+        type="button"
+        className="flex h-10 w-9 items-center justify-center text-slate-600 transition hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+        onClick={() => onChange(Math.max(1, quantity - 1))}
+        aria-label="Diminuir quantidade"
+      >
+        -
+      </button>
+      <span className="flex h-10 min-w-10 items-center justify-center border-x border-slate-200 text-sm font-semibold text-slate-900 dark:border-slate-700 dark:text-white">
+        {quantity}
+      </span>
+      <button
+        type="button"
+        className="flex h-10 w-9 items-center justify-center text-slate-600 transition hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+        onClick={() => onChange(quantity + 1)}
+        aria-label="Aumentar quantidade"
+      >
+        +
+      </button>
+    </div>
+  );
+}
+
+function OwnedCardListRow({
+  item,
+  onUpdate,
+  onRemove,
+  onExport
+}: {
+  item: CollectionItem;
+  onUpdate: (id: number, data: Partial<Pick<CollectionItem, "quantity" | "price" | "favorite" | "forTrade">>) => void;
+  onRemove: () => void;
+  onExport: (cardId: string) => void;
+}) {
+  const repeated = Math.max(0, item.quantity - 1);
+  return (
+    <div className="grid grid-cols-[52px_1fr_auto] items-center gap-3 border-b border-slate-100 p-3 last:border-b-0 dark:border-slate-800">
+      <img src={item.image} alt={item.name} loading="lazy" className="h-16 w-12 rounded-md object-contain" />
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="truncate text-sm font-semibold text-slate-950 dark:text-white">{cardDisplayName(item.name, item.number, item.cardId)}</p>
+          <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-200">
+            Possuída
+          </span>
+          {repeated > 0 && (
+            <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:bg-amber-950/40 dark:text-amber-200">
+              {repeated} repetida(s)
+            </span>
+          )}
+        </div>
+        <p className="truncate text-xs font-medium text-slate-500 dark:text-slate-400">
+          {item.set} - {cardDisplayNumber(item.number, item.cardId)}
+        </p>
+        <p className="text-xs text-slate-500 dark:text-slate-400">Total no fichário {currency(item.price * item.quantity)}</p>
+      </div>
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <OwnedQuantityStepper quantity={item.quantity} onChange={(quantity) => onUpdate(item.id, { quantity })} />
+        <Button variant={item.favorite ? "primary" : "secondary"} size="sm" onClick={() => onUpdate(item.id, { favorite: !item.favorite })}>
+          Favorita
+        </Button>
+        <Button variant={item.forTrade ? "primary" : "secondary"} size="sm" onClick={() => onUpdate(item.id, { forTrade: !item.forTrade })}>
+          Troca
+        </Button>
+        <Button variant="secondary" size="sm" onClick={() => onExport(item.cardId)}>
+          <Download size={16} />
+        </Button>
+        <Button variant="danger" size="sm" onClick={onRemove}>
+          <Trash2 size={16} />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function OwnedCompactCard({
+  item,
+  onUpdate
+}: {
+  item: CollectionItem;
+  onUpdate: (id: number, data: Partial<Pick<CollectionItem, "quantity" | "price" | "favorite" | "forTrade">>) => void;
+}) {
+  const repeated = Math.max(0, item.quantity - 1);
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-2 shadow-sm transition hover:shadow-md dark:border-slate-800 dark:bg-slate-900">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-200">x{item.quantity}</span>
+        {repeated > 0 && <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-300">{repeated} rep.</span>}
+      </div>
+      <img src={item.image} alt={item.name} loading="lazy" className="mx-auto h-24 w-full rounded-md object-contain" />
+      <p className="mt-2 line-clamp-2 min-h-8 text-xs font-semibold text-slate-950 dark:text-white">{cardDisplayName(item.name, item.number, item.cardId)}</p>
+      <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">{cardDisplayNumber(item.number, item.cardId)}</p>
+      <div className="mt-2 flex scale-90 justify-center">
+        <OwnedQuantityStepper quantity={item.quantity} onChange={(quantity) => onUpdate(item.id, { quantity })} />
       </div>
     </div>
   );
