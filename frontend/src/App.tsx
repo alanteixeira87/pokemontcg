@@ -11,6 +11,7 @@ import { Wishlist } from "./pages/Wishlist";
 import { Profile } from "./pages/Profile";
 import { Admin } from "./pages/Admin";
 import { Scanner } from "./pages/Scanner";
+import { Decks } from "./pages/Decks";
 
 export function App() {
   const view = useAppStore((state) => state.view);
@@ -57,6 +58,7 @@ export function App() {
       {view === "explore" && <Explore onToast={showToast} />}
       {view === "collection" && <Collection onToast={showToast} />}
       {view === "scanner" && <Scanner onToast={showToast} />}
+      {view === "decks" && <Decks onToast={showToast} />}
       {view === "wishlist" && <Wishlist onToast={showToast} />}
       {view === "trades" && <TradeMarket onToast={showToast} />}
       {view === "profile" && <Profile onToast={showToast} />}

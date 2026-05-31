@@ -62,6 +62,7 @@ A chave da Pokemon TCG API e opcional para uso basico, mas pode ser preenchida e
 - Usar valor estimado como preco inicial, mantendo edicao manual livre
 - Colecao com edicao inline de quantidade, preco manual, favorito e troca
 - Pokedex com selecao de visualizacao em grid, lista ou colunas por set, exibindo cartas possuidas e faltantes na mesma jornada, com selecao em massa das faltantes e ajuste de quantidade/repetidas nas possuidas
+- Aba Decks com decks competitivos curados de fontes como Limitless TCG, comparando cada lista com as cartas repetidas do usuario para destacar oportunidades de venda/troca e faltantes nas repetidas
 - Importar planilha Excel `.xlsx` com colunas `serie`, `numero`, `sequencia` e `status`
 - Login e cadastro com colecao separada por usuario
 - Quantidade minima igual a 1 e preco minimo igual a 0
