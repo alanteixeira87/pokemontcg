@@ -1,5 +1,5 @@
 import { ArrowUpRight, Boxes, CheckCircle2, ExternalLink, Layers3, PackageSearch, Search, ShoppingBag } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { metaDecks, type MetaDeck, type MetaDeckCard } from "../data/metaDecks";
 import { cardDisplayName } from "../lib/cardDisplay";
 import { currency } from "../lib/utils";
@@ -43,6 +43,7 @@ export function Decks({ onToast }: { onToast: (toast: ToastState) => void }) {
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<"all" | MetaDeckCard["role"]>("all");
   const [cardImages, setCardImages] = useState<Record<string, string>>({});
+  const detailRef = useRef<HTMLDivElement | null>(null);
   const selectedDeck = useMemo(() => metaDecks.find((deck) => deck.id === selectedDeckId) ?? metaDecks[0], [selectedDeckId]);
 
   useEffect(() => {
@@ -77,17 +78,36 @@ export function Decks({ onToast }: { onToast: (toast: ToastState) => void }) {
   }, [deckMatches, roleFilter, search]);
   const repeatedSaleCards = useMemo(() => deckMatches.filter((card) => card.usableRepeated > 0), [deckMatches]);
   const missingRepeatedCards = useMemo(() => deckMatches.filter((card) => card.missingRepeated > 0), [deckMatches]);
+  const deckShowcase = useMemo(
+    () =>
+      metaDecks.map((deck) => {
+        const matches = buildDeckMatches(deck, collectionByName, cardImages);
+        const deckSummary = summarizeDeck(matches);
+        const hero = matches.find((card) => card.role === "Pokemon" && card.image) ?? matches.find((card) => card.image) ?? matches[0];
+        return { deck, summary: deckSummary, hero };
+      }),
+    [cardImages, collectionByName]
+  );
+
+  function openDeck(deckId: string) {
+    setSelectedDeckId(deckId);
+    window.requestAnimationFrame(() => {
+      detailRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
 
   useEffect(() => {
     let active = true;
-    const missingImageCards = selectedDeck.cards.filter((card) => {
+    const heroCards = metaDecks.map((deck) => deck.cards.find((card) => card.role === "Pokemon") ?? deck.cards[0]).filter((card): card is MetaDeckCard => Boolean(card));
+    const imageCandidates = [...heroCards, ...selectedDeck.cards];
+    const missingImageCards = Array.from(new Map(imageCandidates.map((card) => [normalizeName(card.name), card])).values()).filter((card) => {
       const key = normalizeName(card.name);
       return !cardImages[key] && !collectionByName.get(key)?.[0]?.image;
     });
     if (!missingImageCards.length) return;
 
     void Promise.allSettled(
-      missingImageCards.slice(0, 18).map(async (card) => {
+      missingImageCards.slice(0, 24).map(async (card) => {
         const result = await apiService.cards({ page: 1, pageSize: 1, search: card.name, sort: "name" });
         const found = result.cards[0];
         return found ? [normalizeName(card.name), found.image] as const : null;
@@ -156,7 +176,31 @@ export function Decks({ onToast }: { onToast: (toast: ToastState) => void }) {
         <DeckMetric icon={ShoppingBag} label="Valor potencial" value={currency(summary.estimatedRepeatedValue)} hint="estimativa das repetidas aproveitáveis" />
       </section>
 
-      <section className="grid gap-5 xl:grid-cols-[360px_1fr]">
+      <section className="space-y-3">
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h3 className="text-xl font-semibold text-slate-950 dark:text-white">Escolha um deck</h3>
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Cards em colunas com a carta principal do arquetipo. Clique para acessar a lista completa e ver o que temos para troca.</p>
+          </div>
+          <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-200">
+            Energias sempre habilitadas
+          </span>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {deckShowcase.map(({ deck, summary: deckSummary, hero }) => (
+            <DeckShowcaseCard
+              key={deck.id}
+              deck={deck}
+              summary={deckSummary}
+              hero={hero}
+              active={deck.id === selectedDeck.id}
+              onOpen={() => openDeck(deck.id)}
+            />
+          ))}
+        </div>
+      </section>
+
+      <section ref={detailRef} className="grid gap-5 xl:grid-cols-[360px_1fr]">
         <aside className="space-y-4">
           <DeckOverview deck={selectedDeck} summary={summary} />
           <OpportunityPanel title="Temos repetidas para este deck" cards={repeatedSaleCards} empty="Nenhuma carta repetida encontrada para este deck." tone="success" />
@@ -190,6 +234,65 @@ export function Decks({ onToast }: { onToast: (toast: ToastState) => void }) {
         </div>
       </section>
     </div>
+  );
+}
+
+function DeckShowcaseCard({
+  deck,
+  summary,
+  hero,
+  active,
+  onOpen
+}: {
+  deck: MetaDeck;
+  summary: DeckSummary;
+  hero?: DeckCardMatch;
+  active: boolean;
+  onOpen: () => void;
+}) {
+  const coverage = summary.totalRequired ? Math.round((summary.repeatedCovered / summary.totalRequired) * 100) : 0;
+  const activeClass = active ? "border-emerald-400 ring-4 ring-emerald-500/15" : "border-slate-200 hover:border-emerald-300 dark:border-slate-800";
+
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className={`group overflow-hidden rounded-2xl border bg-white text-left shadow-sm transition hover:-translate-y-1 hover:shadow-xl dark:bg-slate-900 ${activeClass}`}
+    >
+      <div className="relative bg-slate-950 px-4 pb-4 pt-5">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.22),transparent_35%)]" />
+        {hero?.image ? (
+          <img src={hero.image} alt={hero.name} loading="lazy" className="relative mx-auto aspect-[63/88] w-full max-w-[150px] rounded-xl object-contain drop-shadow-2xl transition group-hover:scale-[1.03]" />
+        ) : (
+          <div className="relative mx-auto flex aspect-[63/88] w-full max-w-[150px] items-center justify-center rounded-xl border border-dashed border-slate-700 bg-slate-900 text-center text-xs font-semibold text-slate-500">
+            Imagem do deck
+          </div>
+        )}
+        <span className="absolute right-3 top-3 rounded-full bg-white/95 px-2.5 py-1 text-[11px] font-bold text-slate-950">{deck.metaShare}</span>
+      </div>
+      <div className="space-y-3 p-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-emerald-600 dark:text-emerald-300">{deck.format}</p>
+          <h3 className="mt-1 text-lg font-semibold text-slate-950 dark:text-white">{deck.name}</h3>
+          <p className="mt-1 text-sm font-medium text-slate-500 dark:text-slate-400">{deck.archetype}</p>
+        </div>
+        <div className="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+          <div className="h-full rounded-full bg-emerald-500" style={{ width: `${Math.min(coverage, 100)}%` }} />
+        </div>
+        <div className="grid grid-cols-3 gap-2 text-center">
+          <DeckCardStat label="Coberto" value={summary.repeatedCovered} />
+          <DeckCardStat label="Falta" value={summary.missingFromRepeated} />
+          <DeckCardStat label="Total" value={summary.totalRequired} />
+        </div>
+        <div className="flex items-center justify-between gap-3 text-xs font-semibold text-slate-500 dark:text-slate-400">
+          <span>{coverage}% disponível</span>
+          <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-300">
+            Abrir deck
+            <ArrowUpRight size={14} />
+          </span>
+        </div>
+      </div>
+    </button>
   );
 }
 
@@ -255,7 +358,9 @@ function OpportunityPanel({ title, cards, empty, tone }: { title: string; cards:
 
 function DeckCardTile({ card }: { card: DeckCardMatch }) {
   const status =
-    card.usableRepeated >= card.quantity
+    card.role === "Energia"
+      ? "Energia sempre habilitada"
+      : card.usableRepeated >= card.quantity
       ? "Completo nas repetidas"
       : card.usableRepeated > 0
         ? "Parcial nas repetidas"
@@ -263,7 +368,7 @@ function DeckCardTile({ card }: { card: DeckCardMatch }) {
           ? "Tem na coleção, mas não sobra"
           : "Falta nas repetidas";
   const borderClass =
-    card.usableRepeated >= card.quantity
+    card.role === "Energia" || card.usableRepeated >= card.quantity
       ? "border-emerald-300 ring-2 ring-emerald-500/10"
       : card.usableRepeated > 0
         ? "border-amber-300 ring-2 ring-amber-500/10"
@@ -329,7 +434,7 @@ function buildDeckMatches(deck: MetaDeck, collectionByName: Map<string, Collecti
     const key = normalizeName(card.name);
     const ownedItems = collectionByName.get(key) ?? [];
     const ownedQuantity = ownedItems.reduce((sum, item) => sum + item.quantity, 0);
-    const repeatedQuantity = Math.max(0, ownedQuantity - 1);
+    const repeatedQuantity = card.role === "Energia" ? card.quantity : Math.max(0, ownedQuantity - 1);
     const usableRepeated = Math.min(card.quantity, repeatedQuantity);
     const marketPrice = ownedItems[0]?.price ?? 0;
     return {
