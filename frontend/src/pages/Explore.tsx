@@ -12,6 +12,7 @@ import { apiService } from "../services/api";
 import type { ExploreCard, ExploreSortOption, PokemonSet } from "../types";
 import type { ToastState } from "../components/ui/Toast";
 import { cardDisplayName, cardDisplayNumber } from "../lib/cardDisplay";
+import { cardThumbnailUrl, handleCardImageError } from "../lib/cardImage";
 
 export function Explore({ onToast }: { onToast: (toast: ToastState) => void }) {
   const [cards, setCards] = useState<ExploreCard[]>([]);
@@ -455,9 +456,9 @@ function CardListRow({
   onToggleWishlist: (card: ExploreCard) => void;
 }) {
   return (
-    <div className="grid grid-cols-[auto_52px_1fr_auto] items-center gap-3 border-b border-slate-100 p-3 last:border-b-0 dark:border-slate-800">
+    <div className="card-render-surface grid grid-cols-[auto_52px_1fr_auto] items-center gap-3 border-b border-slate-100 p-3 last:border-b-0 dark:border-slate-800">
       <input type="checkbox" checked={selected} onChange={onSelect} className="h-4 w-4 rounded border-slate-300 text-indigo-600" aria-label={`Selecionar ${card.name}`} />
-      <img src={card.image} alt={card.name} loading="lazy" className="h-16 w-12 rounded-md object-contain" />
+      <img src={cardThumbnailUrl(card.image)} alt={card.name} loading="lazy" decoding="async" width={48} height={64} onError={(event) => handleCardImageError(event.currentTarget)} className="h-16 w-12 rounded-md object-contain" />
       <div className="min-w-0">
         <p className="truncate text-sm font-semibold text-slate-950 dark:text-white">{cardDisplayName(card.name, card.number, card.id)}</p>
         <p className="truncate text-xs font-medium text-slate-500 dark:text-slate-400">{card.set} - {cardDisplayNumber(card.number, card.id)}</p>
@@ -491,14 +492,14 @@ function CompactCard({
   onToggleWishlist: (card: ExploreCard) => void;
 }) {
   return (
-    <div className={`rounded-xl border bg-white p-2 shadow-sm transition hover:shadow-md dark:bg-slate-900 ${selected ? "border-indigo-400 ring-2 ring-indigo-500/20" : "border-slate-200 dark:border-slate-800"}`}>
+    <div className={`card-render-surface rounded-xl border bg-white p-2 shadow-sm transition hover:shadow-md dark:bg-slate-900 ${selected ? "border-indigo-400 ring-2 ring-indigo-500/20" : "border-slate-200 dark:border-slate-800"}`}>
       <div className="mb-2 flex items-center justify-between">
         <input type="checkbox" checked={selected} onChange={onSelect} className="h-4 w-4 rounded border-slate-300 text-indigo-600" aria-label={`Selecionar ${card.name}`} />
         <button type="button" onClick={() => onToggleWishlist(card)} className={wished ? "text-rose-500" : "text-slate-400 hover:text-rose-500"} aria-label="Lista de desejos">
           <Heart size={16} fill={wished ? "currentColor" : "none"} />
         </button>
       </div>
-      <img src={card.image} alt={card.name} loading="lazy" className="mx-auto h-24 w-full rounded-md object-contain" />
+      <img src={cardThumbnailUrl(card.image)} alt={card.name} loading="lazy" decoding="async" width={96} height={134} onError={(event) => handleCardImageError(event.currentTarget)} className="mx-auto h-24 w-full rounded-md object-contain" />
       <p className="mt-2 line-clamp-2 min-h-8 text-xs font-semibold text-slate-950 dark:text-white">{cardDisplayName(card.name, card.number, card.id)}</p>
       <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">{cardDisplayNumber(card.number, card.id)}</p>
     </div>
@@ -518,6 +519,4 @@ function normalizeText(value: string): string {
 function setDisplayCode(set: PokemonSet): string {
   return (set.ptcgoCode || set.id).toUpperCase();
 }
-
-
 

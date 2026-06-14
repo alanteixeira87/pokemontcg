@@ -56,6 +56,11 @@ button {
   -webkit-tap-highlight-color: transparent;
 }
 
+.card-render-surface {
+  content-visibility: auto;
+  contain-intrinsic-size: 420px;
+}
+
 ::selection {
   background: rgba(99, 102, 241, 0.18);
 }

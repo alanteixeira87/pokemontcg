@@ -13,6 +13,9 @@ import type { CollectionItem, ExploreCard, PokemonSet, SortOption } from "../typ
 import type { ToastState } from "../components/ui/Toast";
 import { cardDisplayName, cardDisplayNumber, realCollectionTotal } from "../lib/cardDisplay";
 import { currency } from "../lib/utils";
+import { cardThumbnailUrl, handleCardImageError } from "../lib/cardImage";
+
+const collectionPageSize = 80;
 
 export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean; onToast: (toast: ToastState) => void }) {
   const [items, setItems] = useState<CollectionItem[]>([]);
@@ -34,6 +37,7 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
   const [showSelectedCollectionOnly, setShowSelectedCollectionOnly] = useState(false);
   const [loadingMissingCards, setLoadingMissingCards] = useState(false);
   const [downloadingRepeatedPdf, setDownloadingRepeatedPdf] = useState(false);
+  const [visibleCardLimit, setVisibleCardLimit] = useState(collectionPageSize);
   const { filters, setFilters } = useAppStore();
   const [draftFilters, setDraftFilters] = useState(filters);
   const restoreScrollRef = useRef<number | null>(null);
@@ -266,6 +270,11 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
       ...visibleMissingCards.map((card) => ({ type: "missing" as const, card }))
     ];
   }, [hasSetOrderedCards, setOrderedEntries, tradeOnly, visibleItems, visibleMissingCards]);
+  const renderedCollectionEntries = useMemo(
+    () => collectionDisplayEntries.slice(0, visibleCardLimit),
+    [collectionDisplayEntries, visibleCardLimit]
+  );
+  const hasMoreCollectionEntries = renderedCollectionEntries.length < collectionDisplayEntries.length;
   const selectableMissingCards = useMemo(
     () => collectionDisplayEntries.flatMap((entry) => (entry.type === "missing" ? [entry.card] : [])),
     [collectionDisplayEntries]
@@ -314,6 +323,10 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
     setSelectedMissingIds(new Set());
     setConfirmBatchMissing(false);
   }, [filters.favorite, filters.forTrade, filters.missingOnly, filters.set, selectableMissingIdsKey]);
+
+  useEffect(() => {
+    setVisibleCardLimit(collectionPageSize);
+  }, [collectionViewMode, filters.favorite, filters.forTrade, filters.missingOnly, filters.set, filters.sort]);
 
   useEffect(() => {
     if (restoreScrollRef.current === null) return;
@@ -758,7 +771,7 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
         </div>
       ) : shouldUseCollectionView && collectionViewMode === "list" ? (
         <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
-          {collectionDisplayEntries.map((entry) =>
+          {renderedCollectionEntries.map((entry) =>
             entry.type === "owned" ? (
               <OwnedCardListRow
                 key={`owned-${entry.item.id}`}
@@ -784,7 +797,7 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
         </div>
       ) : shouldUseCollectionView && collectionViewMode === "columns" ? (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8">
-          {collectionDisplayEntries.map((entry) =>
+          {renderedCollectionEntries.map((entry) =>
             entry.type === "owned" ? (
               <OwnedCompactCard key={`owned-${entry.item.id}`} item={entry.item} onUpdate={update} />
             ) : (
@@ -804,7 +817,7 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
       ) : visibleItems.length || visibleMissingCards.length || hasSetOrderedCards ? (
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
           {hasSetOrderedCards
-            ? setOrderedEntries.map((entry) =>
+            ? renderedCollectionEntries.map((entry) =>
                 entry.type === "owned" ? (
                   <CardTile
                     key={entry.item.id}
@@ -830,23 +843,30 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
               )
             : (
                 <>
-                  {visibleItems.map((item) => (
-                    <CardTile key={item.id} mode="collection" card={item} onUpdate={update} onRemove={() => setPendingRemove(item)} onExport={exportCard} />
-                  ))}
-                  {!tradeOnly &&
-                    visibleMissingCards.map((card) => (
+                  {renderedCollectionEntries.map((entry) =>
+                    entry.type === "owned" ? (
+                      <CardTile
+                        key={entry.item.id}
+                        mode="collection"
+                        card={entry.item}
+                        onUpdate={update}
+                        onRemove={() => setPendingRemove(entry.item)}
+                        onExport={exportCard}
+                      />
+                    ) : (
                       <MissingCard
-                        key={`missing-${card.id}`}
-                        card={card}
-                        wished={wishlistIds.has(card.id)}
-                        active={activeMissingIds.has(card.id)}
-                        quantity={missingQuantities[card.id] ?? 1}
+                        key={`missing-${entry.card.id}`}
+                        card={entry.card}
+                        wished={wishlistIds.has(entry.card.id)}
+                        active={activeMissingIds.has(entry.card.id)}
+                        quantity={missingQuantities[entry.card.id] ?? 1}
                         onHoverActivate={markMissingAsActive}
                         onQuantityChange={setMissingQuantity}
                         onAdd={addMissing}
                         onToggleWishlist={toggleMissingWishlist}
                       />
-                    ))}
+                    )
+                  )}
                 </>
               )}
         </div>
@@ -855,6 +875,13 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
           title={tradeOnly ? "Nenhuma carta para troca" : "Coleção vazia"}
           description={tradeOnly ? "Marque cartas como troca para visualizá-las aqui." : "Explore cartas e adicione os primeiros itens à sua coleção local."}
         />
+      )}
+      {hasMoreCollectionEntries && !isGridLoading && (
+        <div className="flex justify-center">
+          <Button variant="secondary" onClick={() => setVisibleCardLimit((current) => current + collectionPageSize)}>
+            Carregar mais cartas ({collectionDisplayEntries.length - renderedCollectionEntries.length})
+          </Button>
+        </div>
       )}
       <Modal title="Adicionar cartas faltantes" open={confirmBatchMissing} onClose={() => setConfirmBatchMissing(false)}>
         <div className="space-y-4">
@@ -977,9 +1004,9 @@ function MissingCardListRow({
   onToggleWishlist: (card: ExploreCard) => void;
 }) {
   return (
-    <div className="grid grid-cols-[auto_52px_1fr_auto] items-center gap-3 border-b border-slate-100 p-3 last:border-b-0 dark:border-slate-800">
+    <div className="card-render-surface grid grid-cols-[auto_52px_1fr_auto] items-center gap-3 border-b border-slate-100 p-3 last:border-b-0 dark:border-slate-800">
       <input type="checkbox" checked={selected} onChange={onSelect} className="h-4 w-4 rounded border-slate-300 text-indigo-600" aria-label={`Selecionar ${card.name}`} />
-      <img src={card.image} alt={card.name} loading="lazy" className="h-16 w-12 rounded-md object-contain grayscale" />
+      <img src={cardThumbnailUrl(card.image)} alt={card.name} loading="lazy" decoding="async" width={48} height={64} onError={(event) => handleCardImageError(event.currentTarget)} className="h-16 w-12 rounded-md object-contain grayscale" />
       <div className="min-w-0">
         <p className="truncate text-sm font-semibold text-slate-950 dark:text-white">{cardDisplayName(card.name, card.number, card.id)}</p>
         <p className="truncate text-xs font-medium text-slate-500 dark:text-slate-400">
@@ -1040,8 +1067,8 @@ function OwnedCardListRow({
 }) {
   const repeated = Math.max(0, item.quantity - 1);
   return (
-    <div className="grid grid-cols-[52px_1fr_auto] items-center gap-3 border-b border-slate-100 p-3 last:border-b-0 dark:border-slate-800">
-      <img src={item.image} alt={item.name} loading="lazy" className="h-16 w-12 rounded-md object-contain" />
+    <div className="card-render-surface grid grid-cols-[52px_1fr_auto] items-center gap-3 border-b border-slate-100 p-3 last:border-b-0 dark:border-slate-800">
+      <img src={cardThumbnailUrl(item.image)} alt={item.name} loading="lazy" decoding="async" width={48} height={64} onError={(event) => handleCardImageError(event.currentTarget)} className="h-16 w-12 rounded-md object-contain" />
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
           <p className="truncate text-sm font-semibold text-slate-950 dark:text-white">{cardDisplayName(item.name, item.number, item.cardId)}</p>
@@ -1087,12 +1114,12 @@ function OwnedCompactCard({
 }) {
   const repeated = Math.max(0, item.quantity - 1);
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-2 shadow-sm transition hover:shadow-md dark:border-slate-800 dark:bg-slate-900">
+    <div className="card-render-surface rounded-xl border border-slate-200 bg-white p-2 shadow-sm transition hover:shadow-md dark:border-slate-800 dark:bg-slate-900">
       <div className="mb-2 flex items-center justify-between gap-2">
         <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-200">x{item.quantity}</span>
         {repeated > 0 && <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-300">{repeated} rep.</span>}
       </div>
-      <img src={item.image} alt={item.name} loading="lazy" className="mx-auto h-24 w-full rounded-md object-contain" />
+      <img src={cardThumbnailUrl(item.image)} alt={item.name} loading="lazy" decoding="async" width={96} height={134} onError={(event) => handleCardImageError(event.currentTarget)} className="mx-auto h-24 w-full rounded-md object-contain" />
       <p className="mt-2 line-clamp-2 min-h-8 text-xs font-semibold text-slate-950 dark:text-white">{cardDisplayName(item.name, item.number, item.cardId)}</p>
       <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">{cardDisplayNumber(item.number, item.cardId)}</p>
       <div className="mt-2 flex scale-90 justify-center">
@@ -1120,14 +1147,14 @@ function MissingCompactCard({
   onToggleWishlist: (card: ExploreCard) => void;
 }) {
   return (
-    <div className={`rounded-xl border bg-white p-2 shadow-sm transition hover:shadow-md dark:bg-slate-900 ${selected ? "border-indigo-400 ring-2 ring-indigo-500/20" : "border-slate-200 dark:border-slate-800"}`}>
+    <div className={`card-render-surface rounded-xl border bg-white p-2 shadow-sm transition hover:shadow-md dark:bg-slate-900 ${selected ? "border-indigo-400 ring-2 ring-indigo-500/20" : "border-slate-200 dark:border-slate-800"}`}>
       <div className="mb-2 flex items-center justify-between">
         <input type="checkbox" checked={selected} onChange={onSelect} className="h-4 w-4 rounded border-slate-300 text-indigo-600" aria-label={`Selecionar ${card.name}`} />
         <button type="button" onClick={() => onToggleWishlist(card)} className={wished ? "text-rose-500" : "text-slate-400 hover:text-rose-500"} aria-label="Lista de desejos">
           <Heart size={16} fill={wished ? "currentColor" : "none"} />
         </button>
       </div>
-      <img src={card.image} alt={card.name} loading="lazy" className="mx-auto h-24 w-full rounded-md object-contain grayscale" />
+      <img src={cardThumbnailUrl(card.image)} alt={card.name} loading="lazy" decoding="async" width={96} height={134} onError={(event) => handleCardImageError(event.currentTarget)} className="mx-auto h-24 w-full rounded-md object-contain grayscale" />
       <p className="mt-2 line-clamp-2 min-h-8 text-xs font-semibold text-slate-950 dark:text-white">{cardDisplayName(card.name, card.number, card.id)}</p>
       <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">{cardDisplayNumber(card.number, card.id)}</p>
       <div className="mt-2 flex scale-90 justify-center">
@@ -1159,12 +1186,12 @@ function MissingCard({
   return (
     <article
       onMouseEnter={() => onHoverActivate(card.id)}
-      className={`overflow-hidden rounded-xl border border-slate-200 bg-white transition hover:opacity-100 hover:grayscale-0 dark:border-slate-800 dark:bg-slate-900 ${
+      className={`card-render-surface overflow-hidden rounded-xl border border-slate-200 bg-white transition hover:opacity-100 hover:grayscale-0 dark:border-slate-800 dark:bg-slate-900 ${
         active ? "opacity-100 grayscale-0" : "opacity-75 grayscale"
       }`}
     >
       <div className="relative bg-slate-100 px-4 pb-3 pt-4 dark:bg-slate-950/40">
-        <img src={card.image} alt={card.name} loading="lazy" className="mx-auto aspect-[63/88] w-full max-w-[184px] rounded-lg object-contain" />
+        <img src={cardThumbnailUrl(card.image)} alt={card.name} loading="lazy" decoding="async" width={184} height={257} onError={(event) => handleCardImageError(event.currentTarget)} className="mx-auto aspect-[63/88] w-full max-w-[184px] rounded-lg object-contain" />
         <span className="absolute right-3 top-3 rounded-full bg-slate-900 px-2.5 py-1 text-[11px] font-semibold text-white">Faltante</span>
         <button
           type="button"
@@ -1373,6 +1400,4 @@ function MetricCard({ icon: Icon, label, value }: { icon: typeof Layers3; label:
     </div>
   );
 }
-
-
 

@@ -4,10 +4,9 @@ import { createPortal } from "react-dom";
 import type { CollectionItem, ExploreCard } from "../types";
 import { currency } from "../lib/utils";
 import { cardDisplayName, cardDisplayNumber } from "../lib/cardDisplay";
+import { cardFullImageUrl, cardThumbnailUrl, handleCardImageError } from "../lib/cardImage";
 import { Button } from "./ui/Button";
 import { Input } from "./ui/Input";
-
-const fallbackCardImage = "https://images.pokemontcg.io/base1/4.png";
 
 type ExploreProps = {
   mode: "explore";
@@ -34,15 +33,18 @@ export function CardTile(props: ExploreProps | CollectionProps) {
   const [zoomOpen, setZoomOpen] = useState(false);
 
   return (
-    <article className="group overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition duration-150 ease-out hover:scale-[1.01] hover:shadow-md dark:border-slate-800 dark:bg-slate-900">
+    <article className="card-render-surface group overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition duration-150 ease-out hover:scale-[1.01] hover:shadow-md dark:border-slate-800 dark:bg-slate-900">
       <div className="relative bg-slate-50 px-4 pb-3 pt-4 dark:bg-slate-950/40">
         <button type="button" className="mx-auto block aspect-[63/88] w-full max-w-[184px]" onClick={() => setZoomOpen(true)} aria-label={`Ampliar ${cardDisplayName(card.name, card.number, "cardId" in card ? card.cardId : card.id)}`}>
           <img
-            src={card.image}
+            src={cardThumbnailUrl(card.image)}
             alt={card.name}
             loading="lazy"
+            decoding="async"
+            width={184}
+            height={257}
             onError={(event) => {
-              event.currentTarget.src = fallbackCardImage;
+              handleCardImageError(event.currentTarget);
             }}
             className="h-full w-full rounded-lg object-contain transition duration-150 group-hover:scale-[1.015]"
           />
@@ -222,13 +224,13 @@ function CardZoomModal({ card, number, label, onClose }: { card: ExploreCard | C
       <div className="relative grid h-[94dvh] w-full max-w-7xl overflow-hidden rounded-xl bg-white shadow-lg dark:bg-slate-900 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="flex min-h-0 items-center justify-center bg-slate-950 p-3 sm:p-6">
           <img
-            src={card.image}
+            src={cardFullImageUrl(card.image)}
             alt={card.name}
             loading="eager"
             decoding="async"
             draggable={false}
             onError={(event) => {
-              event.currentTarget.src = fallbackCardImage;
+              handleCardImageError(event.currentTarget);
             }}
             className="h-full max-h-[88dvh] w-full select-none object-contain"
           />
@@ -275,4 +277,3 @@ function rarityTone(rarity?: string | null): string {
   if (normalized.includes("common")) return "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200";
   return "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200";
 }
-
