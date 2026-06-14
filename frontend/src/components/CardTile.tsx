@@ -4,7 +4,8 @@ import { createPortal } from "react-dom";
 import type { CollectionItem, ExploreCard } from "../types";
 import { currency } from "../lib/utils";
 import { cardDisplayName, cardDisplayNumber } from "../lib/cardDisplay";
-import { cardFullImageUrl, cardThumbnailUrl, handleCardImageError } from "../lib/cardImage";
+import { cardFullImageUrl, handleCardImageError } from "../lib/cardImage";
+import { CardImage } from "./CardImage";
 import { Button } from "./ui/Button";
 import { Input } from "./ui/Input";
 
@@ -36,17 +37,12 @@ export function CardTile(props: ExploreProps | CollectionProps) {
     <article className="card-render-surface group overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition duration-150 ease-out hover:scale-[1.01] hover:shadow-md dark:border-slate-800 dark:bg-slate-900">
       <div className="relative bg-slate-50 px-4 pb-3 pt-4 dark:bg-slate-950/40">
         <button type="button" className="mx-auto block aspect-[63/88] w-full max-w-[184px]" onClick={() => setZoomOpen(true)} aria-label={`Ampliar ${cardDisplayName(card.name, card.number, "cardId" in card ? card.cardId : card.id)}`}>
-          <img
-            src={cardThumbnailUrl(card.image)}
+          <CardImage
+            src={card.image}
             alt={card.name}
-            loading="lazy"
-            decoding="async"
             width={184}
             height={257}
-            onError={(event) => {
-              handleCardImageError(event.currentTarget);
-            }}
-            className="h-full w-full rounded-lg object-contain transition duration-150 group-hover:scale-[1.015]"
+            className="h-full w-full rounded-lg transition duration-150 group-hover:scale-[1.015]"
           />
         </button>
         <div className="absolute right-3 top-3 rounded-full bg-white px-2.5 py-1 text-[11px] font-medium text-slate-600 shadow-sm dark:bg-slate-900 dark:text-slate-300">

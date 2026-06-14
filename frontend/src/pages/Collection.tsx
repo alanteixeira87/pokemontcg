@@ -13,7 +13,7 @@ import type { CollectionItem, ExploreCard, PokemonSet, SortOption } from "../typ
 import type { ToastState } from "../components/ui/Toast";
 import { cardDisplayName, cardDisplayNumber, realCollectionTotal } from "../lib/cardDisplay";
 import { currency } from "../lib/utils";
-import { cardThumbnailUrl, handleCardImageError } from "../lib/cardImage";
+import { CardImage } from "../components/CardImage";
 
 const collectionPageSize = 80;
 
@@ -1006,7 +1006,7 @@ function MissingCardListRow({
   return (
     <div className="card-render-surface grid grid-cols-[auto_52px_1fr_auto] items-center gap-3 border-b border-slate-100 p-3 last:border-b-0 dark:border-slate-800">
       <input type="checkbox" checked={selected} onChange={onSelect} className="h-4 w-4 rounded border-slate-300 text-indigo-600" aria-label={`Selecionar ${card.name}`} />
-      <img src={cardThumbnailUrl(card.image)} alt={card.name} loading="lazy" decoding="async" width={48} height={64} onError={(event) => handleCardImageError(event.currentTarget)} className="h-16 w-12 rounded-md object-contain grayscale" />
+      <CardImage src={card.image} alt={card.name} width={48} height={64} className="h-16 w-12 rounded-md grayscale" />
       <div className="min-w-0">
         <p className="truncate text-sm font-semibold text-slate-950 dark:text-white">{cardDisplayName(card.name, card.number, card.id)}</p>
         <p className="truncate text-xs font-medium text-slate-500 dark:text-slate-400">
@@ -1068,7 +1068,7 @@ function OwnedCardListRow({
   const repeated = Math.max(0, item.quantity - 1);
   return (
     <div className="card-render-surface grid grid-cols-[52px_1fr_auto] items-center gap-3 border-b border-slate-100 p-3 last:border-b-0 dark:border-slate-800">
-      <img src={cardThumbnailUrl(item.image)} alt={item.name} loading="lazy" decoding="async" width={48} height={64} onError={(event) => handleCardImageError(event.currentTarget)} className="h-16 w-12 rounded-md object-contain" />
+      <CardImage src={item.image} alt={item.name} width={48} height={64} className="h-16 w-12 rounded-md" />
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
           <p className="truncate text-sm font-semibold text-slate-950 dark:text-white">{cardDisplayName(item.name, item.number, item.cardId)}</p>
@@ -1119,7 +1119,7 @@ function OwnedCompactCard({
         <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-200">x{item.quantity}</span>
         {repeated > 0 && <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-300">{repeated} rep.</span>}
       </div>
-      <img src={cardThumbnailUrl(item.image)} alt={item.name} loading="lazy" decoding="async" width={96} height={134} onError={(event) => handleCardImageError(event.currentTarget)} className="mx-auto h-24 w-full rounded-md object-contain" />
+      <CardImage src={item.image} alt={item.name} width={96} height={134} className="mx-auto h-24 w-full rounded-md" />
       <p className="mt-2 line-clamp-2 min-h-8 text-xs font-semibold text-slate-950 dark:text-white">{cardDisplayName(item.name, item.number, item.cardId)}</p>
       <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">{cardDisplayNumber(item.number, item.cardId)}</p>
       <div className="mt-2 flex scale-90 justify-center">
@@ -1154,7 +1154,7 @@ function MissingCompactCard({
           <Heart size={16} fill={wished ? "currentColor" : "none"} />
         </button>
       </div>
-      <img src={cardThumbnailUrl(card.image)} alt={card.name} loading="lazy" decoding="async" width={96} height={134} onError={(event) => handleCardImageError(event.currentTarget)} className="mx-auto h-24 w-full rounded-md object-contain grayscale" />
+      <CardImage src={card.image} alt={card.name} width={96} height={134} className="mx-auto h-24 w-full rounded-md grayscale" />
       <p className="mt-2 line-clamp-2 min-h-8 text-xs font-semibold text-slate-950 dark:text-white">{cardDisplayName(card.name, card.number, card.id)}</p>
       <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">{cardDisplayNumber(card.number, card.id)}</p>
       <div className="mt-2 flex scale-90 justify-center">
@@ -1191,7 +1191,7 @@ function MissingCard({
       }`}
     >
       <div className="relative bg-slate-100 px-4 pb-3 pt-4 dark:bg-slate-950/40">
-        <img src={cardThumbnailUrl(card.image)} alt={card.name} loading="lazy" decoding="async" width={184} height={257} onError={(event) => handleCardImageError(event.currentTarget)} className="mx-auto aspect-[63/88] w-full max-w-[184px] rounded-lg object-contain" />
+        <CardImage src={card.image} alt={card.name} width={184} height={257} className="mx-auto w-full max-w-[184px] rounded-lg" />
         <span className="absolute right-3 top-3 rounded-full bg-slate-900 px-2.5 py-1 text-[11px] font-semibold text-white">Faltante</span>
         <button
           type="button"
@@ -1400,4 +1400,3 @@ function MetricCard({ icon: Icon, label, value }: { icon: typeof Layers3; label:
     </div>
   );
 }
-
