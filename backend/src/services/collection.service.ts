@@ -16,6 +16,11 @@ type AddCardInput = {
   rarity?: string;
 };
 
+type RestoreCardInput = AddCardInput & {
+  favorite: boolean;
+  forTrade: boolean;
+};
+
 type PreparedCardInput = AddCardInput & {
   estimatedPrice: number;
 };
@@ -161,6 +166,45 @@ export const collectionService = {
       );
     }
 
+    return inputs.reduce((sum, input) => sum + input.quantity, 0);
+  },
+
+  async restoreMany(userId: number, inputs: RestoreCardInput[]): Promise<number> {
+    if (!inputs.length) return 0;
+
+    const chunkSize = 100;
+    const operations: Prisma.PrismaPromise<unknown>[] = [
+      prisma.collection.deleteMany({
+        where: {
+          userId,
+          tradeCards: { none: {} }
+        }
+      })
+    ];
+
+    for (let index = 0; index < inputs.length; index += chunkSize) {
+      const chunk = inputs.slice(index, index + chunkSize);
+      operations.push(
+        prisma.collection.createMany({
+          data: chunk.map((input) => ({
+              userId,
+              cardId: input.cardId,
+              name: input.name,
+              image: input.image,
+              set: input.set,
+              number: input.number,
+              rarity: input.rarity,
+              quantity: input.quantity,
+              price: input.price,
+              favorite: input.favorite,
+              forTrade: input.forTrade
+          })),
+          skipDuplicates: true
+        })
+      );
+    }
+
+    await prisma.$transaction(operations);
     return inputs.reduce((sum, input) => sum + input.quantity, 0);
   },
 

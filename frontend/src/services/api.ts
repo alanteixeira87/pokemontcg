@@ -1,4 +1,5 @@
 import axios from "axios";
+import { useAppStore } from "../store/useAppStore";
 import type {
   AuthResponse,
   AdminOverview,
@@ -45,8 +46,7 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem("pokemon-tcg-token");
-      localStorage.removeItem("pokemon-tcg-user");
+      useAppStore.getState().logout();
     }
     return Promise.reject(error);
   }
@@ -183,9 +183,7 @@ export const apiService = {
   async importCollection(file: File): Promise<ImportResult> {
     const formData = new FormData();
     formData.append("file", file);
-    const response = await api.post<ImportResult>("/import/collection", formData, {
-      headers: { "Content-Type": "multipart/form-data" }
-    });
+    const response = await api.post<ImportResult>("/import/collection", formData, { timeout: 300000 });
     return response.data;
   },
 

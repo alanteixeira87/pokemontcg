@@ -1,4 +1,5 @@
 import { AlertTriangle, BarChart3, CheckSquare, ChevronDown, ChevronUp, Columns3, Download, Grid3X3, Heart, Layers3, List, Plus, RefreshCw, SlidersHorizontal, Trash2, Trophy, Upload } from "lucide-react";
+import axios from "axios";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CardTile } from "../components/CardTile";
 import { EmptyState } from "../components/EmptyState";
@@ -153,11 +154,11 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
       return;
     }
 
-    const ownedBySet = new Map<string, Set<string>>();
+    const ownedBySet = new Map<string, CollectionItem[]>();
     allItems.forEach((item) => {
       const setKey = normalizeSetName(item.set);
-      const owned = ownedBySet.get(setKey) ?? new Set<string>();
-      owned.add(item.cardId);
+      const owned = ownedBySet.get(setKey) ?? [];
+      owned.push(item);
       ownedBySet.set(setKey, owned);
     });
 
@@ -176,9 +177,9 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
           const set = chunk[chunkIndex];
           if (!set) return;
           const setKey = normalizeSetName(set.name);
-          const owned = ownedBySet.get(setKey) ?? new Set<string>();
+          const ownership = matchOwnedCards(result.value, ownedBySet.get(setKey) ?? []);
           result.value.forEach((card) => {
-            if (!owned.has(card.id)) missing.push(card);
+            if (!ownership.has(card.id)) missing.push(card);
           });
         });
       }
@@ -217,17 +218,19 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
   );
   const missingCards = useMemo(() => {
     if (!filters.set) return [];
-    const ownedIds = new Set(allItems.filter((item) => normalizeSetName(item.set) === normalizeSetName(filters.set)).map((item) => item.cardId));
+    const ownership = matchOwnedCards(
+      setCards,
+      allItems.filter((item) => normalizeSetName(item.set) === normalizeSetName(filters.set))
+    );
     return setCards
-      .filter((card) => !ownedIds.has(card.id))
+      .filter((card) => !ownership.has(card.id))
       .filter((card) => (filters.favorite ? wishlistIds.has(card.id) : true))
       .filter(() => (filters.forTrade ? false : true));
   }, [allItems, filters.favorite, filters.forTrade, filters.set, setCards, wishlistIds]);
   const ownedByCardId = useMemo(() => {
-    const map = new Map<string, CollectionItem>();
-    items.forEach((item) => map.set(item.cardId, item));
-    return map;
-  }, [items]);
+    if (!filters.set) return new Map(items.map((item) => [item.cardId, item]));
+    return matchOwnedCards(setCards, items);
+  }, [filters.set, items, setCards]);
   const missingById = useMemo(() => {
     const map = new Map<string, ExploreCard>();
     missingCards.forEach((card) => map.set(card.id, card));
@@ -481,9 +484,14 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
 
   async function importExcel(file: File | undefined) {
     if (!file) return;
+    if (!file.name.toLowerCase().endsWith(".xlsx")) {
+      onToast({ type: "error", message: "Selecione uma planilha no formato .xlsx." });
+      return;
+    }
     setImporting(true);
     try {
       const result = await apiService.importCollection(file);
+      setCardsCacheRef.current.clear();
       await load();
       await loadMeta();
       const firstIssue = result.notFound[0];
@@ -494,8 +502,13 @@ export function Collection({ tradeOnly = false, onToast }: { tradeOnly?: boolean
         type: result.imported > 0 ? "success" : "error",
         message: `${result.imported} cartas importadas. ${result.skipped} linhas ignoradas.${notFoundMessage}`
       });
-    } catch {
-      onToast({ type: "error", message: "Não foi possível importar a planilha. Confira as colunas e tente novamente." });
+    } catch (error) {
+      const apiMessage = axios.isAxiosError(error) ? error.response?.data?.message : null;
+      const timeoutMessage = axios.isAxiosError(error) && error.code === "ECONNABORTED" ? "A importação excedeu o tempo esperado." : null;
+      onToast({
+        type: "error",
+        message: apiMessage || timeoutMessage || "Não foi possível importar a planilha. Confira as colunas e tente novamente."
+      });
     } finally {
       setImporting(false);
     }
@@ -1206,6 +1219,48 @@ function normalizeSetName(value: string): string {
     .toLowerCase();
 }
 
+function normalizeCardName(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+function matchOwnedCards(cards: ExploreCard[], ownedItems: CollectionItem[]): Map<string, CollectionItem> {
+  const matched = new Map<string, CollectionItem>();
+  const usedItemIds = new Set<number>();
+  const directById = new Map(ownedItems.map((item) => [item.cardId, item]));
+
+  cards.forEach((card) => {
+    const direct = directById.get(card.id);
+    if (!direct) return;
+    matched.set(card.id, direct);
+    usedItemIds.add(direct.id);
+  });
+
+  const remainingByName = new Map<string, CollectionItem[]>();
+  ownedItems.forEach((item) => {
+    if (usedItemIds.has(item.id)) return;
+    const key = `${normalizeSetName(item.set)}|${normalizeCardName(item.name)}`;
+    const entries = remainingByName.get(key) ?? [];
+    entries.push(item);
+    remainingByName.set(key, entries);
+  });
+
+  cards.forEach((card) => {
+    if (matched.has(card.id)) return;
+    const key = `${normalizeSetName(card.set)}|${normalizeCardName(card.name)}`;
+    const candidates = remainingByName.get(key);
+    const fallback = candidates?.shift();
+    if (fallback) matched.set(card.id, fallback);
+  });
+
+  return matched;
+}
+
 function buildCollectionSummary(items: CollectionItem[], pokemonSets: PokemonSet[]): ProgressSet[] {
   const grouped = new Map<string, CollectionItem[]>();
   items.forEach((item) => {
@@ -1318,8 +1373,6 @@ function MetricCard({ icon: Icon, label, value }: { icon: typeof Layers3; label:
     </div>
   );
 }
-
-
 
 
 
