@@ -1,6 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
 import { HttpError } from "../utils/httpError.js";
-import { scanService } from "../services/scan.service.js";
 
 function hasValidImageSignature(buffer: Buffer): boolean {
   if (buffer.length < 12) return false;
@@ -44,6 +43,7 @@ export const scanController = {
         throw new HttpError(400, "Formato de imagem invalido. Use JPG, PNG ou WEBP.");
       }
 
+      const { scanService } = await import("../services/scan.service.js");
       const result = await scanService.analyze({
         imageBuffer: req.file.buffer,
         language: sanitizeInput(req.body.language),

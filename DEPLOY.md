@@ -19,7 +19,7 @@ Crie um repositorio no GitHub e envie a pasta `Pokemon 2`.
 
 ```text
 Root Directory: backend
-Build Command: npm install --include=dev && npm run prisma:generate && npm run build
+Build Command: npm install --include=dev && npm run prisma:generate && npm run build && npm run prisma:deploy
 Start Command: npm start
 Health Check Path: /health
 ```
@@ -82,4 +82,4 @@ https://sua-url-da-vercel.vercel.app
 
 ## Observacao
 
-Render pode deixar o backend dormir no plano gratuito. A primeira busca depois de um tempo pode demorar alguns segundos.
+Render deixa o backend dormir após um período sem tráfego no plano gratuito. A primeira busca precisa despertar a instância e pode levar cerca de um minuto. Para eliminar essa espera, use uma instância paga sempre ativa.
