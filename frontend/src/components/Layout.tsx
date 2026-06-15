@@ -1,6 +1,7 @@
-import { BarChart3, Boxes, Camera, Heart, HeartHandshake, Layers3, Library, LogOut, Menu, Moon, Search, SlidersHorizontal, Sun, UserCircle, X } from "lucide-react";
+import { BarChart3, Boxes, Camera, Heart, HeartHandshake, Layers3, Library, LogOut, Menu, Moon, SlidersHorizontal, Sun, UserCircle, X } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { useAppStore } from "../store/useAppStore";
+import { HeaderCardSearch } from "./HeaderCardSearch";
 import { Button } from "./ui/Button";
 
 const nav = [
@@ -42,15 +43,7 @@ export function Layout({ children }: { children: ReactNode }) {
               {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
             </Button>
           </div>
-          <div className="relative flex-1">
-            <Search className="pointer-events-none absolute left-3 top-3 text-slate-400" size={16} />
-            <input
-              readOnly
-              value="Busque, organize e importe suas cartas"
-              onClick={() => setView("explore")}
-              className="h-10 w-full cursor-pointer rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-3 text-sm text-slate-500 outline-none transition hover:bg-white focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
-            />
-          </div>
+          <HeaderCardSearch />
           {user && <div className="hidden text-sm font-medium text-slate-600 lg:block dark:text-slate-300">{user.name}</div>}
           <Button className="hidden lg:inline-flex" variant="secondary" size="icon" onClick={toggleTheme} aria-label="Alternar tema">
             {theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}

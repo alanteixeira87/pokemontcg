@@ -759,10 +759,15 @@ async function listCardsFromTcgDex(page: number, pageSize: number, search?: stri
   const filtered = cards.filter((card) => {
     const setId = tcgDexSetIdFromCardId(card.id);
     const matchesSet = set ? equivalentSetIds(setId).includes(set.toLowerCase()) || equivalentSetIds(set).includes(setId) : true;
+    const searchNumberCandidates = normalizeCardNumbers(search ?? "").map(normalizeLookupText);
+    const cardNumberCandidates = normalizeCardNumbers(card.localId ?? "").map(normalizeLookupText);
+    const matchesNumber = searchNumberCandidates.some((candidate) =>
+      cardNumberCandidates.some((cardNumber) => cardNumber.includes(candidate))
+    );
     const matchesSearch = cleanSearch
       ? searchSetIds.size > 0
         ? equivalentSetIds(setId).some((id) => searchSetIds.has(id))
-        : normalizeLookupText(card.name).includes(cleanSearch)
+        : normalizeLookupText(card.name).includes(cleanSearch) || matchesNumber
       : true;
     return matchesSet && matchesSearch;
   });

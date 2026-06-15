@@ -13,6 +13,7 @@ import type { ExploreCard, ExploreSortOption, PokemonSet } from "../types";
 import type { ToastState } from "../components/ui/Toast";
 import { cardDisplayName, cardDisplayNumber } from "../lib/cardDisplay";
 import { CardImage } from "../components/CardImage";
+import { useAppStore } from "../store/useAppStore";
 
 export function Explore({ onToast }: { onToast: (toast: ToastState) => void }) {
   const [cards, setCards] = useState<ExploreCard[]>([]);
@@ -29,6 +30,7 @@ export function Explore({ onToast }: { onToast: (toast: ToastState) => void }) {
   const [viewMode, setViewMode] = useState<"grid" | "list" | "columns">("grid");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [confirmBatch, setConfirmBatch] = useState(false);
+  const exploreSearchTarget = useAppStore((state) => state.exploreSearchTarget);
   const debouncedSearch = useDebounce(search);
   const pageSize = 24;
   const filteredSets = useMemo(
@@ -59,6 +61,14 @@ export function Explore({ onToast }: { onToast: (toast: ToastState) => void }) {
       .slice(0, 8);
   }, [filteredSets, search]);
   const hasFilters = Boolean(search || setId || series || sort !== "numberAsc");
+
+  useEffect(() => {
+    if (exploreSearchTarget.requestId === 0) return;
+    setSearch(exploreSearchTarget.search);
+    setSetId(exploreSearchTarget.setId);
+    setSeries("");
+    setPage(1);
+  }, [exploreSearchTarget]);
 
   useEffect(() => {
     let active = true;

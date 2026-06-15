@@ -14,11 +14,13 @@ type PersistedFilters = {
 type AppState = {
   view: View;
   filters: PersistedFilters;
+  exploreSearchTarget: { search: string; setId: string; requestId: number };
   token: string | null;
   user: AuthUser | null;
   theme: "light" | "dark";
   setView: (view: View) => void;
   setFilters: (filters: Partial<PersistedFilters>) => void;
+  setExploreSearchTarget: (search: string, setId?: string) => void;
   toggleTheme: () => void;
   setAuth: (token: string, user: AuthUser) => void;
   logout: () => void;
@@ -60,6 +62,7 @@ function loadView(): View {
 export const useAppStore = create<AppState>((set) => ({
   view: loadView(),
   filters: loadFilters(),
+  exploreSearchTarget: { search: "", setId: "", requestId: 0 },
   token: localStorage.getItem(tokenKey),
   user: loadUser(),
   theme: localStorage.getItem(themeKey) === "dark" ? "dark" : "light",
@@ -73,6 +76,14 @@ export const useAppStore = create<AppState>((set) => ({
       localStorage.setItem(storageKey, JSON.stringify(next));
       return { filters: next };
     }),
+  setExploreSearchTarget: (search, setId = "") =>
+    set((state) => ({
+      exploreSearchTarget: {
+        search,
+        setId,
+        requestId: state.exploreSearchTarget.requestId + 1
+      }
+    })),
   toggleTheme: () =>
     set((state) => {
       const theme = state.theme === "dark" ? "light" : "dark";
